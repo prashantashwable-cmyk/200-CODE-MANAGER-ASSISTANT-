@@ -1086,6 +1086,8 @@ export const seedJobs: Job[] = [
   },
   // Booked for the same day as j-4 by the same technician: two sites on one morning is a scheduling conflict 121 shows instead of a dual schedule.
   { id: 'j-9', code: 'AIEC-J-3109', dealId: 'dl-1', technicianId: 'u-tech-1', status: 'scheduled', siteName: 'Shree Ram Heights — Wing C', address: 'Phase 2, Hinjawadi', location: { lat: 18.5925, lng: 73.7412 }, scheduledFor: daysAhead(8), steps: installSteps(0), isDemo: true },
+  // An open offer: nobody has accepted it yet, so partners see only an approximate pin (privacy by geometry).
+  { id: 'j-10', code: 'AIEC-J-3110', dealId: 'dl-2', status: 'scheduled', siteName: 'Kulkarni Signature — Tower 3', address: 'Kharadi Bypass', location: { lat: 18.5526, lng: 73.9488 }, scheduledFor: daysAhead(12), steps: installSteps(0), isDemo: true },
   { id: 'j-6', code: 'AIEC-J-3106', dealId: 'dl-2', technicianId: 'u-tech-3', status: 'on_hold', siteName: 'Kulkarni Signature — Basement', address: 'Kharadi Bypass', location: { lat: 18.5509, lng: 73.9462 }, scheduledFor: daysAgo(4), startedAt: daysAgo(4), steps: installSteps(3), isDemo: true },
 ];
 

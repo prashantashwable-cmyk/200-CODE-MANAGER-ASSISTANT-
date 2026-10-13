@@ -12,8 +12,14 @@ Status uses only: **Done** (persisted as designed, tested), **Partial**, **Plann
 | P4 | Decision Desk: approve/reject/edit/ask/delegate, evidence, impact, history | Done | screen 201 |
 | P4 | "Make this a rule", SLA timers, AI-drafted replies, threads | Not started | |
 | P5 | Decision recorded with AI recommendation | Partial | card carries recommendation; outcome labels not yet |
-| P9.1 | Hash-chained immutable event | Partial | decision records chained and frozen; verified on Owner home |
-| P9.3 | Correction classes 1–4 | Not started | |
+| P9.1 | Hash-chained immutable event with the full field set | Partial | `features/events/eventLog.ts`: device time and server time kept apart, clock skew flagged, evidence hash, AI metadata, correlation id, previous-event hash; idempotent by client event id. In memory only |
+| P9.1 | Taxonomy of at least 60 event types | Done | `features/events/taxonomy.ts`: 16 families, 100+ types, tested |
+| P9.2 | Event Log page, scoped per role | Partial | screen 203 (`/log`): family filter, correction sheet, corrected and clock-off badges. Not built: search, saved views, "needs my attention" tab, filter by map view |
+| P9.3 | Correction classes 1–4 | Partial | classes decided in `classOf`; class 2 applies at once and keeps the original; class 3 goes to the Owner (Admin cannot approve); class 4 refuses edits and allows dispute. Window is fixed at 15 minutes (not yet Owner-settable); cascade engine and impact preview not built |
+| P8.5 | Pin fuzzing, contact masking, Admin sees density only | Done in the data layer | `features/geo/privacy.ts` + `listMapSites`; tested through the repository including that the real point and site name never appear in a partner's response. In-memory: a database build must move this into views/functions |
+| P8.5 | Customers never see partner home locations | Done by omission | no partner location is exposed by any map call |
+| P8.5 | Scrape detection | Partial | `scrapeSignal` exists and is tested; nothing feeds it from real map queries yet |
+| P8 | Map shell with search, list alternative | Partial | screen 204 (`/map`): one map, list beside it, search, precision badges. Not built: layers, plan mode, time slider, clustering, role tool palettes, offline packs |
 | P10.2 | Owner second step, server-side refusal | Partial | in-memory refusal tested; DB-level rule not written |
 | P7 | Owner role | Done | role, home 202, nav |
 | P7 | Other new roles (Sales, QC, NBFC, Logistics, Mentor, Applicant) | Not started | |

@@ -20,6 +20,7 @@ async function signIn(page: Page, phone: string) {
 const go = (page: Page, p: string) => page.evaluate((x) => { history.pushState({}, '', x); dispatchEvent(new PopStateEvent('popstate')); }, p);
 
 test('review screenshots', async ({ page }) => {
+  test.skip(!process.env.PROGRESS_DIR, 'only when PROGRESS_DIR is set');
   mkdirSync(DIR, { recursive: true });
   await signIn(page, '9822011009');
   for (const [name, w, h] of [['laptop', 1440, 900], ['phone', 390, 844]] as const) {

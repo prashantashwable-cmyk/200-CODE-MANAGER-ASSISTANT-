@@ -72,3 +72,16 @@ memory), backups. Each screen that depends on one says so; see
 - **Seed**: the legacy Admin account is now "Control Tower Admin" (9822011001); the Owner is Prashant Vasant Wable (9822011009). Old history text still names Prashant against the Admin role.
 - **Adaptive layout** was checked on the Decision Desk at 390, 1440, 2560 and 3840 px only. Other screens were not reviewed at those sizes; the Admin live map and tables are the likely ones to need work. Desktop headers are centred while content is left-aligned (pre-existing).
 - Not started: map-first home for all roles, privacy by geometry, general event store, correction classes, facilitator quote model, new partner roles.
+
+## Added with the map, privacy and event-log slice
+
+- **Map tiles are the public OpenStreetMap servers** (G7), and they do not load in this build environment, so screenshots show pins but a blank basemap. A tile provider decision is open.
+- **The map has a screen (`/map`) but only the Owner has a nav entry.** Surveyor, technician, customer, supplier and Admin reach it by address. Their tab bars do not yet carry it, and "the map is every role's home" is not done.
+- **Approximate pins are tested against one open offer** in the seed (a job with no technician, on the Kulkarni deal). "Offered" means exactly that: a job nobody has accepted. There is no offer, acceptance or token flow yet, so a partner cannot actually accept from the map.
+- **The pin salt is generated per run** in memory. A real build keeps it as a server secret; until then fuzzed pins move after a restart.
+- **Density for Admin** hides cells under 3 sites at about 1 km. The demo seed is too sparse to show any, so Admin's demo map is empty until real volume exists (the screen says why).
+- **Event log is in memory.** A refresh empties it, except that lead creation from the demo seed does not backfill events for the 12 seeded leads. Only leads captured after start-up have a `lead.captured` event.
+- **Only lead capture writes events so far.** Quotes, contracts, QC, payouts and the rest do not emit into the stream yet; the taxonomy is ready for them.
+- **Owner may correct another person's non-locked event directly.** Class 3 approval is for everyone else; this is the one place the Owner is not sent to themselves. Locked (class 4) events are locked for the Owner too.
+- **No Event Log search, saved views, "needs my attention" tab, or Owner-settable correction window.**
+- **No sync conflict handling beyond idempotency and clock-skew flags.** The offline queue, field-level merge and conflict cards are not built.

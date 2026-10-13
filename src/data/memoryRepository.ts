@@ -93,6 +93,7 @@ import {
   simulateRead,
   simulateWrite,
 } from './repository';
+import type { MapSitePin, MapSitesView } from './repository';
 import type {
   BotSimulationResult,
   BroadcastSegmentPreview,
@@ -894,6 +895,10 @@ import type {
   TrainingFeedback,
 } from './types';
 import { createDecisionStore, DecisionError } from '@/features/decisions/decisions';
+import { createEventLog, EventError } from '@/features/events/eventLog';
+import type { AppendInput } from '@/features/events/eventLog';
+import { aggregateDensity, contactLevel, DEFAULT_FUZZ_RADIUS_M, fuzzPin, revealLevel, shownDistanceM } from '@/features/geo/privacy';
+import type { SiteStage } from '@/features/geo/privacy';
 import { seedDecisionCards } from './decisionSeed';
 import { formatDate, formatDateTime, formatINR, formatINRCompact, formatTime, haversineKm } from '@/design-system/format';
 import { MAX_SAFE_BOT_DISCOUNT_PCT } from '@/features/communication/botRules';
@@ -18841,6 +18846,58 @@ function decisionCall<T>(fn: () => T): T {
   try { return fn(); } catch (e) { if (e instanceof DecisionError) throw new RepositoryError(e.code); throw e; }
 }
 
+/** Server-only salt for pin fuzzing: never sent to a browser. A database build keeps it as a secret. */
+const GEO_SALT = randomToken(16);
+const geoRadiusM = DEFAULT_FUZZ_RADIUS_M;
+
+const eventLog = createEventLog({
+  now: () => new Date().toISOString(),
+  roleOf: (userId) => byId(users, userId)?.role ?? null,
+  // Visibility matrix: your own events; a scout's events on a lead they own; a customer's events on their own project.
+  canSee: (userId, _role, e) => e.actor.id === userId || (e.subject.kind === 'lead' && byId(leads, e.subject.id)?.surveyorId === userId) || e.payload.customerId === userId,
+});
+function eventCall<T>(fn: () => T): T {
+  try { return fn(); } catch (e) { if (e instanceof EventError) throw new RepositoryError(e.code); throw e; }
+}
+
+/** Where a person stands with a site: owns the lead, is its customer, or has been offered / has accepted the work. */
+function siteStageFor(lead: Lead, user: User): { stage: SiteStage; relation: { ownsLead: boolean; isCustomerOfSite: boolean } } {
+  const deal = deals.find((d) => d.leadId === lead.id);
+  const relation = { ownsLead: lead.surveyorId === user.id, isCustomerOfSite: !!deal && deal.customerId === user.id };
+  const dealJobs = deal ? jobs.filter((j) => j.dealId === deal.id) : [];
+  if (user.role === 'technician') {
+    if (dealJobs.some((j) => j.technicianId === user.id || (j.crew ?? []).some((c) => c.userId === user.id))) return { stage: 'accepted', relation };
+    if (dealJobs.some((j) => !j.technicianId && j.status !== 'completed')) return { stage: 'offered', relation };
+  }
+  return { stage: 'lead', relation };
+}
+
+function mapSitesFor(userId: string, from?: { lat: number; lng: number }): MapSitesView {
+  const user = byId(users, userId);
+  if (!user) throw new RepositoryError('not_found');
+  const pins: MapSitePin[] = [];
+  const points: { lat: number; lng: number }[] = [];
+  for (const lead of leads) {
+    const { stage, relation } = siteStageFor(lead, user);
+    const level = revealLevel(user.role, stage, relation);
+    if (level === 'density') { points.push(lead.location); continue; }
+    if (level === 'none') continue;
+    const fuzzed = level === 'fuzzed' ? fuzzPin({ id: lead.id, ...lead.location }, geoRadiusM, GEO_SALT) : null;
+    pins.push({
+      id: lead.id,
+      code: lead.code,
+      label: level === 'exact' ? lead.siteName : lead.city,
+      stage: lead.stage,
+      level,
+      point: fuzzed ?? lead.location,
+      ...(fuzzed && from ? { distanceM: shownDistanceM(from, fuzzed) } : {}),
+      contact: contactLevel(user.role, stage, relation),
+      mine: relation.ownsLead,
+    });
+  }
+  return { pins, density: aggregateDensity(points), fuzzRadiusM: geoRadiusM, role: user.role };
+}
+
 export const memoryRepository: Repository = {
   /* ------------------------------------------------------------- Users */
   listUsers: (filter) =>
@@ -18911,6 +18968,11 @@ export const memoryRepository: Repository = {
       };
       leads.unshift(lead);
       pushTimelineEvent({ leadId: lead.id, kind: 'captured', actorName: nameOf(lead.surveyorId), at: now, detail: lead.siteName });
+      // The same capture, as an event in the platform stream. Admin cannot write business events, so a lead entered for a scout is a system event naming who.
+      const capturer = byId(users, lead.surveyorId);
+      const captured: AppendInput = { type: 'lead.captured', subject: { kind: 'lead', id: lead.id }, clientEventId: `lead:${lead.id}`, payload: { code: lead.code, siteName: lead.siteName, city: lead.city, lat: lead.location.lat, lng: lead.location.lng } };
+      if (capturer && capturer.role !== 'admin') eventLog.append(capturer.id, captured);
+      else eventLog.appendSystem({ ...captured, source: 'system', reasonTag: 'entered_for_scout', payload: { ...captured.payload, byUserId: lead.surveyorId } });
       return lead;
     }),
 
@@ -28404,6 +28466,14 @@ export const memoryRepository: Repository = {
       return { entries: list.slice(offset, offset + limit).map((e) => ({ ...e })), total: list.length } as PermissionLogView;
     }),
   /* 193 — single-person monitor */
+  appendEvent: (userId, input) => simulateWrite(() => eventCall(() => eventLog.append(userId, input))),
+  listEvents: (userId, filter) => simulateRead(() => eventCall(() => eventLog.list(userId, filter))),
+  getEffectiveEvent: (userId, eventId) => simulateRead(() => eventCall(() => eventLog.effective(userId, eventId))),
+  correctEvent: (userId, eventId, patch, reason) => simulateWrite(() => eventCall(() => eventLog.correct(userId, eventId, patch, reason))),
+  decideEventCorrection: (userId, proposalId, approve, reason) => simulateWrite(() => eventCall(() => eventLog.decideCorrection(userId, proposalId, approve, reason))),
+  markEvent: (userId, eventId, kind, text) => simulateWrite(() => eventCall(() => eventLog.mark(userId, eventId, kind, text))),
+  verifyEventLog: (userId) => simulateRead(() => { if (!isAdminRole(byId(users, userId)?.role)) throw new RepositoryError('forbidden'); return eventLog.verify(); }),
+  listMapSites: (userId, from) => simulateRead(() => mapSitesFor(userId, from)),
   listDecisionCards: (userId, filter) => simulateRead(() => decisionCall(() => decisionStore.list(userId, filter))),
   getDecisionCard: (userId, cardId) => simulateRead(() => decisionCall(() => decisionStore.get(userId, cardId))),
   prepareDecisionPacket: (userId, input) => simulateWrite(() => decisionCall(() => decisionStore.prepare(userId, input))),

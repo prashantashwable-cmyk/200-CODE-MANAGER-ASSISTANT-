@@ -1,4 +1,6 @@
 import type { VaultKind } from '@/features/documents/vault';
+import type { AppendInput, CorrectionClass, PlatformEvent } from '@/features/events/eventLog';
+import type { ContactLevel, RevealLevel } from '@/features/geo/privacy';
 import type { DecisionCard, DecisionInput, DecisionRecord, DecisionStatusRow, DecisionView, PacketInput } from '@/features/decisions/decisions';
 import type { DecisionKind, DecisionStatus } from '@/features/authority/authority';
 import type { ChainCheck } from '@/features/audit/chain';
@@ -10160,7 +10162,32 @@ export interface Repository {
   prepareDecisionPacket(userId: string, input: PacketInput): Promise<DecisionCard>;
   decideDecisionCard(userId: string, input: DecisionInput): Promise<{ card: DecisionCard; record: DecisionRecord }>;
   verifyDecisionChain(userId: string): Promise<ChainCheck>;
+  /* 203 — platform event log (master prompt P9) */
+  appendEvent(userId: string, input: AppendInput): Promise<{ event: PlatformEvent; duplicate: boolean }>;
+  listEvents(userId: string, filter?: { subject?: { kind: string; id: string }; family?: string; type?: string }): Promise<PlatformEvent[]>;
+  getEffectiveEvent(userId: string, eventId: string): Promise<{ event: PlatformEvent; payload: Record<string, unknown>; corrections: PlatformEvent[] }>;
+  correctEvent(userId: string, eventId: string, patch: Record<string, unknown>, reason: string): Promise<{ status: 'applied' | 'needs_approval'; event: PlatformEvent; class: CorrectionClass }>;
+  decideEventCorrection(userId: string, proposalId: string, approve: boolean, reason: string): Promise<PlatformEvent>;
+  markEvent(userId: string, eventId: string, kind: 'flagged' | 'annotated' | 'disputed', text: string): Promise<PlatformEvent>;
+  verifyEventLog(userId: string): Promise<ChainCheck>;
+  /* 204 — map workspace: what each role may see of each site, decided here and not on the screen */
+  listMapSites(userId: string, from?: { lat: number; lng: number }): Promise<MapSitesView>;
 }
+
+export interface MapSitePin {
+  id: string;
+  code: string;
+  /** Exact: the site's name. Fuzzed: the locality only. */
+  label: string;
+  stage: string;
+  level: RevealLevel;
+  /** Absent when the role may not see a place. Fuzzed pins carry the fuzzed point, never the real one. */
+  point?: { lat: number; lng: number };
+  distanceM?: number;
+  contact: ContactLevel;
+  mine: boolean;
+}
+export interface MapSitesView { pins: MapSitePin[]; density: { lat: number; lng: number; count: number }[]; fuzzRadiusM: number; role: Role }
 
 export interface DecisionListView { level: 'detail' | 'status'; cards: DecisionCard[]; statusRows: DecisionStatusRow[] }
 

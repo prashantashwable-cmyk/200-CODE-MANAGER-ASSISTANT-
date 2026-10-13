@@ -5,7 +5,7 @@ Slice order follows the prompt. "Done in this branch" is limited to what the tes
 | Slice | Scope | State |
 |---|---|---|
 | 1 Foundation | Audit docs, Owner role, authority rules, Decision Desk, Owner security, adaptive layout, tests | **Done in this branch** except: database-level rules and persistence (needs Supabase project; G1) |
-| 2 Map and leads | Shared map shell for Scout/Sales/Owner, lead capture persisted, duplicate ownership, offline queue, general event table, corrections 1–2, pin fuzzing | Next |
+| 2 Map and leads | Shared map shell for Scout/Sales/Owner, lead capture persisted, duplicate ownership, offline queue, general event table, corrections 1–2, pin fuzzing | **Part done:** event log with correction classes, pin fuzzing and role-scoped map, Activity Log and Map screens, lead capture emits events. **Next:** offline queue with conflict handling, duplicate-ownership rule, lead capture screen on the map, database tables and row-level rules |
 | 3 Sales and quotes | Handoff, requirement capture, itemised quote with disclosed facilitation fee, customer acceptance | Planned |
 | 4 Contracts and readiness | Work orders, e-sign and payment adapters (flagged off until connected), QC tasks | Planned |
 | 5 Delivery and install | Supplier/logistics, delivery proof, milestones, handover record | Planned |
