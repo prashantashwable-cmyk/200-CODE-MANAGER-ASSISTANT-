@@ -13,7 +13,7 @@ Status uses only: **Done** (persisted as designed, tested), **Partial**, **Plann
 | P4 | "Make this a rule", SLA timers, AI-drafted replies, threads | Not started | |
 | P5 | Decision recorded with AI recommendation | Partial | card carries recommendation; outcome labels not yet |
 | P9.1 | Hash-chained immutable event with the full field set | Partial | `features/events/eventLog.ts`: device time and server time kept apart, clock skew flagged, evidence hash, AI metadata, correlation id, previous-event hash; idempotent by client event id. In memory only |
-| P9.1 | Taxonomy of at least 60 event types | Done | `features/events/taxonomy.ts`: 16 families, 100+ types, tested |
+| P9.1 | Taxonomy of at least 60 event types | Done | `features/events/taxonomy.ts`: 16 families, 79 types (requirement: at least 60), tested |
 | P9.2 | Event Log page, scoped per role | Partial | screen 203 (`/log`): family filter, correction sheet, corrected and clock-off badges. Not built: search, saved views, "needs my attention" tab, filter by map view |
 | P9.3 | Correction classes 1–4 | Partial | classes decided in `classOf`; class 2 applies at once and keeps the original; class 3 goes to the Owner (Admin cannot approve); class 4 refuses edits and allows dispute. Window is fixed at 15 minutes (not yet Owner-settable); cascade engine and impact preview not built |
 | P8.5 | Pin fuzzing, contact masking, Admin sees density only | Done in the data layer | `features/geo/privacy.ts` + `listMapSites`; tested through the repository including that the real point and site name never appear in a partner's response. In-memory: a database build must move this into views/functions |
