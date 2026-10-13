@@ -54,7 +54,7 @@ test('map and log screenshots', async ({ browser }) => {
     await page.waitForURL(/\/surveyor/);
     await page.evaluate(async () => {
       const repo = (window as unknown as { __aiecRepo: { createLead(d: unknown): Promise<unknown> } }).__aiecRepo;
-      await repo.createLead({ stage: 'captured', surveyorId: 'u-srv-3', source: 'surveyor_field', builderName: 'B', contactName: 'C', contactPhone: '9822000111', siteName: 'Hinjawadi Phase 3 Plot 12', address: 'A', city: 'Pune', pincode: '411057', location: { lat: 18.59, lng: 73.73 }, photos: [], estimatedValue: 1, incentiveAmount: 1, incentiveStatus: 'projected' });
+      await repo.createLead({ stage: 'captured', surveyorId: 'u-srv-3', source: 'field_survey', builderName: 'B', contactName: 'C', contactPhone: '9822000111', siteName: 'Hinjawadi Phase 3 Plot 12', address: 'A', city: 'Pune', pincode: '411057', location: { lat: 18.59, lng: 73.73 }, photos: [], estimatedValue: 1, incentiveAmount: 1, incentiveStatus: 'projected' });
     });
     await go(page, '/log');
     const card = page.locator('.ds-card', { hasText: 'Hinjawadi Phase 3' }); await card.waitFor(); await card.click();

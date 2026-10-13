@@ -19,7 +19,7 @@ export interface PlatformEvent {
   /** Time on the device when it happened, and when the server received it: never merged. */
   capturedAt: string;
   receivedAt: string;
-  /** Device clock more than SKEW_FLAG_MS from the server's: kept as is, flagged. */
+  /** The phone's clock error measured at send: (phone clock when sending) minus (server clock). 0 when not measured. Beyond SKEW_FLAG_MS it is flagged. */
   skewMs: number;
   source: 'app' | 'ai' | 'system' | 'human';
   geo?: { lat: number; lng: number; accuracyM: number };
@@ -39,6 +39,8 @@ export interface AppendInput {
   type: string;
   subject: { kind: string; id: string };
   capturedAt?: string;
+  /** The phone's clock reading at the moment of sending: lets the server measure its clock error. An old offline capture is not a wrong clock. */
+  deviceSentAt?: string;
   source?: PlatformEvent['source'];
   geo?: PlatformEvent['geo'];
   evidence?: PlatformEvent['evidence'];
@@ -90,8 +92,8 @@ export function createEventLog(deps: EventDeps) {
     if (!isEventType(input.type)) throw new EventError('unknown_type');
     const receivedAt = deps.now();
     const capturedAt = input.capturedAt ?? receivedAt;
-    const skewMs = Date.parse(capturedAt) - Date.parse(receivedAt);
-    if (!Number.isFinite(skewMs)) throw new EventError('time_invalid');
+    if (!Number.isFinite(Date.parse(capturedAt)) || (input.deviceSentAt !== undefined && !Number.isFinite(Date.parse(input.deviceSentAt)))) throw new EventError('time_invalid');
+    const skewMs = input.deviceSentAt ? Date.parse(input.deviceSentAt) - Date.parse(receivedAt) : 0;
     counter += 1;
     const prevHash = events[events.length - 1]?.hash ?? GENESIS;
     const base = { id: `ev-${counter}`, seq: events.length + 1, type: input.type, actor, subject: input.subject, capturedAt, receivedAt, skewMs, source: input.source ?? 'app', ...(input.geo ? { geo: input.geo } : {}), ...(input.evidence ? { evidence: input.evidence } : {}), ...(input.ai ? { ai: input.ai } : {}), ...(input.reasonTag ? { reasonTag: input.reasonTag } : {}), correlationId: input.correlationId ?? `co-${counter}`, ...(input.clientEventId ? { clientEventId: input.clientEventId } : {}), ...(input.about ? { about: input.about } : {}), payload: input.payload ?? {} };

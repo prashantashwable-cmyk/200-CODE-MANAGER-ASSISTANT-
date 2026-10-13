@@ -10172,7 +10172,24 @@ export interface Repository {
   verifyEventLog(userId: string): Promise<ChainCheck>;
   /* 204 — map workspace: what each role may see of each site, decided here and not on the screen */
   listMapSites(userId: string, from?: { lat: number; lng: number }): Promise<MapSitesView>;
+  /* 205 — lead capture with the ownership rule. Idempotent on `clientEventId`, so an offline retry never records twice. */
+  submitLeadCapture(userId: string, input: LeadCaptureInput): Promise<LeadCaptureResult>;
 }
+
+export interface LeadCaptureInput {
+  clientEventId: string;
+  draft: Parameters<Repository['createLead']>[0];
+  /** The phone's GPS error in metres, when it gave one. */
+  accuracyM?: number | null;
+  /** When it truly happened on the device (an offline capture is sent later). */
+  capturedAt?: string;
+  /** The phone's clock when it sent this: lets the server measure the clock error rather than guess it. */
+  deviceSentAt?: string;
+}
+export type LeadCaptureResult =
+  | { outcome: 'claimed'; lead: Lead; duplicate: boolean }
+  | { outcome: 'supporting'; lead: Lead; ownerLeadId: string; duplicate: boolean }
+  | { outcome: 'review'; lead: Lead; ownerLeadId: string; decisionCardId: string; duplicate: boolean };
 
 export interface MapSitePin {
   id: string;

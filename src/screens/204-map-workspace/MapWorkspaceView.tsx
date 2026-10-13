@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Badge, Card, EmptyState, ErrorState, Input, ListRow, LoadingState, MapCanvas, Screen, ScreenHeader } from '@/design-system';
+import { Badge, Button, Card, EmptyState, ErrorState, Input, ListRow, LoadingState, MapCanvas, Screen, ScreenHeader } from '@/design-system';
 import type { MapHeatCell, MapMarker } from '@/design-system';
 import { useData } from '@/data/DataProvider';
 import { useSession } from '@/session/SessionProvider';
@@ -13,6 +14,7 @@ export function MapWorkspaceScreen() {
   const { t } = useTranslation();
   const repository = useData();
   const { user, role } = useSession();
+  const navigate = useNavigate();
   const uid = user?.id ?? '';
   const [view, setView] = useState<MapSitesView | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -38,7 +40,7 @@ export function MapWorkspaceScreen() {
 
   return (
     <Screen width="wide">
-      <ScreenHeader title={t('mapWork.title')} subtitle={t(role === 'admin' ? 'mapWork.subtitleAdmin' : 'mapWork.subtitle')} />
+      <ScreenHeader title={t('mapWork.title')} subtitle={t(role === 'admin' ? 'mapWork.subtitleAdmin' : 'mapWork.subtitle')} action={role === 'surveyor' || role === 'owner' ? <Button size="sm" onClick={() => navigate('/capture')}>{t('mapWork.capture')}</Button> : undefined} />
       {state === 'loading' && <LoadingState label={t('mapWork.loading')} rows={3} variant="block" />}
       {state === 'error' && <ErrorState title={t('mapWork.error.title')} body={t('mapWork.error.body')} retryLabel={t('mapWork.error.retry')} onRetry={() => void read()} />}
       {state === 'ready' && view && (

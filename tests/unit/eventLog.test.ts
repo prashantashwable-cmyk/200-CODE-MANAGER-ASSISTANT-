@@ -21,12 +21,16 @@ describe('taxonomy', () => {
 });
 
 describe('appending', () => {
-  it('records who did it from the session, not from the client, and keeps device time and server time apart', () => {
+  it('records who did it from the session, not from the client, keeps device time and server time apart, and measures clock error rather than guessing it', () => {
     const log = make();
-    const { event } = log.append('scout1', { type: 'lead.captured', subject: lead(), capturedAt: new Date(clock - 60_000).toISOString(), geo: { lat: 18.59, lng: 73.73, accuracyM: 9 } });
+    const { event } = log.append('scout1', { type: 'lead.captured', subject: lead(), capturedAt: new Date(clock - 3 * 3_600_000).toISOString(), geo: { lat: 18.59, lng: 73.73, accuracyM: 9 } });
     expect(event.actor).toEqual({ role: 'surveyor', id: 'scout1' });
     expect(event.capturedAt).not.toBe(event.receivedAt);
-    expect(event.skewMs).toBe(-60_000);
+    // an offline capture sent hours later is not a wrong clock: with no measurement the error is simply unknown (0)
+    expect(event.skewMs).toBe(0);
+    // a phone that reports its clock at send lets the server measure the error
+    const fast = log.append('scout1', { type: 'lead.photo_added', subject: lead(), deviceSentAt: new Date(clock + 3_600_000).toISOString() });
+    expect(fast.event.skewMs).toBe(3_600_000);
   });
   it('is idempotent on clientEventId, so a retry after a dropped connection does not double-record', () => {
     const log = make();

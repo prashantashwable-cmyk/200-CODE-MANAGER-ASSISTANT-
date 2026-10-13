@@ -85,3 +85,14 @@ memory), backups. Each screen that depends on one says so; see
 - **Owner may correct another person's non-locked event directly.** Class 3 approval is for everyone else; this is the one place the Owner is not sent to themselves. Locked (class 4) events are locked for the Owner too.
 - **No Event Log search, saved views, "needs my attention" tab, or Owner-settable correction window.**
 - **No sync conflict handling beyond idempotency and clock-skew flags.** The offline queue, field-level merge and conflict cards are not built.
+
+## Added with lead capture, ownership and the offline queue
+
+- **Approving an ownership dispute does nothing yet.** The Owner can decide the card, and the decision is recorded, but the lead stays where it is. Moving the lead (and its capture commission) on approval is not built.
+- **Supporting captures carry no photos or contact data yet**, only a note on the lead's timeline and an event. The capture screen has no photo step.
+- **No duplicate warning before saving.** The scout learns the outcome after the capture is sent, which is the only honest moment offline. An online pre-check is not built.
+- **Backdating is bounded, not prevented.** A capture cannot claim to be more than 72 hours old or later than the server received it, and an earlier-looking capture from a different scout always goes to the Owner. A phone that lies about its whole clock for a lead captured within those 72 hours cannot be caught by software alone.
+- **The offline queue lives in browser storage** (`aiec.captureQueue.<user>`). A cleared browser loses what has not been sent. Only lead capture uses it.
+- **Ownership settings** (60 m radius, 30 days, 30 m GPS limit, 5 minutes, 72 h offline) are code defaults, not yet Owner-editable.
+- **Seeded leads have no recorded GPS accuracy**, so a new capture beside one is judged on position and time only.
+- **Capture and Map are reachable from the map's button and by address**; surveyors' bottom tab bar still points at the older capture screen (032), which does not use the ownership rule.

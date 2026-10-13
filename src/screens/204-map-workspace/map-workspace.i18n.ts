@@ -3,6 +3,7 @@ import type { ScreenTranslations } from '@/i18n/types';
 /** Screen 204. The map workspace, in three languages. */
 const translations: ScreenTranslations = {
   en: { mapWork: {
+    "capture": "Capture a site",
   "title": "Map",
   "subtitle": "Your sites on one map. A place appears only as exactly as you are allowed to know it.",
   "subtitleAdmin": "How many sites are where, never a single site. This protects partners and customers.",
@@ -43,6 +44,7 @@ const translations: ScreenTranslations = {
   }
 } },
   hi: { mapWork: {
+    "capture": "साइट दर्ज करें",
   "title": "नक्शा",
   "subtitle": "आपकी साइटें एक नक्शे पर। जगह उतनी ही सटीक दिखती है जितनी जानने की आपको अनुमति है।",
   "subtitleAdmin": "कितनी साइटें कहाँ हैं, कभी कोई एक साइट नहीं। यह पार्टनर और ग्राहकों की रक्षा करता है।",
@@ -83,6 +85,7 @@ const translations: ScreenTranslations = {
   }
 } },
   mr: { mapWork: {
+    "capture": "साइट नोंदवा",
   "title": "नकाशा",
   "subtitle": "तुमच्या साइट्स एका नकाशावर. ठिकाण तितकेच अचूक दिसते जितके जाणण्याची तुम्हाला परवानगी आहे.",
   "subtitleAdmin": "कोणत्या भागात किती साइट्स, कधीही एकच साइट नाही. यामुळे पार्टनर आणि ग्राहकांचे रक्षण होते.",

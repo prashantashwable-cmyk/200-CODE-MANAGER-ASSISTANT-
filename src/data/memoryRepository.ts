@@ -93,7 +93,7 @@ import {
   simulateRead,
   simulateWrite,
 } from './repository';
-import type { MapSitePin, MapSitesView } from './repository';
+import type { LeadCaptureResult, MapSitePin, MapSitesView } from './repository';
 import type {
   BotSimulationResult,
   BroadcastSegmentPreview,
@@ -896,6 +896,8 @@ import type {
 } from './types';
 import { createDecisionStore, DecisionError } from '@/features/decisions/decisions';
 import { createEventLog, EventError } from '@/features/events/eventLog';
+import { decideOwnership } from '@/features/leads/ownership';
+import type { Capture as OwnCapture0 } from '@/features/leads/ownership';
 import type { AppendInput } from '@/features/events/eventLog';
 import { aggregateDensity, contactLevel, DEFAULT_FUZZ_RADIUS_M, fuzzPin, revealLevel, shownDistanceM } from '@/features/geo/privacy';
 import type { SiteStage } from '@/features/geo/privacy';
@@ -18846,6 +18848,46 @@ function decisionCall<T>(fn: () => T): T {
   try { return fn(); } catch (e) { if (e instanceof DecisionError) throw new RepositoryError(e.code); throw e; }
 }
 
+type OwnCapture = OwnCapture0;
+/** What each lead's capture looked like when it came in, for the ownership rule. Leads from before this existed fall back to their created time. */
+const captureMeta = new Map<string, OwnCapture>();
+const captureResults = new Map<string, LeadCaptureResult>();
+
+function ownershipSummary(reason: 'accuracy_conflict' | 'too_close_to_order' | 'earlier_capture_synced_late', first: string, second: string): string {
+  if (reason === 'too_close_to_order') return `${first} and ${second} captured the same site minutes apart, too close for phone clocks to say who was first.`;
+  if (reason === 'earlier_capture_synced_late') return `${second} says they captured this site before ${first}'s capture on record, but it reached the server later. It cannot be checked, so it needs a decision.`;
+  return `${first}'s earlier capture has a poor GPS fix and ${second}'s later one is accurate.`;
+}
+
+function createLeadRecord(draft: Parameters<Repository['createLead']>[0], meta?: { clientEventId?: string; capturedAt?: string; receivedAt?: string; deviceSentAt?: string; clockSkewMs?: number; accuracyM?: number | null; duplicateOfLeadId?: string }): Lead {
+  leadCounter += 1;
+  const now = new Date().toISOString();
+  const lead: Lead = {
+    ...draft,
+    id: `l-new-${leadCounter}`,
+    code: `AIEC-L-0${leadCounter}`,
+    originalSurveyorId: draft.surveyorId,
+    createdAt: now,
+    updatedAt: now,
+    stageEnteredAt: now,
+    isDemo: true,
+    ...(meta?.duplicateOfLeadId ? { duplicateOfLeadId: meta.duplicateOfLeadId } : {}),
+  };
+  leads.unshift(lead);
+  captureMeta.set(lead.id, { leadId: lead.id, scoutId: lead.surveyorId, at: lead.location, capturedAt: meta?.capturedAt ?? now, receivedAt: meta?.receivedAt ?? now, ...(meta?.clockSkewMs !== undefined ? { clockSkewMs: meta.clockSkewMs } : {}), accuracyM: meta?.accuracyM ?? null, phone: lead.contactPhone });
+  pushTimelineEvent({ leadId: lead.id, kind: 'captured', actorName: nameOf(lead.surveyorId), at: now, detail: lead.siteName });
+  // The same capture, as an event in the platform stream. Admin cannot write business events, so a lead entered for a scout is a system event naming who.
+  const capturer = byId(users, lead.surveyorId);
+  const captured: AppendInput = {
+    type: 'lead.captured', subject: { kind: 'lead', id: lead.id }, clientEventId: meta?.clientEventId ?? `lead:${lead.id}`, ...(meta?.capturedAt ? { capturedAt: meta.capturedAt } : {}), ...(meta?.deviceSentAt ? { deviceSentAt: meta.deviceSentAt } : {}),
+    ...(meta?.accuracyM != null ? { geo: { lat: lead.location.lat, lng: lead.location.lng, accuracyM: meta.accuracyM } } : {}),
+    payload: { code: lead.code, siteName: lead.siteName, city: lead.city, lat: lead.location.lat, lng: lead.location.lng },
+  };
+  if (capturer && capturer.role !== 'admin') eventLog.append(capturer.id, captured);
+  else eventLog.appendSystem({ ...captured, source: 'system', reasonTag: 'entered_for_scout', payload: { ...captured.payload, byUserId: lead.surveyorId } });
+  return lead;
+}
+
 /** Server-only salt for pin fuzzing: never sent to a browser. A database build keeps it as a secret. */
 const GEO_SALT = randomToken(16);
 const geoRadiusM = DEFAULT_FUZZ_RADIUS_M;
@@ -18952,28 +18994,47 @@ export const memoryRepository: Repository = {
 
   getLead: (id) => simulateRead(() => resolveLead(id)),
 
-  createLead: (draft) =>
+  createLead: (draft) => simulateWrite(() => createLeadRecord(draft)),
+
+  submitLeadCapture: (userId, input) =>
     simulateWrite(() => {
-      leadCounter += 1;
-      const now = new Date().toISOString();
-      const lead: Lead = {
-        ...draft,
-        id: `l-new-${leadCounter}`,
-        code: `AIEC-L-0${leadCounter}`,
-        originalSurveyorId: draft.surveyorId,
-        createdAt: now,
-        updatedAt: now,
-        stageEnteredAt: now,
-        isDemo: true,
-      };
-      leads.unshift(lead);
-      pushTimelineEvent({ leadId: lead.id, kind: 'captured', actorName: nameOf(lead.surveyorId), at: now, detail: lead.siteName });
-      // The same capture, as an event in the platform stream. Admin cannot write business events, so a lead entered for a scout is a system event naming who.
-      const capturer = byId(users, lead.surveyorId);
-      const captured: AppendInput = { type: 'lead.captured', subject: { kind: 'lead', id: lead.id }, clientEventId: `lead:${lead.id}`, payload: { code: lead.code, siteName: lead.siteName, city: lead.city, lat: lead.location.lat, lng: lead.location.lng } };
-      if (capturer && capturer.role !== 'admin') eventLog.append(capturer.id, captured);
-      else eventLog.appendSystem({ ...captured, source: 'system', reasonTag: 'entered_for_scout', payload: { ...captured.payload, byUserId: lead.surveyorId } });
-      return lead;
+      const user = byId(users, userId);
+      if (!user || (user.role !== 'surveyor' && user.role !== 'owner')) throw new RepositoryError('forbidden');
+      if (!input.clientEventId) throw new RepositoryError('client_event_id_required');
+      if (user.role === 'surveyor' && input.draft.surveyorId !== userId) throw new RepositoryError('forbidden');
+      const done = captureResults.get(`${userId}|${input.clientEventId}`);
+      if (done) return { ...done, duplicate: true };
+      const point = input.draft.location;
+      if (!Number.isFinite(point.lat) || !Number.isFinite(point.lng) || Math.abs(point.lat) > 90 || Math.abs(point.lng) > 180) throw new RepositoryError('location_invalid');
+      if (!input.draft.siteName.trim()) throw new RepositoryError('site_name_required');
+      const receivedAt = new Date().toISOString();
+      const capturedAt = input.capturedAt && Number.isFinite(Date.parse(input.capturedAt)) ? input.capturedAt : receivedAt;
+      const clockSkewMs = input.deviceSentAt && Number.isFinite(Date.parse(input.deviceSentAt)) ? Date.parse(input.deviceSentAt) - Date.parse(receivedAt) : undefined;
+      const incoming: OwnCapture = { leadId: `pending:${input.clientEventId}`, scoutId: input.draft.surveyorId, at: point, capturedAt, receivedAt, ...(clockSkewMs !== undefined ? { clockSkewMs } : {}), accuracyM: input.accuracyM ?? null, phone: input.draft.contactPhone };
+      const existing: OwnCapture[] = leads.map((l) => captureMeta.get(l.id) ?? { leadId: l.id, scoutId: l.originalSurveyorId, at: l.location, capturedAt: l.createdAt, receivedAt: l.createdAt, accuracyM: null, phone: l.contactPhone });
+      const verdict = decideOwnership(existing, incoming);
+      let result: LeadCaptureResult;
+      if (verdict.outcome === 'supporting') {
+        const owner = byId(leads, verdict.ownerLeadId)!;
+        pushTimelineEvent({ leadId: owner.id, kind: 'note_added', actorName: nameOf(userId), at: receivedAt, detail: `Another capture of this site by ${nameOf(input.draft.surveyorId)}: kept as supporting evidence`, topic: 'other' });
+        eventLog.append(userId, { type: 'lead.duplicate_detected', subject: { kind: 'lead', id: owner.id }, capturedAt, ...(input.deviceSentAt ? { deviceSentAt: input.deviceSentAt } : {}), clientEventId: input.clientEventId, geo: { lat: point.lat, lng: point.lng, accuracyM: input.accuracyM ?? 0 }, payload: { supportingFor: owner.id, siteName: input.draft.siteName } });
+        result = { outcome: 'supporting', lead: owner, ownerLeadId: owner.id, duplicate: false };
+      } else {
+        const lead = createLeadRecord(input.draft, { clientEventId: input.clientEventId, capturedAt, receivedAt, ...(input.deviceSentAt ? { deviceSentAt: input.deviceSentAt } : {}), ...(clockSkewMs !== undefined ? { clockSkewMs } : {}), accuracyM: input.accuracyM ?? null, ...(verdict.outcome === 'review' ? { duplicateOfLeadId: verdict.ownerLeadId } : {}) });
+        if (verdict.outcome === 'review') {
+          const owner = byId(leads, verdict.ownerLeadId)!;
+          const card = decisionStore.raiseSystem({
+            kind: 'lead_ownership_dispute', proposedByName: 'Duplicate detection',
+            title: `Two scouts captured ${lead.siteName}`,
+            summary: ownershipSummary(verdict.reason, nameOf(owner.originalSurveyorId), nameOf(input.draft.surveyorId)),
+            place: { lat: point.lat, lng: point.lng, label: lead.city }, evidence: [{ label: `First capture ${owner.code}`, kind: 'map' }, { label: `Second capture ${lead.code}`, kind: 'map' }],
+            impact: ['The winner earns the lead commission', 'The other capture stays as supporting evidence'],
+          });
+          result = { outcome: 'review', lead, ownerLeadId: owner.id, decisionCardId: card.id, duplicate: false };
+        } else result = { outcome: 'claimed', lead, duplicate: false };
+      }
+      captureResults.set(`${userId}|${input.clientEventId}`, result);
+      return result;
     }),
 
   updateLead: (id, patch) =>
