@@ -54,6 +54,7 @@ const STORAGE_KEY_THEME = 'aiec.theme';
 const STORAGE_KEY_SESSION = 'aiec.session';
 
 const DEMO_USER_BY_ROLE: Record<Role, string> = {
+  owner: 'u-owner-1',
   admin: 'u-admin-1',
   surveyor: 'u-srv-1',
   technician: 'u-tech-1',

@@ -15,6 +15,7 @@ import {
   MapTrifold,
   Path,
   PlusCircle,
+  Scales,
   Receipt,
   Package,
   Storefront,
@@ -43,6 +44,14 @@ export interface NavItem {
 const ICON_SIZE = 22;
 
 export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
+  owner: [
+    { id: 'home', labelKey: 'nav.home', path: '/owner', icon: <House size={ICON_SIZE} /> },
+    { id: 'map', labelKey: 'nav.map', path: '/admin/map', icon: <MapTrifold size={ICON_SIZE} /> },
+    { id: 'decisions', labelKey: 'nav.decisions', path: '/owner/decisions', icon: <Scales size={ICON_SIZE} /> },
+    { id: 'analytics', labelKey: 'nav.analytics', path: '/admin/analytics/funnel', icon: <ChartLineUp size={ICON_SIZE} /> },
+    { id: 'alerts', labelKey: 'nav.alerts', path: '/admin/alerts', icon: <Bell size={ICON_SIZE} /> },
+    { id: 'settings', labelKey: 'nav.settings', path: '/settings', icon: <Gear size={ICON_SIZE} /> },
+  ],
   admin: [
     { id: 'home', labelKey: 'nav.home', path: '/admin', icon: <House size={ICON_SIZE} /> },
     { id: 'map', labelKey: 'nav.map', path: '/admin/map', icon: <MapTrifold size={ICON_SIZE} /> },

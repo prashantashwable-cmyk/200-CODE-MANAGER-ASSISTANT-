@@ -893,6 +893,8 @@ import type {
   SopRolloutReceipt,
   TrainingFeedback,
 } from './types';
+import { createDecisionStore, DecisionError } from '@/features/decisions/decisions';
+import { seedDecisionCards } from './decisionSeed';
 import { formatDate, formatDateTime, formatINR, formatINRCompact, formatTime, haversineKm } from '@/design-system/format';
 import { MAX_SAFE_BOT_DISCOUNT_PCT } from '@/features/communication/botRules';
 import { extractMergeFields, renderTemplateBody } from '@/features/communication/templateRender';
@@ -1444,7 +1446,7 @@ function intOverview(now: number): InternalNotificationsView {
 }
 function intAdmin(userId: string): User {
   const u = byId(users, userId);
-  if (u?.role !== 'admin') throw new RepositoryError('forbidden');
+  if ((!u || !isAdminRole(u.role))) throw new RepositoryError('forbidden');
   return u;
 }
 const intSetOk = (c: unknown): c is InternalChannelSet => !!c && INT_CHANNELS.every((ch) => typeof (c as Record<string, unknown>)[ch] === 'boolean');
@@ -1460,6 +1462,9 @@ function logAutomatedAction(input: AutomatedActionInput): AutomatedActionLogEntr
   automatedActionLog.push(entry);
   return entry;
 }
+
+/** Owner holds every authority Admin holds (P1): a gate that lets Admin through lets the Owner through. The reverse is never true for restricted decisions (see features/authority). */
+function isAdminRole(role: string | undefined | null): boolean { return role === 'admin' || role === 'owner'; }
 
 const objectionScripts = [...seedObjectionScripts];
 let objectionScriptCounter = 100;
@@ -3232,7 +3237,7 @@ function wfEvent(r: CustomRule, kind: CustomRuleEvent['kind'], byName: string, d
 }
 function wfAdmin(userId: string): User {
   const u = byId(users, userId);
-  if (u?.role !== 'admin') throw new RepositoryError('forbidden');
+  if ((!u || !isAdminRole(u.role))) throw new RepositoryError('forbidden');
   return u;
 }
 function wfRule(id: string): CustomRule {
@@ -4521,7 +4526,7 @@ function cpSignals(now: number): { verify: { id: string; version: number; dueAt:
 
 /** The screens the app declares (one entry per route) and each role's home. The repository holds only decisions; every judgement is made against this table. */
 let accessCatalogue: PmScreenRef[] = [];
-let accessHomes: Record<Role, string> = { admin: '/admin', surveyor: '/surveyor', technician: '/technician', customer: '/customer', supplier: '/orders' };
+let accessHomes: Record<Role, string> = { owner: '/owner', admin: '/admin', surveyor: '/surveyor', technician: '/technician', customer: '/customer', supplier: '/orders' };
 const customRoles: CustomRole[] = [];
 const roleDecisions = new Map<string, PmDecision>();
 const userRoleAssign = new Map<string, string[]>();
@@ -4821,7 +4826,7 @@ function mnBackupCandidates(adminId: string): MonitorBackupCandidate[] {
   const out: MonitorBackupCandidate[] = [];
   for (const c of escBackups) {
     const u = c?.userId ? byId(users, c.userId) : undefined;
-    if (u && u.status === 'active' && u.role !== 'admin' && u.role !== 'customer' && u.role !== 'supplier' && !seen.has(u.id)) { seen.add(u.id); out.push({ userId: u.id, name: u.name, role: u.role, fromMatrix: true }); }
+    if (u && u.status === 'active' && !isAdminRole(u.role) && u.role !== 'customer' && u.role !== 'supplier' && !seen.has(u.id)) { seen.add(u.id); out.push({ userId: u.id, name: u.name, role: u.role, fromMatrix: true }); }
   }
   for (const u of users) if (u.status === 'active' && (u.role === 'surveyor' || u.role === 'technician') && !seen.has(u.id) && out.length < 14 && u.id !== adminId) { seen.add(u.id); out.push({ userId: u.id, name: u.name, role: u.role, fromMatrix: false }); }
   return out;
@@ -4869,7 +4874,7 @@ function mnSignalsForCommitments(now: number): { checks: { adminId: string; day:
   const today = mnDayKey(now);
   const checks: { adminId: string; day: string; dueAt: string }[] = [];
   for (const u of users) {
-    if (u.role !== 'admin' || u.status !== 'active') continue;
+    if (!isAdminRole(u.role) || u.status !== 'active') continue;
     const cfg = mnConfigOf(u.id);
     if (!cfg.checkDays.includes(new Date(now).getDay()) || mnAway(u.id)(today)) continue;
     if (monitorChecks.some((c) => c.adminId === u.id && mnDayKey(Date.parse(c.at)) === today)) continue;
@@ -5431,13 +5436,13 @@ function secEnsure(): void {
   const t = (ms: number): number => now - ms;
   securityPolicies.push({
     id: 'sp-1', version: 1, effectiveFrom: secIso(t(365 * secDay)), createdAt: secIso(t(365 * secDay)), byName: 'Prashant Vasant Wable', reason: 'The starting security settings: a second step for Admin, the rest for the owner and his adviser to review.',
-    config: JSON.parse(JSON.stringify(SEC_DEFAULT)) as SecurityConfig, twoFactorSince: { admin: secIso(t(365 * secDay)), surveyor: null, technician: null, supplier: null, customer: null }, weakened: [],
+    config: JSON.parse(JSON.stringify(SEC_DEFAULT)) as SecurityConfig, twoFactorSince: { owner: secIso(t(365 * secDay)), admin: secIso(t(365 * secDay)), surveyor: null, technician: null, supplier: null, customer: null }, weakened: [],
   });
   const v2 = JSON.parse(JSON.stringify(SEC_DEFAULT)) as SecurityConfig;
   v2.twoFactor.technician = { required: true, graceDays: 14 };
   securityPolicies.push({
     id: 'sp-2', version: 2, effectiveFrom: secIso(t(1 * secDay)), createdAt: secIso(t(1 * secDay)), byName: 'Prashant Vasant Wable', reason: 'Technicians carry customers\' addresses and site records on their phones: a second step protects them if a phone is lost.',
-    config: v2, twoFactorSince: { admin: secIso(t(365 * secDay)), surveyor: null, technician: secIso(t(1 * secDay)), supplier: null, customer: null }, weakened: [],
+    config: v2, twoFactorSince: { owner: secIso(t(365 * secDay)), admin: secIso(t(365 * secDay)), surveyor: null, technician: secIso(t(1 * secDay)), supplier: null, customer: null }, weakened: [],
   });
   secEvent({ kind: 'policy_changed', userId: 'u-admin-1', at: secIso(t(1 * secDay)), byName: 'Prashant Vasant Wable', detail: securityPolicies[1].reason });
   const has = (id: string): boolean => !!byId(users, id);
@@ -5454,6 +5459,7 @@ function secEnsure(): void {
     twoFactorEnrolments.push({ userId, method, enrolledAt: secIso(t(agoDays * secDay)), secondPhoneMasked: secondPhone ? secMaskPhone(secondPhone) : undefined });
     secEvent({ kind: 'twofa_enrolled', userId, at: secIso(t(agoDays * secDay)) });
   };
+  enrol('u-owner-1', 'authenticator', 300);
   enrol('u-admin-1', 'authenticator', 300);
   enrol('u-tech-1', 'authenticator', 0.8);
   enrol('u-tech-5', 'second_phone', 0.5, '9822099005');
@@ -6236,7 +6242,7 @@ const hpKnownRoles = (): string[] => [...BUILT_IN_HELP_ROLES, ...customRoles.fil
 const hpRolesOf = (u: User): string[] => [u.role, ...(userRoleAssign.get(u.id) ?? [])];
 const hpPublic = (u: User): User => { const x = byId(users, u.id); if (!x) throw new RepositoryError('forbidden'); return x; };
 const hpUser = (userId: string): User => { const u = byId(users, userId); if (!u) throw new RepositoryError('forbidden'); return u; };
-const hpAdmin = (userId: string): User => { const u = byId(users, userId); if (u?.role !== 'admin') throw new RepositoryError('forbidden'); return u; };
+const hpAdmin = (userId: string): User => { const u = byId(users, userId); if ((!u || !isAdminRole(u.role))) throw new RepositoryError('forbidden'); return u; };
 const hpOffice = (): string | null => users.find((x) => x.role === 'admin' && x.status === 'active')?.phone ?? null;
 const hpKnownRoute = (path: string): boolean | null => (accessCatalogue.length === 0 ? null : HP_ROUTE_KNOWN(path, accessCatalogue.map((r) => r.path)));
 const hpSince = (a: HelpArticle): string => (hpCurrent(a).at > a.reviewedAt ? hpCurrent(a).at : a.reviewedAt);
@@ -6384,7 +6390,7 @@ function avEnsure(): void {
 const avKnownRoles = (): string[] => [...BUILT_IN_HELP_ROLES, ...customRoles.filter((c) => !c.retired).map((c) => c.id)];
 const avRolesOf = (u: User): string[] => [u.role, ...(userRoleAssign.get(u.id) ?? [])];
 const avUser = (userId: string): User => { const u = byId(users, userId); if (!u) throw new RepositoryError('forbidden'); return u; };
-const avAdmin = (userId: string): User => { const u = byId(users, userId); if (u?.role !== 'admin') throw new RepositoryError('forbidden'); return u; };
+const avAdmin = (userId: string): User => { const u = byId(users, userId); if ((!u || !isAdminRole(u.role))) throw new RepositoryError('forbidden'); return u; };
 const avLatest = (): AppRelease | null => [...appReleases].sort((a, b) => compareAppVersions(b.version, a.version))[0] ?? null;
 
 function avReleaseView(r: AppRelease, u: User, running: string): ReleaseView {
@@ -6852,7 +6858,7 @@ function planCatalogBulkUpload(supplier: Supplier, csvText: string, actor: User)
       issues.push(...check.warnings);
     } else if (
       existing &&
-      actor.role !== 'admin' &&
+      !isAdminRole(actor.role) &&
       existing.unitPrice !== entry.unitPrice &&
       isMaterialPriceChange(existing.unitPrice, entry.unitPrice, catalogSettings.priceReviewThresholdPct)
     ) {
@@ -7236,7 +7242,7 @@ function advanceShipments(now: number): void {
  *  for any. Nobody else stands at a tailgate for AIEC. */
 function checklistActorOf(byUserId: string): User {
   const actor = catalogActor(byUserId);
-  if (actor.role !== 'admin' && actor.role !== 'technician') throw new RepositoryError('forbidden');
+  if (!isAdminRole(actor.role) && actor.role !== 'technician') throw new RepositoryError('forbidden');
   return actor;
 }
 
@@ -7386,7 +7392,7 @@ function dealMaterialsOnSite(dealId: string): boolean {
 
 function confirmationActorOf(byUserId: string): User {
   const actor = catalogActor(byUserId);
-  if (actor.role !== 'admin' && actor.role !== 'technician' && actor.role !== 'customer') throw new RepositoryError('forbidden');
+  if (!isAdminRole(actor.role) && actor.role !== 'technician' && actor.role !== 'customer') throw new RepositoryError('forbidden');
   return actor;
 }
 
@@ -7686,7 +7692,7 @@ function delayRowOf(c: DeliveryDelayCase, now: number): DelayRow {
 
 function reportActorOf(byUserId: string): User {
   const actor = catalogActor(byUserId);
-  if (actor.role !== 'admin' && actor.role !== 'technician') throw new RepositoryError('forbidden');
+  if (!isAdminRole(actor.role) && actor.role !== 'technician') throw new RepositoryError('forbidden');
   return actor;
 }
 
@@ -9546,7 +9552,7 @@ function safetyActor(jobId: string, userId: string, mode: 'read' | 'technician' 
   if (!user) throw new RepositoryError('forbidden');
   if (!job) throw new RepositoryError('not_found');
   if (mode === 'admin') {
-    if (user.role !== 'admin') throw new RepositoryError('forbidden');
+    if (!isAdminRole(user.role)) throw new RepositoryError('forbidden');
     return { job, user };
   }
   if (user.role === 'admin' && mode === 'read') return { job, user };
@@ -11033,7 +11039,7 @@ function snagsVisibleTo(userId: string): ReworkRequest[] {
 
 function snagBoardOf(userId: string, jobId: string | undefined, now: number): SnagBoardView {
   const user = byId(users, userId);
-  if (!user || (user.role !== 'admin' && user.role !== 'technician')) throw new RepositoryError('forbidden');
+  if (!user || (!isAdminRole(user.role) && user.role !== 'technician')) throw new RepositoryError('forbidden');
   let visible = snagsVisibleTo(userId);
   if (jobId) {
     const job = byId(jobs, jobId);
@@ -11071,8 +11077,8 @@ function snagOf(snagId: string, userId: string, need: 'read' | 'qc' | 'admin'): 
   const job = byId(jobs, r.jobId) as Job;
   const role = snagRoleOf(job, r, userId);
   if (!role) throw new RepositoryError('forbidden');
-  if (need === 'admin' && role !== 'admin') throw new RepositoryError('forbidden');
-  if (need === 'qc' && role !== 'admin' && role !== 'inspector') throw new RepositoryError('forbidden');
+  if (need === 'admin' && !isAdminRole(role)) throw new RepositoryError('forbidden');
+  if (need === 'qc' && !isAdminRole(role) && role !== 'inspector') throw new RepositoryError('forbidden');
   return { r, job, user, role };
 }
 
@@ -11571,7 +11577,7 @@ let screeningMessageCounter = 0;
 
 function screeningAdmin(userId: string): User {
   const u = byId(users, userId);
-  if (!u || u.role !== 'admin') throw new RepositoryError('not_admin');
+  if (!u || !isAdminRole(u.role)) throw new RepositoryError('not_admin');
   return u;
 }
 
@@ -11728,7 +11734,7 @@ const ivEvent = (kind: PartnerInterview['events'][number]['kind'], byName: strin
 
 function ivAdmin(userId: string): User {
   const u = byId(users, userId);
-  if (!u || u.role !== 'admin') throw new RepositoryError('not_admin');
+  if (!u || !isAdminRole(u.role)) throw new RepositoryError('not_admin');
   return u;
 }
 function ivApp(applicationId: string): PartnerApplication {
@@ -11861,7 +11867,7 @@ const vfOf = (app: PartnerApplication): PartnerVerification => {
 };
 function vfAdmin(userId: string): User {
   const u = byId(users, userId);
-  if (!u || u.role !== 'admin') throw new RepositoryError('not_admin');
+  if (!u || !isAdminRole(u.role)) throw new RepositoryError('not_admin');
   return u;
 }
 function vfApp(applicationId: string): PartnerApplication {
@@ -11980,7 +11986,7 @@ const ofEvent = (kind: PartnerOffer['events'][number]['kind'], byName: string, n
 };
 function ofAdmin(userId: string): User {
   const u = byId(users, userId);
-  if (!u || u.role !== 'admin') throw new RepositoryError('not_admin');
+  if (!u || !isAdminRole(u.role)) throw new RepositoryError('not_admin');
   return u;
 }
 function ofApp(applicationId: string): PartnerApplication {
@@ -14432,7 +14438,7 @@ const tkAdmin = (): User | undefined => users.find((u) => u.role === 'admin' && 
 const tkFirst = (name: string): string => name.trim().split(/\s+/)[0] ?? name;
 const tkAdminOf = (id: string): User => {
   const u = byId(users, id);
-  if (!u || u.role !== 'admin') throw new RepositoryError('forbidden');
+  if (!u || !isAdminRole(u.role)) throw new RepositoryError('forbidden');
   return u;
 };
 const tkTicket = (id: string): ServiceTicket => {
@@ -16519,7 +16525,7 @@ function spLibraryOf(userId: string, isAdmin: boolean, now: number): SopLibraryV
 
 function spReader(userId: string): User {
   const u = byId(users, userId);
-  if (!u || (u.role !== 'admin' && u.role !== 'technician')) throw new RepositoryError('forbidden');
+  if (!u || (!isAdminRole(u.role) && u.role !== 'technician')) throw new RepositoryError('forbidden');
   return u;
 }
 
@@ -18815,7 +18821,7 @@ function threadSummary(thread: SupplierThread, viewerSide: SupplierMessageAuthor
 
 function adminOnly(byUserId: string): User {
   const actor = catalogActor(byUserId);
-  if (actor.role !== 'admin') throw new RepositoryError('forbidden');
+  if (!isAdminRole(actor.role)) throw new RepositoryError('forbidden');
   return actor;
 }
 
@@ -18823,6 +18829,16 @@ function ratingOrThrow(ratingId: string): SupplierOrderRating {
   const rating = byId(supplierOrderRatings, ratingId);
   if (!rating) throw new RepositoryError('not_found');
   return rating;
+}
+
+const decisionStore = createDecisionStore(seedDecisionCards.map((c) => ({ ...c })), {
+  now: () => new Date().toISOString(),
+  roleOf: (userId) => byId(users, userId)?.role ?? null,
+  nameOf,
+});
+/** The decision store speaks in its own error codes; screens read them as repository errors. */
+function decisionCall<T>(fn: () => T): T {
+  try { return fn(); } catch (e) { if (e instanceof DecisionError) throw new RepositoryError(e.code); throw e; }
 }
 
 export const memoryRepository: Repository = {
@@ -20190,7 +20206,7 @@ export const memoryRepository: Repository = {
   decidePendingUser: (userId, approve, adminId) =>
     simulateWrite(() => {
       const admin = byId(users, adminId);
-      if (!admin || admin.role !== 'admin' || admin.status !== 'active') throw new RepositoryError('forbidden');
+      if (!admin || !isAdminRole(admin.role) || admin.status !== 'active') throw new RepositoryError('forbidden');
       const target = byId(users, userId);
       if (!target) throw new RepositoryError('not_found');
       if (target.status !== 'pending_approval') throw new RepositoryError('not_pending');
@@ -21803,7 +21819,7 @@ export const memoryRepository: Repository = {
       const supplier = byId(suppliers, supplierId);
       if (!supplier) return null;
       if (actor.role === 'supplier' && supplierUserFor(supplier)?.id !== actor.id) return null;
-      if (actor.role !== 'admin' && actor.role !== 'supplier') return null;
+      if (!isAdminRole(actor.role) && actor.role !== 'supplier') return null;
       const ratings = supplierOrderRatings.filter((r) => r.supplierId === supplierId).sort(byDelivered);
       const windowIds = new Set(ratings.slice(-RATING_WINDOW).map((r) => r.id));
       const earlier = aggregateRatings(ratings.slice(0, -SCORE_DELTA_ORDERS));
@@ -21938,7 +21954,7 @@ export const memoryRepository: Repository = {
       const supplier = byId(suppliers, supplierId);
       if (!supplier) return null;
       if (actor.role === 'supplier' && supplierUserFor(supplier)?.id !== actor.id) return null;
-      if (actor.role !== 'admin' && actor.role !== 'supplier') return null;
+      if (!isAdminRole(actor.role) && actor.role !== 'supplier') return null;
       const versions = versionsOf(supplierAgreementVersions, supplierId);
       const state = agreementState(versions, Date.now());
       const orders = supplierPurchaseOrders
@@ -22045,7 +22061,7 @@ export const memoryRepository: Repository = {
   dispatchShipment: (poId, input, byUserId) =>
     simulateWrite(() => {
       const viewer = shipmentViewerOf(byUserId);
-      if (viewer.actor.role !== 'admin' && viewer.actor.role !== 'supplier') throw new RepositoryError('forbidden');
+      if (!isAdminRole(viewer.actor.role) && viewer.actor.role !== 'supplier') throw new RepositoryError('forbidden');
       const po = deliveryPoOrThrow(poId);
       if (viewer.supplierId && po.supplierId !== viewer.supplierId) throw new RepositoryError('forbidden');
       const supplier = byId(suppliers, po.supplierId!)!;
@@ -22419,7 +22435,7 @@ export const memoryRepository: Repository = {
   attributeDiscrepancyReport: (reportId, input, byUserId) =>
     simulateWrite(() => {
       const actor = reportActorOf(byUserId);
-      if (actor.role !== 'admin') throw new RepositoryError('forbidden');
+      if (!isAdminRole(actor.role)) throw new RepositoryError('forbidden');
       const r = reportOrThrow(reportId, actor);
       if (r.status !== 'open') throw new RepositoryError('invalid_state');
       // The delivery is signed for first: what is being judged is what could be verified at that moment.
@@ -22441,7 +22457,7 @@ export const memoryRepository: Repository = {
   advanceDiscrepancyResolution: (reportId, input, byUserId) =>
     simulateWrite(() => {
       const actor = reportActorOf(byUserId);
-      if (actor.role !== 'admin') throw new RepositoryError('forbidden');
+      if (!isAdminRole(actor.role)) throw new RepositoryError('forbidden');
       const r = reportOrThrow(reportId, actor);
       if (r.status !== 'open') throw new RepositoryError('invalid_state');
       { const kept = reportChecklist(r); if (kept && kept.status !== 'completed') throw new RepositoryError('checklist_open'); }
@@ -22498,7 +22514,7 @@ export const memoryRepository: Repository = {
   sendReportToSupplier: (reportId, channel, byUserId) =>
     simulateWrite(() => {
       const actor = reportActorOf(byUserId);
-      if (actor.role !== 'admin') throw new RepositoryError('forbidden');
+      if (!isAdminRole(actor.role)) throw new RepositoryError('forbidden');
       const r = reportOrThrow(reportId, actor);
       if (r.status !== 'open') throw new RepositoryError('invalid_state');
       const routed = routeReportToSupplier(r, actor, channel);
@@ -22509,7 +22525,7 @@ export const memoryRepository: Repository = {
   notifyCustomerOfReport: (reportId, byUserId) =>
     simulateWrite(() => {
       const actor = reportActorOf(byUserId);
-      if (actor.role !== 'admin') throw new RepositoryError('forbidden');
+      if (!isAdminRole(actor.role)) throw new RepositoryError('forbidden');
       const r = reportOrThrow(reportId, actor);
       if (r.status !== 'open') throw new RepositoryError('invalid_state');
       // An honest updated timeline needs a date in it.
@@ -23152,7 +23168,7 @@ export const memoryRepository: Repository = {
       if (!inv) throw new RepositoryError('not_found');
       // Admin sends any open invoice back. A supplier may only take back their own, and only while it does not match.
       const own = !!viewer.supplierId && viewer.supplierId === inv.supplierId;
-      if (viewer.supplierId ? !own : viewer.actor.role !== 'admin') throw new RepositoryError('forbidden');
+      if (viewer.supplierId ? !own : !isAdminRole(viewer.actor.role)) throw new RepositoryError('forbidden');
       if (inv.status !== 'open') throw new RepositoryError('invalid_state');
       if (own && evaluateInvoice(inv).status !== 'mismatch') throw new RepositoryError('invalid_state');
       if (reason.trim().length < 4) throw new RepositoryError('note_required');
@@ -23866,7 +23882,7 @@ export const memoryRepository: Repository = {
   listPartnerApplications: (userId) =>
     simulateRead((): ApplicationBoardView => {
       const u = byId(users, userId);
-      if (!u || u.role !== 'admin') throw new RepositoryError('forbidden');
+      if (!u || !isAdminRole(u.role)) throw new RepositoryError('forbidden');
       const rows = partnerApplications
         .map((a) => {
           const interest = byId(recruitmentInterests, a.interestId);
@@ -25300,7 +25316,7 @@ export const memoryRepository: Repository = {
       const now = Date.now();
       syncPayoutDisputes(now);
       const u = byId(users, userId);
-      if (!u || (u.role !== 'admin' && u.role !== 'surveyor' && u.role !== 'technician' && u.role !== 'supplier')) throw new RepositoryError('forbidden');
+      if (!u || (!isAdminRole(u.role) && u.role !== 'surveyor' && u.role !== 'technician' && u.role !== 'supplier')) throw new RepositoryError('forbidden');
       const admin = u.role === 'admin';
       const ownSupplier = u.role === 'supplier' ? phWho(userId).supplierId : null;
       const mine = payoutQueries.filter((q) => !ownSupplier && (admin || q.partnerId === userId) && byId(commissions, q.entryId));
@@ -25344,7 +25360,7 @@ export const memoryRepository: Repository = {
       const q = byId(payoutQueries, disputeId);
       const u = byId(users, userId);
       if (!q || !u) throw new RepositoryError('not_found');
-      if (u.role !== 'admin' && q.partnerId !== userId) throw new RepositoryError('not_found');
+      if (!isAdminRole(u.role) && q.partnerId !== userId) throw new RepositoryError('not_found');
       return pdViewOf(q, userId, now);
     }),
 
@@ -25563,7 +25579,7 @@ export const memoryRepository: Repository = {
   getContestLeaderboard: (contestId, userId) =>
     simulateRead((): ContestLeaderboardView => {
       const viewer = byId(users, userId);
-      if (!viewer || (viewer.role !== 'admin' && viewer.role !== 'surveyor' && viewer.role !== 'technician')) throw new RepositoryError('forbidden');
+      if (!viewer || (!isAdminRole(viewer.role) && viewer.role !== 'surveyor' && viewer.role !== 'technician')) throw new RepositoryError('forbidden');
       const now = Date.now();
       syncContests(now);
       const visible = contests.filter((c) => viewer.role === 'admin' || c.cohort === viewer.role);
@@ -25860,7 +25876,7 @@ export const memoryRepository: Repository = {
       const e = byId(commissions, entryId);
       const u = byId(users, userId);
       if (!e || !u) throw new RepositoryError('not_found');
-      if (u.role !== 'admin' && e.userId !== userId) throw new RepositoryError('forbidden');
+      if (!isAdminRole(u.role) && e.userId !== userId) throw new RepositoryError('forbidden');
       const t = crTraceOf(e);
       const v = t.ruleId && t.version ? crRule(t.ruleId).versions.find((x) => x.version === t.version) : undefined;
       return { entryId, reasonKey: e.reasonKey, ruleId: t.ruleId, version: t.version, effectiveFrom: v?.effectiveFrom ?? null, params: v ? { ...v.params } : null, inferred: t.inferred };
@@ -26703,7 +26719,7 @@ export const memoryRepository: Repository = {
   getCompletionBoard: (userId) =>
     simulateRead((): CompletionBoardView => {
       const user = byId(users, userId);
-      if (!user || (user.role !== 'admin' && user.role !== 'customer')) throw new RepositoryError('forbidden');
+      if (!user || (!isAdminRole(user.role) && user.role !== 'customer')) throw new RepositoryError('forbidden');
       const now = Date.now();
       const mine = jobs.filter((j) => (user.role === 'admin' || byId(deals, j.dealId)?.customerId === userId) && (j.status === 'handover_pending' || !!completionOf(j.id)));
       return {
@@ -26727,7 +26743,7 @@ export const memoryRepository: Repository = {
   issueCompletionCertificate: (jobId, input, userId) =>
     simulateWrite((): CompletionView => {
       const { job, user, role } = completionActor(jobId, userId);
-      if (role !== 'admin') throw new RepositoryError('not_admin');
+      if (!isAdminRole(role)) throw new RepositoryError('not_admin');
       if (completionOf(job.id)) throw new RepositoryError('already_issued');
       if (job.status !== 'handover_pending') throw new RepositoryError('invalid_state');
       const now = Date.now();
@@ -26781,7 +26797,7 @@ export const memoryRepository: Repository = {
   recordPayoutJudgement: (jobId, input, userId) =>
     simulateWrite((): CompletionView => {
       const { job, user, role } = completionActor(jobId, userId);
-      if (role !== 'admin') throw new RepositoryError('not_admin');
+      if (!isAdminRole(role)) throw new RepositoryError('not_admin');
       const rec = completionOf(job.id);
       if (!rec) throw new RepositoryError('not_issued');
       const allowed = new Set(rec.payout.lines.map((l) => l.commissionId));
@@ -26814,7 +26830,7 @@ export const memoryRepository: Repository = {
   getWarrantyBoard: (userId) =>
     simulateRead((): WarrantyBoardView => {
       const user = byId(users, userId);
-      if (!user || (user.role !== 'admin' && user.role !== 'customer')) throw new RepositoryError('forbidden');
+      if (!user || (!isAdminRole(user.role) && user.role !== 'customer')) throw new RepositoryError('forbidden');
       const mine = jobs.filter((j) => (user.role === 'admin' || byId(deals, j.dealId)?.customerId === userId) && (j.status === 'handover_pending' || j.status === 'completed'));
       return {
         viewer: user.role === 'admin' ? 'admin' : 'customer',
@@ -26894,7 +26910,7 @@ export const memoryRepository: Repository = {
         if (user.role === 'customer') return byId(deals, j.dealId)?.customerId === userId && (j.status === 'handover_pending' || j.status === 'completed');
         return user.role === 'technician' && (isOnJob(j, userId) || qcOf(j.id)?.inspectorId === userId) && (j.status === 'handover_pending' || j.status === 'completed');
       });
-      if (user.role !== 'admin' && user.role !== 'customer' && user.role !== 'technician') throw new RepositoryError('forbidden');
+      if (!isAdminRole(user.role) && user.role !== 'customer' && user.role !== 'technician') throw new RepositoryError('forbidden');
       return {
         viewer: user.role === 'admin' ? 'admin' : user.role === 'customer' ? 'customer' : 'conductor',
         rows: mine
@@ -27236,7 +27252,7 @@ export const memoryRepository: Repository = {
   escalateRework: (snagId, input, userId) =>
     simulateWrite((): ReworkView => {
       const { r, user, role } = snagOf(snagId, userId, 'read');
-      if (role !== 'owner' && role !== 'admin') throw new RepositoryError('not_owner');
+      if (role !== 'owner' && !isAdminRole(role)) throw new RepositoryError('not_owner');
       if (!sgIsOpen(r.status) || r.status === 'disputed' || r.status === 'ready_for_retest') throw new RepositoryError('invalid_state');
       const problem = rwEscalateProblem({ from: r.severity, to: input.severity, note: input.note });
       if (problem) throw new RepositoryError(problem);
@@ -27321,7 +27337,7 @@ export const memoryRepository: Repository = {
       if (!user) throw new RepositoryError('forbidden');
       if (!job) throw new RepositoryError('not_found');
       const role = snagRoleOf(job, null, userId);
-      if (role !== 'admin' && role !== 'inspector') throw new RepositoryError('forbidden');
+      if (!isAdminRole(role) && role !== 'inspector') throw new RepositoryError('forbidden');
       if (job.status !== 'qc_pending' && job.status !== 'handover_pending') throw new RepositoryError('not_ready');
       const problem = sgRaiseProblem({ title: input.title, note: input.note, severity: input.severity, evidenceCount: input.evidence.length });
       if (problem) throw new RepositoryError(problem);
@@ -27668,7 +27684,7 @@ export const memoryRepository: Repository = {
       ensureQcSeeds();
       const user = byId(users, userId);
       if (!user) throw new RepositoryError('forbidden');
-      if (user.role !== 'admin' && user.role !== 'technician') throw new RepositoryError('forbidden');
+      if (!isAdminRole(user.role) && user.role !== 'technician') throw new RepositoryError('forbidden');
       const isAdmin = user.role === 'admin';
       const now = Date.now();
       const candidates = jobs.filter((j) => {
@@ -27861,8 +27877,8 @@ export const memoryRepository: Repository = {
       const by = byId(users, byId_);
       if (!by) throw new RepositoryError('forbidden');
       const target = input.userId ?? byId_;
-      if (by.role !== 'admin' && target !== byId_) throw new RepositoryError('forbidden');
-      if (by.role !== 'admin' && by.role !== 'technician') throw new RepositoryError('forbidden');
+      if (!isAdminRole(by.role) && target !== byId_) throw new RepositoryError('forbidden');
+      if (!isAdminRole(by.role) && by.role !== 'technician') throw new RepositoryError('forbidden');
       const who = byId(users, target);
       if (!who || who.role !== 'technician') throw new RepositoryError('unknown_inspector');
       if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date) || input.date < qcDay(Date.now())) throw new RepositoryError('dates_invalid');
@@ -27879,7 +27895,7 @@ export const memoryRepository: Repository = {
       const by = byId(users, byId_);
       const entry = inspectorOff.find((u) => u.id === id);
       if (!by || !entry) throw new RepositoryError('not_found');
-      if (by.role !== 'admin' && entry.userId !== byId_) throw new RepositoryError('forbidden');
+      if (!isAdminRole(by.role) && entry.userId !== byId_) throw new RepositoryError('forbidden');
       inspectorOff.splice(inspectorOff.indexOf(entry), 1);
       return inspectorOff.filter((u) => u.userId === entry.userId).map((u) => ({ ...u }));
     }),
@@ -28388,6 +28404,11 @@ export const memoryRepository: Repository = {
       return { entries: list.slice(offset, offset + limit).map((e) => ({ ...e })), total: list.length } as PermissionLogView;
     }),
   /* 193 — single-person monitor */
+  listDecisionCards: (userId, filter) => simulateRead(() => decisionCall(() => decisionStore.list(userId, filter))),
+  getDecisionCard: (userId, cardId) => simulateRead(() => decisionCall(() => decisionStore.get(userId, cardId))),
+  prepareDecisionPacket: (userId, input) => simulateWrite(() => decisionCall(() => decisionStore.prepare(userId, input))),
+  decideDecisionCard: (userId, input) => simulateWrite(() => decisionCall(() => decisionStore.decide(userId, input))),
+  verifyDecisionChain: (userId) => simulateRead(() => decisionCall(() => decisionStore.verify(userId))),
   getMonitorPanel: (userId) => simulateRead(() => { const u = byId(users, userId); if (!u) throw new RepositoryError('not_found'); return mnPanelFor(u, Date.now()); }),
   saveMonitorConfig: (userId, input) =>
     simulateWrite(() => {
@@ -29386,7 +29407,7 @@ export const memoryRepository: Repository = {
       const u = hpUser(userId);
       hpEnsure();
       const a = byId(helpArticles, articleId);
-      if (!a || (u.role !== 'admin' && !(a.status === 'published' && HP_FOR_ROLE(a.roles, hpRolesOf(u))))) throw new RepositoryError('not_found');
+      if (!a || (!isAdminRole(u.role) && !(a.status === 'published' && HP_FOR_ROLE(a.roles, hpRolesOf(u))))) throw new RepositoryError('not_found');
       return hpArticleView(a, u, Date.now());
     }),
   rateHelpArticle: (userId, articleId, input) =>
@@ -29394,7 +29415,7 @@ export const memoryRepository: Repository = {
       const u = hpUser(userId);
       hpEnsure();
       const a = byId(helpArticles, articleId);
-      if (!a || (u.role !== 'admin' && !(a.status === 'published' && HP_FOR_ROLE(a.roles, hpRolesOf(u))))) throw new RepositoryError('not_found');
+      if (!a || (!isAdminRole(u.role) && !(a.status === 'published' && HP_FOR_ROLE(a.roles, hpRolesOf(u))))) throw new RepositoryError('not_found');
       if (!input.helpful && !input.reason) throw new RepositoryError('reason_required');
       if (!input.helpful && !HP_REASONS.includes(input.reason as HelpFeedback['reason'] & string)) throw new RepositoryError('reason_unknown');
       const comment = input.comment.trim();
@@ -30010,13 +30031,13 @@ export const memoryRepository: Repository = {
   /* --------------------------------- Automation dashboard (181) */
   getAutomationOverview: (userId) =>
     simulateRead(() => {
-      if (byId(users, userId)?.role !== 'admin') throw new RepositoryError('forbidden');
+      if (!isAdminRole(byId(users, userId)?.role)) throw new RepositoryError('forbidden');
       return automationOverviewOf(Date.now());
     }),
   pauseAutomationCategory: (userId, category, reason) =>
     simulateWrite(() => {
       const admin = byId(users, userId);
-      if (admin?.role !== 'admin') throw new RepositoryError('forbidden');
+      if ((!admin || !isAdminRole(admin.role))) throw new RepositoryError('forbidden');
       if (!automationOverviewOf(Date.now()).categories.some((c) => c.id === category)) throw new RepositoryError('unknown_category');
       if (categoryDef(category)?.protected) throw new RepositoryError('protected_category');
       if (reason.replace(/[^\p{L}]/gu, '').length < 10) throw new RepositoryError('reason_short');
@@ -30029,7 +30050,7 @@ export const memoryRepository: Repository = {
   resumeAutomationCategory: (userId, category) =>
     simulateWrite(() => {
       const admin = byId(users, userId);
-      if (admin?.role !== 'admin') throw new RepositoryError('forbidden');
+      if ((!admin || !isAdminRole(admin.role))) throw new RepositoryError('forbidden');
       if (!autoPauseOf('category', category)) throw new RepositoryError('not_paused');
       const at = new Date().toISOString();
       const units = UNITS.filter((u) => u.category === category);
@@ -30475,7 +30496,7 @@ export const memoryRepository: Repository = {
   reopenServiceTicket: (ticketId, userId, note) =>
     simulateWrite((): TicketView => {
       const viewer = byId(users, userId);
-      if (!viewer || (viewer.role !== 'customer' && viewer.role !== 'admin')) throw new RepositoryError('forbidden');
+      if (!viewer || (viewer.role !== 'customer' && !isAdminRole(viewer.role))) throw new RepositoryError('forbidden');
       const now = Date.now();
       tkSeeds(now);
       const t = tkTicket(ticketId);
@@ -30877,7 +30898,7 @@ export const memoryRepository: Repository = {
       if (severity === issue.severity) throw new RepositoryError('invalid_state');
       // A safety concern is never quietly downgraded, and a technician can only make a report more serious, never less.
       if (!severityAtLeast(severity, minSeverityFor(issue.category))) throw new RepositoryError('severity_too_low');
-      if (user.role !== 'admin' && !severityAtLeast(severity, issue.severity)) throw new RepositoryError('forbidden');
+      if (!isAdminRole(user.role) && !severityAtLeast(severity, issue.severity)) throw new RepositoryError('forbidden');
       patchInPlace(jobIssues, issue.id, { severity, events: [...issue.events, issueEvent('severity', actorOf(user), note.trim(), { from: issue.severity, to: severity })] });
       syncIssueHold(job);
       syncIssueAlerts(false, Date.now());
@@ -30922,7 +30943,7 @@ export const memoryRepository: Repository = {
       const issue = issueOrThrow(issueId);
       const { job, user } = issueActor(issue.jobId, userId, true);
       const role = user.role === 'admin' ? 'admin' : 'technician';
-      if (!canReopen(issue, role, Date.now()) || (role !== 'admin' && issue.reportedByUserId !== userId)) throw new RepositoryError('invalid_state');
+      if (!canReopen(issue, role, Date.now()) || (!isAdminRole(role) && issue.reportedByUserId !== userId)) throw new RepositoryError('invalid_state');
       if (note.trim().length < ISSUE_NOTE_MIN) throw new RepositoryError('note_required');
       patchInPlace(jobIssues, issue.id, { status: 'open' as const, resolution: undefined, events: [...issue.events, issueEvent('reopened', actorOf(user), note.trim())] });
       syncIssueHold(byId(jobs, job.id) as Job);
@@ -32473,7 +32494,7 @@ export const memoryRepository: Repository = {
         const own = suppliers.find((sp) => supplierUserFor(sp)?.id === actor.id);
         if (!own) return [];
         supplierScope = own.id;
-      } else if (actor.role !== 'admin') {
+      } else if (!isAdminRole(actor.role)) {
         throw new RepositoryError('forbidden');
       }
       const now = Date.now();
@@ -32527,7 +32548,7 @@ export const memoryRepository: Repository = {
 
   updateAutoPoRules: (patch, byUserId) =>
     simulateWrite(() => {
-      if (catalogActor(byUserId).role !== 'admin') throw new RepositoryError('forbidden');
+      if (!isAdminRole(catalogActor(byUserId).role)) throw new RepositoryError('forbidden');
       const next = { ...autoPoRules, ...patch };
       const w = next.weights;
       const weightsValid =
@@ -32540,7 +32561,7 @@ export const memoryRepository: Repository = {
 
   simulateAutoPoMatching: (input, byUserId) =>
     simulateWrite(() => {
-      if (catalogActor(byUserId).role !== 'admin') throw new RepositoryError('forbidden');
+      if (!isAdminRole(catalogActor(byUserId).role)) throw new RepositoryError('forbidden');
       const rules: AutoPoRules = { ...autoPoRules, ...input.rulesOverride };
       const results = matchRequiredCategories(input.driveType, input.assignedSupplierId, rules);
       const share = valueShareOf(results);
@@ -32563,7 +32584,7 @@ export const memoryRepository: Repository = {
 
   draftPurchaseOrdersNow: (dealId, byUserId) =>
     simulateWrite(() => {
-      if (catalogActor(byUserId).role !== 'admin') throw new RepositoryError('forbidden');
+      if (!isAdminRole(catalogActor(byUserId).role)) throw new RepositoryError('forbidden');
       const deal = byId(deals, dealId);
       if (!deal) throw new RepositoryError('not_found');
       if (deal.status !== 'won') throw new RepositoryError('invalid_state');
@@ -32631,7 +32652,7 @@ export const memoryRepository: Repository = {
 
   updateCatalogSettings: (priceReviewThresholdPct, byUserId) =>
     simulateWrite(() => {
-      if (catalogActor(byUserId).role !== 'admin') throw new RepositoryError('forbidden');
+      if (!isAdminRole(catalogActor(byUserId).role)) throw new RepositoryError('forbidden');
       if (!Number.isFinite(priceReviewThresholdPct) || priceReviewThresholdPct < 1 || priceReviewThresholdPct > 50) {
         throw new RepositoryError('invalid_input');
       }
@@ -32694,7 +32715,7 @@ export const memoryRepository: Repository = {
 
   reviewCatalogPriceChange: (changeId, decision, byUserId, reason) =>
     simulateWrite(() => {
-      if (catalogActor(byUserId).role !== 'admin') throw new RepositoryError('forbidden');
+      if (!isAdminRole(catalogActor(byUserId).role)) throw new RepositoryError('forbidden');
       const change = byId(catalogPriceChanges, changeId);
       if (!change) throw new RepositoryError('not_found');
       if (change.status !== 'pending') throw new RepositoryError('not_pending');

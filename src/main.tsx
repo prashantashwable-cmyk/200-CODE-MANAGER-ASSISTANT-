@@ -17,6 +17,7 @@ import './styles/utilities.css';
 import './styles/components.css';
 import './styles/shell.css';
 import './styles/map.css';
+import './styles/adaptive.css';
 
 // Registers i18next and applies the saved language + font pairing.
 import '@/i18n';

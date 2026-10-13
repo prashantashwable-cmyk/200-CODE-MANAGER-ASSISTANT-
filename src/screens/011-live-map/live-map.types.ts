@@ -79,6 +79,7 @@ export interface LiveMapData {
 export const ROLE_GLYPH: Record<Role, string> = {
   surveyor: 'S',
   technician: 'T',
+  owner: 'O',
   admin: 'A',
   customer: 'C',
   supplier: 'P',

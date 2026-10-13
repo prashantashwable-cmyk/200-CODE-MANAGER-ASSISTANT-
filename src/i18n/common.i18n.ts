@@ -24,6 +24,7 @@ const common: ScreenTranslations = {
       issuer: { gstin: 'GSTIN', label: 'Issued by' },
     },
     role: {
+      owner: 'Owner',
       admin: 'Admin',
       surveyor: 'Surveyor',
       technician: 'Technician',
@@ -121,6 +122,7 @@ const common: ScreenTranslations = {
     },
     nav: {
       home: 'Home',
+      decisions: 'Decisions',
       map: 'Map',
       installation: 'Installation',
       analytics: 'Analytics',
@@ -529,6 +531,7 @@ const common: ScreenTranslations = {
       issuer: { gstin: 'जीएसटीआईएन', label: 'जारीकर्ता' },
     },
     role: {
+      owner: 'मालिक',
       admin: 'प्रशासक',
       surveyor: 'सर्वेक्षक',
       technician: 'तकनीशियन',
@@ -626,6 +629,7 @@ const common: ScreenTranslations = {
     },
     nav: {
       home: 'होम',
+      decisions: 'फ़ैसले',
       map: 'नक्शा',
       installation: 'इंस्टॉलेशन',
       analytics: 'विश्लेषण',
@@ -1035,6 +1039,7 @@ const common: ScreenTranslations = {
       issuer: { gstin: 'जीएसटीआयएन', label: 'जारी करणारे' },
     },
     role: {
+      owner: 'मालक',
       admin: 'प्रशासक',
       surveyor: 'सर्वेक्षक',
       technician: 'तंत्रज्ञ',
@@ -1132,6 +1137,7 @@ const common: ScreenTranslations = {
     },
     nav: {
       home: 'होम',
+      decisions: 'निर्णय',
       map: 'नकाशा',
       installation: 'इन्स्टॉलेशन',
       analytics: 'विश्लेषण',

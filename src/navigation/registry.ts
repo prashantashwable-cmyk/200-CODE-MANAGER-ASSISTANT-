@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import type { Role } from '@/data/types';
+import { rolesAdmit } from '@/features/authority/authority';
 
 /**
  * Routes are DISCOVERED, not centrally listed.
@@ -75,11 +76,12 @@ export function routeById(id: string): ScreenRoute | undefined {
 
 export function canAccess(route: ScreenRoute, role: Role | null): boolean {
   if (route.roles === 'public') return true;
-  return role !== null && route.roles.includes(role);
+  return role !== null && rolesAdmit(route.roles, role);
 }
 
 /** Where each role lands after sign-in or entering Demo Mode. */
 export const HOME_PATH_BY_ROLE: Record<Role, string> = {
+  owner: '/owner',
   admin: '/admin',
   surveyor: '/surveyor',
   technician: '/technician',

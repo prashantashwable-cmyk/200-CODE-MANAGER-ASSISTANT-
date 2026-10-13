@@ -147,11 +147,25 @@ function makeRandom(seed: number) {
 
 export const seedUsers: User[] = [
   {
+    id: 'u-owner-1',
+    role: 'owner',
+    name: 'Prashant Vasant Wable',
+    phone: '9822011009',
+    email: 'owner@aiec.example',
+    status: 'active',
+    preferredLanguage: 'en',
+    themePreference: 'light',
+    isDemo: true,
+    city: 'Pune',
+    joinedAt: daysAgo(720),
+    rating: 5,
+  },
+  {
     id: 'u-admin-1',
     role: 'admin',
-    name: 'Prashant Vasant Wable',
+    name: 'Control Tower Admin',
     phone: '9822011001',
-    email: 'owner@aiec.example',
+    email: 'admin@aiec.example',
     status: 'active',
     preferredLanguage: 'en',
     themePreference: 'light',

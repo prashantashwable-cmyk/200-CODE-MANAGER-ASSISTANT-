@@ -4,8 +4,8 @@
  * Every number below is a placeholder business decision flagged on the screen.
  */
 import { isIndianMobile } from '@/features/validation/india';
-export type SecRole = 'admin' | 'surveyor' | 'technician' | 'customer' | 'supplier';
-export const SEC_ROLES: SecRole[] = ['admin', 'surveyor', 'technician', 'supplier', 'customer'];
+export type SecRole = 'owner' | 'admin' | 'surveyor' | 'technician' | 'customer' | 'supplier';
+export const SEC_ROLES: SecRole[] = ['owner', 'admin', 'surveyor', 'technician', 'supplier', 'customer'];
 
 export const METHODS = ['authenticator', 'second_phone'] as const;
 export type SecondFactorMethod = (typeof METHODS)[number];
@@ -24,6 +24,7 @@ export interface SecurityConfig {
 /** Defaults (placeholders). Admin's second factor is not optional: it guards every other account. */
 export const DEFAULT_CONFIG: SecurityConfig = {
   twoFactor: {
+    owner: { required: true, graceDays: 0 },
     admin: { required: true, graceDays: 0 },
     surveyor: { required: false, graceDays: 14 },
     technician: { required: false, graceDays: 14 },
@@ -33,6 +34,7 @@ export const DEFAULT_CONFIG: SecurityConfig = {
   password: { minLength: 10, requireUpper: true, requireDigit: true, requireSymbol: false, rotateDays: 0, reuseBlock: 3 },
   signIn: { maxFailed: 5, failedWindowMin: 15, lockoutMin: 15 },
   sessions: {
+    owner: { idleMinutes: 60, maxHours: 12 },
     admin: { idleMinutes: 60, maxHours: 12 },
     surveyor: { idleMinutes: 10_080, maxHours: 720 },
     technician: { idleMinutes: 10_080, maxHours: 720 },
@@ -89,8 +91,8 @@ const inRange = (n: number, lo: number, hi: number): boolean => Number.isInteger
 /** What stops a configuration from being saved. */
 export function configProblems(c: SecurityConfig): ConfigProblem[] {
   const out: ConfigProblem[] = [];
-  if (!c.twoFactor.admin.required) out.push('admin_2fa_locked');
-  if (SEC_ROLES.some((r) => !inRange(c.twoFactor[r].graceDays, 0, 30)) || c.twoFactor.admin.graceDays > 7) out.push('grace_range');
+  if (!c.twoFactor.admin.required || !c.twoFactor.owner.required) out.push('admin_2fa_locked');
+  if (SEC_ROLES.some((r) => !inRange(c.twoFactor[r].graceDays, 0, 30)) || c.twoFactor.admin.graceDays > 7 || c.twoFactor.owner.graceDays > 7) out.push('grace_range');
   if (!inRange(c.password.minLength, 8, 64)) out.push('min_length_range');
   if (!(c.password.rotateDays === 0 || inRange(c.password.rotateDays, 30, 365))) out.push('rotate_range');
   if (!inRange(c.password.reuseBlock, 0, 10)) out.push('reuse_range');

@@ -28,6 +28,7 @@ export const PRIMER_SHOWN_AT_KEY = 'aiec.permissionsPrimerShownAt';
 export const PERMISSIONS_BY_ROLE: Record<Role, PermissionId[]> = {
   surveyor: ['location', 'camera', 'notifications'],
   technician: ['location', 'camera', 'notifications'],
+  owner: ['notifications'],
   admin: ['notifications'],
   customer: ['notifications'],
   supplier: ['notifications'],

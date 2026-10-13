@@ -60,3 +60,15 @@ memory), backups. Each screen that depends on one says so; see
 - 026's price and responsiveness scores are a stated neutral 0.7: nothing records them yet.
 - 020 cannot rank by distance for a job whose site has no position (a historic seed deal): everyone reads as far away, though Admin can still choose one.
 - Closed in S0a: no 403 page, 404 reload, domain data in one device's storage (030, 029, 026, 004), seven copies of the phone rule, the supplier placeholder home.
+
+## Added on branch `claude/new-session-g6fda4` (Owner / Decision Desk / adaptive layout)
+
+- **Legacy Admin approvals are unchanged.** Only the Decision Desk bars Admin from deciding. Payout approval (163), tiers (148), access (192), pricing and discounts (067, 070) still let Admin decide. Moving each onto the Decision Desk is Slice 6.
+- **Decision Desk data is in memory** like the rest of the app (G1): it resets on refresh. No database table or row-level rule exists for it yet.
+- **Delegation** is per card for 7 days. There is no standing delegate setup, amount editor or revoke screen.
+- **No Owner settings editor** for the authority matrix; it is code.
+- **Owner role labels** use the shared `role.owner` string only. Many legacy screens switch on the five older roles and show no Owner-specific wording.
+- **The Owner opens Admin's screens** as a superset. Those screens still say "Admin" in places.
+- **Seed**: the legacy Admin account is now "Control Tower Admin" (9822011001); the Owner is Prashant Vasant Wable (9822011009). Old history text still names Prashant against the Admin role.
+- **Adaptive layout** was checked on the Decision Desk at 390, 1440, 2560 and 3840 px only. Other screens were not reviewed at those sizes; the Admin live map and tables are the likely ones to need work. Desktop headers are centred while content is left-aligned (pre-existing).
+- Not started: map-first home for all roles, privacy by geometry, general event store, correction classes, facilitator quote model, new partner roles.

@@ -1,4 +1,7 @@
 import type { VaultKind } from '@/features/documents/vault';
+import type { DecisionCard, DecisionInput, DecisionRecord, DecisionStatusRow, DecisionView, PacketInput } from '@/features/decisions/decisions';
+import type { DecisionKind, DecisionStatus } from '@/features/authority/authority';
+import type { ChainCheck } from '@/features/audit/chain';
 import type { LegalCategory, LegalReviewState } from '@/features/legal/legal';
 import type { HelpFlag, SupportKind } from '@/features/help/help';
 import type { BrowserRequirement, FeedbackKind as ProductFeedbackKind, FeedbackStatus as ProductFeedbackStatus, ReleaseItemKind } from './types';
@@ -10151,7 +10154,15 @@ export interface Repository {
   /** Completes a commitment whose proof of done is the owner's say-so
    *  (`WorkItem.quickAction`), through the same write its own screen uses. */
   completeCommitmentQuickAction(commitmentId: string, byUserId: string): Promise<Commitment>;
+  /* 201 — Owner Decision Desk (master prompt P1/P4). Owner: full cards. Admin: status rows only. */
+  listDecisionCards(userId: string, filter?: { status?: DecisionStatus | 'open'; kind?: DecisionKind }): Promise<DecisionListView>;
+  getDecisionCard(userId: string, cardId: string): Promise<DecisionView>;
+  prepareDecisionPacket(userId: string, input: PacketInput): Promise<DecisionCard>;
+  decideDecisionCard(userId: string, input: DecisionInput): Promise<{ card: DecisionCard; record: DecisionRecord }>;
+  verifyDecisionChain(userId: string): Promise<ChainCheck>;
 }
+
+export interface DecisionListView { level: 'detail' | 'status'; cards: DecisionCard[]; statusRows: DecisionStatusRow[] }
 
 export const SERIES_KEYS = {
   leadsPerDay: 'leadsPerDay',

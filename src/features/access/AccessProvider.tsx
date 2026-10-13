@@ -7,6 +7,7 @@ import { useSession } from '@/session/SessionProvider';
 import { ACCESS_CHANGED, AccessContext } from './AccessContext';
 import type { AccessContextValue } from './AccessContext';
 import { accessFor, decisionKey } from './permissions';
+import { rolesAdmit } from '@/features/authority/authority';
 import type { Decision, OverrideEffect, ScreenRef } from './permissions';
 
 const REFRESH_MS = 30_000;
@@ -41,7 +42,7 @@ export function AccessProvider({ children }: { children: ReactNode }) {
     if (route.roles === 'public') return true;
     if (!role) return false;
     // Until the decisions have been read, what the code says stands.
-    if (!grants || grants.baseRole !== role) return route.roles.includes(role);
+    if (!grants || grants.baseRole !== role) return rolesAdmit(route.roles, role);
     return accessFor({ id: route.id, path: route.path, roles: route.roles, titleKey: '' }, { baseRole: role, customRoleIds: grants.customRoleIds, overrides }, decisions, HOME_PATH_BY_ROLE).allowed;
   }, [role, grants, decisions, overrides]);
   const value = useMemo<AccessContextValue>(() => ({ screens: SCREENS, ready, canOpen, role }), [ready, canOpen, role]);

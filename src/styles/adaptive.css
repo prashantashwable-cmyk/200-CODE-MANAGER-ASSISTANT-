@@ -1,0 +1,72 @@
+/* Adaptive layout for large, high-resolution displays (laptops, desktops, 2K/4K monitors, wall dashboards).
+   The mobile and tablet layouts are untouched: everything here starts at 1280px.
+   Type is in rem, so raising the root size grows text, icons set in em and every rem-based token together.
+   Content grows wider with the screen and grids add columns (`.grid-auto` is auto-fit), so a large monitor shows
+   more at once instead of a small column floating in empty space. */
+
+@media (min-width: 1280px) {
+  :root {
+    --screen-margin: var(--space-5, 32px);
+  }
+  .shell__sidebar {
+    width: 260px;
+  }
+  .ds-screen {
+    max-width: 1440px;
+  }
+  .ds-screen--wide {
+    max-width: 1840px;
+  }
+}
+
+@media (min-width: 1600px) {
+  html {
+    font-size: 17px;
+  }
+  .shell__sidebar {
+    width: 288px;
+  }
+  .ds-screen {
+    max-width: 1680px;
+  }
+  .ds-screen--wide {
+    max-width: 2240px;
+  }
+}
+
+@media (min-width: 1920px) {
+  html {
+    font-size: 18px;
+  }
+  .shell__sidebar {
+    width: 312px;
+  }
+  .ds-screen {
+    max-width: 1920px;
+  }
+  .ds-screen--wide {
+    max-width: 2760px;
+  }
+}
+
+@media (min-width: 2560px) {
+  html {
+    font-size: 21px;
+  }
+  .shell__sidebar {
+    width: 360px;
+  }
+  .ds-screen {
+    max-width: 2280px;
+  }
+  .ds-screen--wide {
+    max-width: 3600px;
+  }
+}
+
+/* Wall displays and 4K: the narrow form screens stay readable but no longer look lost. */
+@media (min-width: 1920px) {
+  .ds-screen--narrow {
+    max-width: 720px;
+  }
+}

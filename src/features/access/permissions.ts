@@ -4,6 +4,7 @@
  * A role's decision grants or revokes a screen for the whole role; a person may carry an exception of their own, always with a reason and (by default) an end. Every number is a placeholder flagged on the screen.
  */
 import type { Role } from '@/data/types';
+import { rolesAdmit } from '@/features/authority/authority';
 
 export interface ScreenRef { id: string; path: string; roles: Role[] | 'public'; titleKey: string }
 export const BUILT_IN_ROLES: Role[] = ['admin', 'surveyor', 'technician', 'customer', 'supplier'];
@@ -34,7 +35,7 @@ export const isGoverned = (r: ScreenRef): boolean => r.roles !== 'public';
 export const adminOnly = (r: ScreenRef): boolean => r.roles !== 'public' && r.roles.length === 1 && r.roles[0] === 'admin';
 export const decisionKey = (roleId: string, screenId: string): string => `${roleId}|${screenId}`;
 
-export const defaultAllows = (ref: ScreenRef, role: RoleLite): boolean => role.builtIn && ref.roles !== 'public' && ref.roles.includes(role.id as Role);
+export const defaultAllows = (ref: ScreenRef, role: RoleLite): boolean => role.builtIn && ref.roles !== 'public' && rolesAdmit(ref.roles, role.id as Role);
 /** Locked in: the Admin's essential screens, and every role's own home. */
 export const lockedFor = (ref: ScreenRef, role: RoleLite, homes: Record<Role, string>): boolean => (role.builtIn && role.id === 'admin' && ESSENTIAL_ADMIN_IDS.includes(ref.id)) || (role.builtIn && homes[role.id as Role] === ref.path);
 

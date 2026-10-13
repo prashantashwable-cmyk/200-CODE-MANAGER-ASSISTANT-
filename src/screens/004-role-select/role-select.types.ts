@@ -25,6 +25,7 @@ export const ONBOARDING_PATH_BY_ROLE: Record<Role, string> = {
   supplier: '/onboarding/supplier',
   customer: '/onboarding/customer',
   admin: '/admin',
+  owner: '/owner',
 };
 
 export const STORAGE_PENDING_SELECTION = 'aiec.pendingRoleSelection';

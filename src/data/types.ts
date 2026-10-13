@@ -12,7 +12,7 @@
 import type { SecurityConfig } from '@/features/security/security';
 import type { BackupConfig } from '@/features/backup/backup';
 
-export type Role = 'admin' | 'surveyor' | 'technician' | 'customer' | 'supplier';
+export type Role = 'owner' | 'admin' | 'surveyor' | 'technician' | 'customer' | 'supplier';
 
 export type Language = 'en' | 'hi' | 'mr';
 
