@@ -37,7 +37,7 @@ test('Scout: captures with no signal, sees it waiting, and it sends itself when 
   await context.setOffline(true);
   await expect(page.getByText('No signal: captures wait on this phone')).toBeVisible();
   await page.locator('.leaflet-container').click({ position: { x: 300, y: 160 } });
-  await expect(page.getByText(/Pin set/)).toBeVisible();
+  await expect(page.getByText(/Pin placed by hand/)).toBeVisible();
 
   // validation first: nothing is queued for an unnamed site
   await page.getByRole('button', { name: 'Save capture' }).click();

@@ -66,6 +66,14 @@ describe('visibility', () => {
     expect(adminView.payload.phone).toBe('••••••1001');
     expect(adminView.payload.contactName).toBe('••••');
     expect(log.list('owner1').find((e) => e.subject.id === 'L1')!.payload.phone).toBe('9822011001');
+    // Admin sees what happened, never exactly where: no place on the event and none in its payload
+    const placed = make();
+    placed.append('scout1', { type: 'lead.captured', subject: lead('L9'), geo: { lat: 18.59, lng: 73.73, accuracyM: 9 }, payload: { siteName: 'Hidden Heights', lat: 18.59, lng: 73.73, city: 'Pune' } });
+    const seen = placed.list('admin1')[0];
+    expect(seen.geo).toBeUndefined();
+    expect(seen.payload).toEqual({ siteName: 'Hidden Heights', city: 'Pune' });
+    expect(placed.list('owner1')[0].geo).toEqual({ lat: 18.59, lng: 73.73, accuracyM: 9 });
+    expect(placed.list('scout1')[0].payload.lat).toBe(18.59);
   });
 });
 

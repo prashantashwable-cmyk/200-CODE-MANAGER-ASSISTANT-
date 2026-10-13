@@ -96,3 +96,13 @@ memory), backups. Each screen that depends on one says so; see
 - **Ownership settings** (60 m radius, 30 days, 30 m GPS limit, 5 minutes, 72 h offline) are code defaults, not yet Owner-editable.
 - **Seeded leads have no recorded GPS accuracy**, so a new capture beside one is judged on position and time only.
 - **Capture and Map are reachable from the map's button and by address**; surveyors' bottom tab bar still points at the older capture screen (032), which does not use the ownership rule.
+
+## Added with the database event stream
+
+- **The app does not use the new table yet.** `platform_events` and its rules are written and proved on real Postgres (`npm run test:db`), but the screens still read the in-memory log. Wiring `listEvents` / `appendEvent` into `withServer` needs a running Supabase stack (Docker) to test end to end, which this build environment does not have. Until then nothing the app records survives a refresh.
+- **Two hashes exist.** The in-memory log uses a fast non-cryptographic fingerprint; the database uses SHA-256. They are different on purpose and not comparable. Once the app reads from the database, the database's chain is the one that counts.
+- **The database does not yet know which scout owns a lead or who a customer is**, because leads, deals and jobs are still in memory. So the database lets a scout read only events they wrote themselves; "a scout sees events on a lead they own" and "a customer sees their own project" still need those tables.
+- **No database table yet** for decision cards and records, leads, ownership captures, map sites, the offline queue's server side, or settings. Pin fuzzing and density are still computed in the in-memory repository, not in a database view.
+- **The Owner role was added to an existing enum**, and `app.is_admin()` now also returns true for the Owner (the Owner holds every authority Admin holds). The 34 earlier database tests still pass. Any policy added later that must be Owner-only has to check `app.is_owner()`.
+- **The correction window is fixed at 15 minutes in SQL**, not Owner-settable. Making it a setting needs a settings table the Owner alone can write; a session setting would let any browser widen it.
+- **Admin's view has no `lat`/`lng` and no geo, but the site name still appears** in event payloads. Whether Admin may see site names (as opposed to places) is an open question.

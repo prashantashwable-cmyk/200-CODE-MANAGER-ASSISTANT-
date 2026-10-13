@@ -58,14 +58,14 @@ export const CORRECTION_WINDOW_MS = 15 * 60_000; // [ASSUMPTION] default; Owner-
 export const REASON_MIN = 10;
 
 /** Class 4, locked: evidence, signatures, payment proofs, safety tripwires, verification reports, closed milestones. */
-const LOCKED: EventType[] = ['contract.signed', 'delivery.proof_captured', 'delivery.material_handover_signed', 'milestone.payment_recorded', 'milestone.payment_confirmed', 'milestone.verified', 'milestone.closed', 'safety.tripwire_raised', 'safety.check_recorded', 'milestone.evidence_submitted', 'qc.passed', 'qc.failed', 'decision.approved', 'decision.rejected'];
+export const LOCKED_TYPES: EventType[] = ['contract.signed', 'delivery.proof_captured', 'delivery.material_handover_signed', 'milestone.payment_recorded', 'milestone.payment_confirmed', 'milestone.verified', 'milestone.closed', 'safety.tripwire_raised', 'safety.check_recorded', 'milestone.evidence_submitted', 'qc.passed', 'qc.failed', 'decision.approved', 'decision.rejected'];
 const FREE: EventType[] = ['lead.contact_added'];
-const AFFECTS_MONEY_OR_RANK: EventType[] = ['quote.itemised', 'quote.component_accepted', 'tier.changed', 'payout.approved', 'payout.released', 'lead.ownership_claimed', 'milestone.opened'];
+export const MONEY_OR_RANK_TYPES: EventType[] = ['quote.itemised', 'quote.component_accepted', 'tier.changed', 'payout.approved', 'payout.released', 'lead.ownership_claimed', 'milestone.opened'];
 
 export function classOf(e: Pick<PlatformEvent, 'type' | 'actor' | 'receivedAt'>, byUserId: string, now: string, synced = true): CorrectionClass {
-  if (LOCKED.includes(e.type)) return 4;
+  if (LOCKED_TYPES.includes(e.type)) return 4;
   if (FREE.includes(e.type) || familyOf(e.type) === 'event') return 1;
-  if (AFFECTS_MONEY_OR_RANK.includes(e.type)) return 3;
+  if (MONEY_OR_RANK_TYPES.includes(e.type)) return 3;
   const mine = e.actor.id === byUserId;
   const inWindow = Date.parse(now) - Date.parse(e.receivedAt) <= CORRECTION_WINDOW_MS;
   return mine && (inWindow || !synced) ? 2 : 3;
@@ -104,7 +104,12 @@ export function createEventLog(deps: EventDeps) {
   }
 
   const sees = (userId: string, r: Role, e: PlatformEvent) => r === 'owner' || r === 'admin' || deps.canSee(userId, r, e);
-  const masked = (e: PlatformEvent, r: Role): PlatformEvent => (r === 'admin' ? ({ ...e, payload: maskPayload(e.payload) } as PlatformEvent) : e);
+  const masked = (e: PlatformEvent, r: Role): PlatformEvent => {
+    if (r !== 'admin') return e;
+    // Admin sees what happened, not who or exactly where: contact data masked, places removed.
+    const { geo: _place, ...rest } = e;
+    return { ...rest, payload: maskPayload(e.payload) } as PlatformEvent;
+  };
 
   return {
     /** Idempotent by `clientEventId`: a retry after a dropped connection returns the same event. The actor is the signed-in person, never what the client says. */
@@ -141,7 +146,7 @@ export function createEventLog(deps: EventDeps) {
       const target = find(eventId);
       if (!sees(userId, r, target)) throw new EventError('forbidden');
       if (reason.trim().length < REASON_MIN) throw new EventError('reason_short');
-      const cls = r === 'owner' && !LOCKED.includes(target.type) ? (1 as CorrectionClass) : classOf(target, userId, deps.now(), synced);
+      const cls = r === 'owner' && !LOCKED_TYPES.includes(target.type) ? (1 as CorrectionClass) : classOf(target, userId, deps.now(), synced);
       if (cls === 4) throw new EventError('locked');
       const payload = { patch, reason: reason.trim(), class: cls };
       if (cls === 3) return { status: 'needs_approval', class: cls, event: push({ role: r, id: userId }, { type: 'correction.proposed', subject: target.subject, about: eventId, payload, reasonTag: 'class3' }) };
@@ -176,9 +181,10 @@ export function createEventLog(deps: EventDeps) {
   };
 }
 
-/** Contact data is masked for Admin: last four digits only. */
+/** Contact data is masked for Admin (last four digits only) and places are removed. */
 function maskPayload(p: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = { ...p };
+  for (const k of ['lat', 'lng', 'latitude', 'longitude']) delete out[k];
   for (const k of ['phone', 'contactPhone', 'mobile']) if (typeof out[k] === 'string') out[k] = `••••••${String(out[k]).slice(-4)}`;
   for (const k of ['contactName', 'customerName']) if (k in out) out[k] = '••••';
   return out;
