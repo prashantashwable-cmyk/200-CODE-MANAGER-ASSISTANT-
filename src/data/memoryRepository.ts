@@ -1017,6 +1017,9 @@ import type { Candidate as BookingCandidate } from '@/features/service/booking';
 import { DRIVE_SKILL } from '@/features/training/skills';
 import { isEmail, isIndianMobile, isPincode } from '@/features/validation/india';
 import { randomCode, randomToken } from '@/features/ids/clientId';
+import { DEFAULT_COST_RATES, DEFAULT_FEE_SETTINGS, alternatives as fqAlternatives, computeQuote as fqCompute, mayOffer as fqMayOffer, maxBundleDiscountInr as fqMaxDiscount, quoteProblems as fqProblems, settingsProblem as fqSettingsProblem, waterfall as fqWaterfall } from '@/features/quotes/facilitatorQuote';
+import type { CostRates as FqCostRates, FeeActor as FqActor, FeeSettings as FqSettings, QuoteLine as FqLine } from '@/features/quotes/facilitatorQuote';
+import type { CustomerQuoteView, FacilitatorQuote, FeeSettingsVersion, QuotePreview, SaveQuoteInput, SaveQuoteResult } from '@/features/quotes/types';
 import { addDays } from '@/features/qc/inspectors';
 import { HUMAN_HOLD as SUPPORT_HUMAN_HOLD, MAX_MESSAGE as SUPPORT_MAX_MESSAGE, QUEUE_BUSY as SUPPORT_QUEUE_BUSY, REPLY_TARGET_MIN as SUPPORT_REPLY_TARGET_MIN, decide as supportDecide, handlingOf as supportHandlingOf, intentOf as supportIntentOf, queueOf as supportQueueOf } from '@/features/support/chat';
 import type { Intent as SupportIntent, Parsed as SupportParsed } from '@/features/support/chat';
@@ -18902,6 +18905,53 @@ function eventCall<T>(fn: () => T): T {
   try { return fn(); } catch (e) { if (e instanceof EventError) throw new RepositoryError(e.code); throw e; }
 }
 
+/* ---- 206/207 facilitator quotes: partner prices + a disclosed fee, priced on the fee version in force ---- */
+const feeVersions: FeeSettingsVersion[] = [
+  { version: 1, settings: DEFAULT_FEE_SETTINGS, costRates: DEFAULT_COST_RATES, setByName: 'Initial default [ASSUMPTION]', reason: 'Starting values for the Owner to replace', at: new Date().toISOString() },
+];
+const facilitatorQuotes: FacilitatorQuote[] = [];
+let fqCounter = 3000;
+const currentFee = () => feeVersions[feeVersions.length - 1];
+function fqActorOf(role: string | undefined): FqActor { return role === 'owner' ? 'owner' : 'sales'; }
+function fqRequireStaff(userId: string) {
+  const u = byId(users, userId);
+  if (!u || !isAdminRole(u.role)) throw new RepositoryError('forbidden');
+  fqSeed();
+  return u;
+}
+function fqPreview(userId: string, lines: FqLine[], bundleDiscountInr?: number): QuotePreview {
+  const u = fqRequireStaff(userId);
+  const fee = currentFee();
+  const input = { lines, settings: fee.settings, ...(bundleDiscountInr != null ? { bundleDiscountInr } : {}) };
+  const totals = fqCompute(input);
+  const actor = fqActorOf(u.role);
+  return {
+    totals, problems: fqProblems(input), band: totals.band, actor, allowed: fqMayOffer(totals.band, actor),
+    maxDiscountInr: fqMaxDiscount(lines, fee.settings, actor),
+    waterfall: fqWaterfall(totals.feeInr, totals.gstOnFeeInr, fee.costRates),
+    alternatives: fqAlternatives(totals.baseInr, fee.settings), feeVersion: fee.version,
+  };
+}
+function fqCustomerView(q: FacilitatorQuote): CustomerQuoteView {
+  return { quote: { id: q.id, code: q.code, siteName: q.siteName, status: q.status, ...(q.sentAt ? { sentAt: q.sentAt } : {}), components: q.components.map((c) => ({ ...c })), bundleDiscountInr: q.bundleDiscountInr, totals: { ...q.totals } }, tokenInr: q.totals.tokenInr };
+}
+let fqSeeded = false;
+function fqSeed() {
+  if (fqSeeded) return;
+  fqSeeded = true;
+  const lead = leads.find((l) => l.id === 'l-3');
+  if (!lead) return;
+  const lines: FqLine[] = [
+    { id: 'c1', partnerId: 'sp-1', partnerName: 'Vertex Lifts', kind: 'material', description: 'Machine, controller, cabin and doors', partnerPriceInr: 2_300_000 },
+    { id: 'c2', partnerId: 'u-tech-1', partnerName: 'Santosh Patil', kind: 'installation', description: 'Installation and commissioning', partnerPriceInr: 450_000 },
+    { id: 'c3', partnerId: 'dp-1', partnerName: 'City Freight', kind: 'logistics', description: 'Delivery to site', partnerPriceInr: 60_000 },
+    { id: 'c4', partnerId: 'gov', partnerName: 'Lift Inspectorate', kind: 'statutory', description: 'Licence and inspection fee (pass-through)', partnerPriceInr: 20_000 },
+  ];
+  const totals = fqCompute({ lines, settings: currentFee().settings });
+  fqCounter += 1;
+  facilitatorQuotes.push({ id: `fq-${fqCounter}`, code: `AIEC-FQ-${fqCounter}`, leadId: lead.id, siteName: lead.siteName, customerId: 'u-cust-3', components: lines, bundleDiscountInr: 0, feeVersion: 1, totals, status: 'sent', createdAt: new Date().toISOString(), createdByName: 'Demo seed', sentAt: new Date().toISOString() });
+}
+
 /** Where a person stands with a site: owns the lead, is its customer, or has been offered / has accepted the work. */
 function siteStageFor(lead: Lead, user: User): { stage: SiteStage; relation: { ownsLead: boolean; isCustomerOfSite: boolean } } {
   const deal = deals.find((d) => d.leadId === lead.id);
@@ -28526,6 +28576,73 @@ export const memoryRepository: Repository = {
       const limit = filter.limit === 0 ? list.length : filter.limit ?? PM_PAGE;
       return { entries: list.slice(offset, offset + limit).map((e) => ({ ...e })), total: list.length } as PermissionLogView;
     }),
+  /* 206/207 — facilitator quote */
+  getFeeSettings: (userId) => simulateRead(() => { fqRequireStaff(userId); return { current: { ...currentFee() }, history: [...feeVersions].reverse() }; }),
+  saveFeeSettings: (userId, settings, costRates, reason) => simulateWrite(() => {
+    const u = byId(users, userId);
+    if (!u || u.role !== 'owner') throw new RepositoryError('owner_only');
+    if (reason.trim().length < 10) throw new RepositoryError('reason_short');
+    const bad = fqSettingsProblem(settings);
+    if (bad) throw new RepositoryError(bad);
+    const v: FeeSettingsVersion = { version: currentFee().version + 1, settings, costRates, setByName: u.name, reason: reason.trim(), at: new Date().toISOString() };
+    feeVersions.push(v);
+    eventLog.append(userId, { type: 'system.rule_changed', subject: { kind: 'setting', id: 'fee' }, capturedAt: v.at, payload: { setting: 'facilitation_fee', version: v.version, targetPct: settings.targetPct, reason: v.reason } });
+    return { ...v };
+  }),
+  previewFacilitatorQuote: (userId, input) => simulateRead(() => fqPreview(userId, input.lines, input.bundleDiscountInr)),
+  saveFacilitatorQuote: (userId, input: SaveQuoteInput) => simulateWrite((): SaveQuoteResult => {
+    const u = fqRequireStaff(userId);
+    const dup = facilitatorQuotes.find((q) => q.clientEventId === input.clientEventId);
+    if (dup) return { status: 'saved', quote: { ...dup } };
+    const lead = byId(leads, input.leadId);
+    if (!lead) throw new RepositoryError('not_found');
+    const pv = fqPreview(userId, input.lines, input.bundleDiscountInr);
+    if (pv.problems.length) throw new RepositoryError(pv.problems[0]);
+    if (!pv.allowed) {
+      const card = decisionStore.prepare(userId, { kind: 'fee_change', title: `Fee below ${pv.actor === 'owner' ? 'floor' : 'your floor'} for ${lead.siteName}`, summary: `Quote for ${lead.siteName} would carry a fee of ${pv.totals.effectivePct}% on partner cost, which is in the "${pv.band}" band and needs the Owner.`, amountInr: pv.totals.feeInr, impact: [`Fee ₹${pv.totals.feeInr}`, `Margin after costs ₹${pv.waterfall.marginInr}`] });
+      return { status: 'needs_owner', cardId: card.id, preview: pv };
+    }
+    const deal = deals.find((d) => d.leadId === lead.id);
+    fqCounter += 1;
+    const quote: FacilitatorQuote = { id: `fq-${fqCounter}`, code: `AIEC-FQ-${fqCounter}`, leadId: lead.id, siteName: lead.siteName, ...(deal?.customerId ? { customerId: deal.customerId } : {}), components: input.lines.map((l) => ({ ...l })), bundleDiscountInr: pv.totals.bundleDiscountInr, feeVersion: pv.feeVersion, totals: pv.totals, status: 'draft', createdAt: new Date().toISOString(), createdByName: u.name, clientEventId: input.clientEventId };
+    facilitatorQuotes.unshift(quote);
+    eventLog.append(userId, { type: 'quote.itemised', subject: { kind: 'lead', id: lead.id }, capturedAt: quote.createdAt, clientEventId: input.clientEventId, payload: { quoteId: quote.id, feeInr: pv.totals.feeInr, effectivePct: pv.totals.effectivePct, band: pv.band, feeVersion: pv.feeVersion, customerId: quote.customerId ?? null } });
+    return { status: 'saved', quote: { ...quote } };
+  }),
+  listFacilitatorQuotes: (userId) => simulateRead(() => { fqRequireStaff(userId); fqSeed(); return facilitatorQuotes.map((q) => ({ ...q })); }),
+  sendFacilitatorQuote: (userId, quoteId) => simulateWrite(() => {
+    fqRequireStaff(userId);
+    const q = byId(facilitatorQuotes, quoteId);
+    if (!q) throw new RepositoryError('not_found');
+    if (q.status !== 'draft') throw new RepositoryError('invalid_state');
+    q.status = 'sent'; q.sentAt = new Date().toISOString();
+    eventLog.append(userId, { type: 'quote.sent', subject: { kind: 'lead', id: q.leadId }, capturedAt: q.sentAt, payload: { quoteId: q.id, customerId: q.customerId ?? null } });
+    return { ...q };
+  }),
+  getMyQuote: (userId) => simulateRead(() => {
+    const u = byId(users, userId);
+    if (!u || u.role !== 'customer') throw new RepositoryError('forbidden');
+    fqSeed();
+    const q = facilitatorQuotes.find((x) => x.customerId === userId && x.status !== 'draft');
+    return q ? fqCustomerView(q) : null;
+  }),
+  acceptQuoteComponents: (userId, quoteId, lineIds) => simulateWrite(() => {
+    const u = byId(users, userId);
+    if (!u || u.role !== 'customer') throw new RepositoryError('forbidden');
+    const q = byId(facilitatorQuotes, quoteId);
+    if (!q || q.customerId !== userId || q.status === 'draft') throw new RepositoryError('not_found');
+    if (q.status === 'accepted' || q.status === 'rejected') throw new RepositoryError('invalid_state');
+    const now = new Date().toISOString();
+    for (const id of lineIds) {
+      const c = q.components.find((x) => x.id === id);
+      if (!c) throw new RepositoryError('not_found');
+      if (c.acceptedAt) continue;
+      c.acceptedAt = now;
+      eventLog.append(userId, { type: 'quote.component_accepted', subject: { kind: 'lead', id: q.leadId }, capturedAt: now, payload: { quoteId: q.id, lineId: c.id, partnerId: c.partnerId, priceInr: c.partnerPriceInr, customerId: userId } });
+    }
+    q.status = q.components.every((c) => c.acceptedAt) ? 'accepted' : 'partly_accepted';
+    return fqCustomerView(q);
+  }),
   /* 193 — single-person monitor */
   appendEvent: (userId, input) => simulateWrite(() => eventCall(() => eventLog.append(userId, input))),
   listEvents: (userId, filter) => simulateRead(() => eventCall(() => eventLog.list(userId, filter))),

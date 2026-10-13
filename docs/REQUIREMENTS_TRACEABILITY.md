@@ -28,7 +28,7 @@ Status uses only: **Done** (persisted as designed, tested), **Partial**, **Plann
 | P7 | Owner role | Done | role, home 202, nav |
 | P7 | Other new roles (Sales, QC, NBFC, Logistics, Mentor, Applicant) | Not started | |
 | P8 | Map-first home, fuzzing, presence | Not started | |
-| P0 | Facilitator commercial model, fee band, quotes | Not started | |
+| P0 | Facilitator commercial model, fee band, quotes | Partly built | `features/quotes/facilitatorQuote.ts` (fee band 60/30/20, bundle discount from fee only, token, waterfall, alternatives, principal-risk flags); screens 206/207; tests `facilitatorQuote*.test.ts`, `quotes.spec.ts`. Mode P is a flag only (no principal flow). |
 | P6 | Tier system | Not started (a tier screen exists in the legacy model, 148) | |
 | Adaptive screens (user request) | High-resolution adaptive layout | Done for shell, containers, type | `styles/adaptive.css`; per-screen visual review not done |
 | Part C | Scout capture, sales flow, QC, payments, SOP, admin analytics | Exists in legacy screens (in-memory); not re-verified against the new model | |

@@ -109,3 +109,12 @@ memory), backups. Each screen that depends on one says so; see
 
 ## Free-tier policy (2026-10-13)
 See docs/FREE_TIER_POLICY.md. Supabase free plan: pauses after inactivity, no daily backups, 500 MB cap, no SMS. Limits quoted from third-party sources, unverified against the vendor.
+
+## Slice 3 — facilitator quote (2026-10-13)
+- In memory only: quotes, fee settings and their history are not in the database yet (no migration, no `withServer` override).
+- All fee values are placeholders for the Owner: 60% target markup on partner cost, 30% assistant floor, 20% person floor, 18% GST on the fee `[VERIFY with the accountant]`, Rs 10,000 token, cost rates in the waterfall. A 60% markup on partner cost is 37.5% of the partners-plus-fee total (before GST): whether customers accept that is untested (see the alternatives card).
+- Partner prices are typed in by staff here. Real partner offers (RFQ to partners, partner consent to a changed price) are not built.
+- Customer acceptance is per component and recorded as events; the booking token is displayed, not collected (no payment provider connected).
+- A below-floor quote by Admin raises a `fee_change` Decision Desk card but the quote itself is not saved until the Owner re-saves it; accepting the card does not yet create the quote.
+- Mode P (principal) is only a flag: `computeQuote` refuses it. The comparison table is not built.
+- The customer's quote is reachable by URL (`/my-quote`, Documents tab); nothing on the customer home links to it yet.
