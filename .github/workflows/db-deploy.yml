@@ -1,0 +1,30 @@
+name: Deploy database
+
+# Run by hand (Actions tab → "Deploy database" → Run workflow). Sends supabase/migrations to the live
+# Supabase project. The three values are GitHub repository secrets (Settings → Secrets and variables →
+# Actions); they are never written in the code or the chat. See docs/SUPABASE_SETUP.md.
+on:
+  workflow_dispatch:
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0
+      - name: Check the secrets are set
+        run: |
+          for v in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_REF; do
+            if [ -z "${!v}" ]; then echo "::error::Repository secret $v is not set (docs/SUPABASE_SETUP.md)"; exit 1; fi
+          done
+      - run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+      - name: Show what will change
+        run: supabase db push --dry-run
+      - run: supabase db push

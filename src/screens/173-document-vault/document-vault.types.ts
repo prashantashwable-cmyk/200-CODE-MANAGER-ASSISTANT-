@@ -1,0 +1,220 @@
+import type { VaultKind } from '@/features/documents/vault';
+import type { HtmlTokens } from '@/features/documents/vault';
+
+export const POLL_MS = 60_000;
+export const VAULT_PATH = '/documents';
+export const viewKey = (userId: string) => `aiec.documentVault.${userId}`;
+export const KIND_ORDER: VaultKind[] = ['quotation', 'agreement', 'invoice', 'receipt', 'delivery', 'compliance', 'handover', 'warranty', 'amc'];
+/** The active theme's colours, as the custom properties a downloaded page reads (plain values when there is no theme, e.g. in a test). */
+export function readTokens(): HtmlTokens {
+  const css = typeof document === 'undefined' ? null : getComputedStyle(document.documentElement);
+  const out: HtmlTokens = {};
+  for (const name of ['--color-bg', '--color-surface', '--color-text-primary', '--color-text-secondary', '--color-border', '--color-accent-primary']) {
+    const v = css?.getPropertyValue(name).trim();
+    if (v) out[name] = v;
+  }
+  return out;
+}
+
+export const DOCUMENT_KEYS = {
+  title: 'documentVault.title',
+  subtitle: 'documentVault.subtitle',
+  loading: 'documentVault.loading',
+  error: {
+    title: 'documentVault.error.title',
+    body: 'documentVault.error.body',
+  },
+  offline: 'documentVault.offline',
+  refresh: 'documentVault.refresh',
+  close: 'documentVault.close',
+  search: {
+    label: 'documentVault.search.label',
+    placeholder: 'documentVault.search.placeholder',
+  },
+  filter: {
+    all: 'documentVault.filter.all',
+  },
+  project: {
+    all: 'documentVault.project.all',
+    label: 'documentVault.project.label',
+  },
+  kind: {
+    quotation: 'documentVault.kind.quotation',
+    agreement: 'documentVault.kind.agreement',
+    invoice: 'documentVault.kind.invoice',
+    receipt: 'documentVault.kind.receipt',
+    compliance: 'documentVault.kind.compliance',
+    warranty: 'documentVault.kind.warranty',
+    amc: 'documentVault.kind.amc',
+    handover: 'documentVault.kind.handover',
+    delivery: 'documentVault.kind.delivery',
+  },
+  invoiceType: {
+    stage: 'documentVault.invoiceType.stage',
+    final: 'documentVault.invoiceType.final',
+    reissue: 'documentVault.invoiceType.reissue',
+    credit_note: 'documentVault.invoiceType.credit_note',
+  },
+  status: {
+    current: 'documentVault.status.current',
+    superseded: 'documentVault.status.superseded',
+    void: 'documentVault.status.void',
+  },
+  supersededBy: 'documentVault.supersededBy',
+  earlier: 'documentVault.earlier',
+  showEarlier: 'documentVault.showEarlier',
+  hideEarlier: 'documentVault.hideEarlier',
+  count: 'documentVault.count',
+  issuedOn: 'documentVault.issuedOn',
+  validity: {
+    quote: 'documentVault.validity.quote',
+    service_warranty: 'documentVault.validity.service_warranty',
+    amc_term: 'documentVault.validity.amc_term',
+    state: {
+      valid: 'documentVault.validity.state.valid',
+      expiring: 'documentVault.validity.state.expiring',
+      expired: 'documentVault.validity.state.expired',
+    },
+    expiringNote: 'documentVault.validity.expiringNote',
+  },
+  list: {
+    empty: {
+      title: 'documentVault.list.empty.title',
+      body: 'documentVault.list.empty.body',
+    },
+    none: {
+      title: 'documentVault.list.none.title',
+      body: 'documentVault.list.none.body',
+    },
+    clear: 'documentVault.list.clear',
+  },
+  beforeAccount: {
+    badge: 'documentVault.beforeAccount.badge',
+    note: 'documentVault.beforeAccount.note',
+  },
+  exactly: 'documentVault.exactly',
+  actions: {
+    open: 'documentVault.actions.open',
+    download: 'documentVault.actions.download',
+    share: 'documentVault.actions.share',
+    downloadAll: 'documentVault.actions.downloadAll',
+    openOrigin: 'documentVault.actions.openOrigin',
+  },
+  toast: {
+    downloaded: 'documentVault.toast.downloaded',
+    copied: 'documentVault.toast.copied',
+    shared: 'documentVault.toast.shared',
+    failed: 'documentVault.toast.failed',
+    nothing: 'documentVault.toast.nothing',
+  },
+  detail: {
+    version: 'documentVault.detail.version',
+    versions: 'documentVault.detail.versions',
+    current: 'documentVault.detail.current',
+    issuedBy: 'documentVault.detail.issuedBy',
+    notFound: 'documentVault.detail.notFound',
+    loading: 'documentVault.detail.loading',
+  },
+  section: {
+    document: 'documentVault.section.document',
+    lift: 'documentVault.section.lift',
+    price: 'documentVault.section.price',
+    paymentPlan: 'documentVault.section.paymentPlan',
+    specialTerms: 'documentVault.section.specialTerms',
+    amendments: 'documentVault.section.amendments',
+    parties: 'documentVault.section.parties',
+    amounts: 'documentVault.section.amounts',
+    checks: 'documentVault.section.checks',
+    notice: 'documentVault.section.notice',
+    serviceWarranty: 'documentVault.section.serviceWarranty',
+    partsWarranty: 'documentVault.section.partsWarranty',
+    terms: 'documentVault.section.terms',
+    items: 'documentVault.section.items',
+  },
+  field: {
+    number: 'documentVault.field.number',
+    version: 'documentVault.field.version',
+    status: 'documentVault.field.status',
+    issued: 'documentVault.field.issued',
+    validUntil: 'documentVault.field.validUntil',
+    accepted: 'documentVault.field.accepted',
+    drive: 'documentVault.field.drive',
+    persons: 'documentVault.field.persons',
+    capacityKg: 'documentVault.field.capacityKg',
+    stops: 'documentVault.field.stops',
+    height: 'documentVault.field.height',
+    finish: 'documentVault.field.finish',
+    gstAmount: 'documentVault.field.gstAmount',
+    totalInclGst: 'documentVault.field.totalInclGst',
+    signed: 'documentVault.field.signed',
+    agreedPrice: 'documentVault.field.agreedPrice',
+    notes: 'documentVault.field.notes',
+    amended: 'documentVault.field.amended',
+    forStage: 'documentVault.field.forStage',
+    reason: 'documentVault.field.reason',
+    against: 'documentVault.field.against',
+    billedTo: 'documentVault.field.billedTo',
+    address: 'documentVault.field.address',
+    yourGstin: 'documentVault.field.yourGstin',
+    aiecGstin: 'documentVault.field.aiecGstin',
+    issuer: 'documentVault.field.issuer',
+    issuerAddress: 'documentVault.field.issuerAddress',
+    taxable: 'documentVault.field.taxable',
+    gstPercent: 'documentVault.field.gstPercent',
+    received: 'documentVault.field.received',
+    method: 'documentVault.field.method',
+    reference: 'documentVault.field.reference',
+    invoice: 'documentVault.field.invoice',
+    stageAmount: 'documentVault.field.stageAmount',
+    amountReceived: 'documentVault.field.amountReceived',
+    site: 'documentVault.field.site',
+    standards: 'documentVault.field.standards',
+    basedOn: 'documentVault.field.basedOn',
+    installSteps: 'documentVault.field.installSteps',
+    mechanicalSigned: 'documentVault.field.mechanicalSigned',
+    electricalSigned: 'documentVault.field.electricalSigned',
+    notice: 'documentVault.field.notice',
+    job: 'documentVault.field.job',
+    customer: 'documentVault.field.customer',
+    registered: 'documentVault.field.registered',
+    starts: 'documentVault.field.starts',
+    months: 'documentVault.field.months',
+    part: 'documentVault.field.part',
+    plan: 'documentVault.field.plan',
+    annualPrice: 'documentVault.field.annualPrice',
+    includedVisits: 'documentVault.field.includedVisits',
+    response: 'documentVault.field.response',
+    term: 'documentVault.field.term',
+    item: 'documentVault.field.item',
+  },
+  stage: {
+    advance: 'documentVault.stage.advance',
+    material: 'documentVault.stage.material',
+    installation: 'documentVault.stage.installation',
+    handover: 'documentVault.stage.handover',
+    retention: 'documentVault.stage.retention',
+  },
+  method: {
+    upi: 'documentVault.method.upi',
+    netbanking: 'documentVault.method.netbanking',
+    neft: 'documentVault.method.neft',
+    card: 'documentVault.method.card',
+    cash: 'documentVault.method.cash',
+    cheque: 'documentVault.method.cheque',
+    financing: 'documentVault.method.financing',
+  },
+  tier: {
+    basic: 'documentVault.tier.basic',
+    standard: 'documentVault.tier.standard',
+    comprehensive: 'documentVault.tier.comprehensive',
+  },
+  complianceNotice: 'documentVault.complianceNotice',
+  bundle: {
+    title: 'documentVault.bundle.title',
+    note: 'documentVault.bundle.note',
+    share: 'documentVault.bundle.share',
+  },
+  link: {
+    open: 'documentVault.link.open',
+  },
+} as const;

@@ -1,0 +1,1052 @@
+import type { ScreenTranslations } from '@/i18n/types';
+
+/**
+ * Screen 152. The player's own words, and the content of every authored lesson (`lessonContent.<module code>.l<n>.*`: title, summary, the words of each
+ * section, the knowledge check and its explanation, and the key points of the quick-reference sheet) in three languages. A new lesson adds its keys here
+ * and its structure to the seed, never a screen. The wording is a starting draft for the owner's own safety adviser to review.
+ */
+const translations: ScreenTranslations = {
+  en: {
+    lessonPlayer: {
+      title: 'Lesson',
+      loading: 'Loading the lesson',
+      error: {
+        title: 'The lesson could not be loaded',
+        body: 'Check your connection and try again.',
+      },
+      notFound: {
+        title: 'That lesson is not available',
+        body: 'It may have been withdrawn, or it is not part of your training.',
+      },
+      soon: {
+        title: 'Lessons are being prepared',
+        body: 'This module has no lessons yet. Nothing is lost: it will open here as soon as they are published.',
+      },
+      locked: {
+        title: 'Not open yet',
+        body: 'Finish the earlier lesson, or the module this one builds on, to open it.',
+      },
+      back: 'Back to training',
+      backToModule: 'Back to the module',
+      overview: {
+        progress: '{{done}} of {{total}} lessons finished',
+        changed: 'What changed:',
+        lessonsHeading: 'Lessons',
+        minutes: '{{count}} min',
+        play: 'Start',
+        resume: 'Continue',
+        replay: 'Watch again',
+        updatedBadge: 'Updated',
+        doneBadge: 'Finished',
+        lockedHint: 'Lessons open one after another. Finish a lesson, including its check, to open the next.',
+        allDone: 'Every lesson in this module is finished. You can watch any of them again.',
+        keyPoints_one: '{{count}} key point',
+        keyPoints_other: '{{count}} key points',
+      },
+      reference: {
+        heading: 'Quick-reference sheet',
+        body: 'The key points of the lessons you have finished, on one page you can keep on your phone and read on site.',
+        download: 'Download the sheet',
+        none: 'Finish a lesson to unlock it.',
+        lesson: 'Download this lesson’s sheet',
+        downloaded: 'Sheet saved',
+        brand: 'All India Elevators Company',
+        generated: 'Saved on {{date}}',
+        footer: 'A summary of the AIEC lesson, for quick lookup. It does not replace the full lesson or your trainer.',
+        version: 'Lesson version {{version}}',
+      },
+      player: {
+        sceneOf: 'Section {{n}} of {{total}}',
+        play: 'Play',
+        pause: 'Pause',
+        replaySection: 'Replay this section',
+        restart: 'Start again',
+        speed: 'Speed',
+        speedValue: '{{value}}×',
+        captions: 'Captions',
+        captionsOff: 'Captions are off. Turn them on to read this section.',
+        listen: 'Read aloud',
+        listenOff: 'Reading aloud is off',
+        language: 'Lesson language',
+        timeline: 'Position in the lesson',
+        time: '{{now}} / {{total}}',
+        resumed: 'Picking up where you left off, at {{time}}.',
+        sections: 'Sections',
+        sectionPlayed: 'Played',
+        sectionAhead: 'Play the lesson to reach this section.',
+        aheadNote: 'You can go back to anything you have played, but not ahead of it.',
+        offline: 'No signal. The lesson plays on and your place is kept on this phone. You will need signal to answer a check.',
+        synced: 'Your place is kept on this phone and will be saved when you are back online.',
+        replaying: 'Watching again',
+        checkMarker: 'Knowledge check',
+      },
+      lang: {
+        en: 'English',
+        hi: 'Hindi',
+        mr: 'Marathi',
+      },
+      visual: {
+        welcome: 'A handshake',
+        promise: 'A shield with a tick',
+        person: 'A person',
+        phone: 'A phone',
+        warning: 'A warning sign',
+        harness: 'A safety harness',
+        inspect: 'A magnifying glass',
+        anchor: 'An anchor point',
+        rescue: 'A lifebuoy',
+        power: 'A lightning bolt',
+        lock: 'A padlock',
+        tag: 'A tag',
+        meter: 'A meter',
+      },
+      check: {
+        heading: 'Check your understanding',
+        blocked: 'The lesson continues once you answer this correctly.',
+        single: 'Choose one',
+        multi: 'Choose all that apply',
+        submit: 'Check my answer',
+        correct: 'Correct',
+        notYet: 'Not quite',
+        attempts: 'Attempt {{count}}',
+        tryAgain: 'Try again',
+        watchAgain: 'Watch the section again',
+        continue: 'Continue the lesson',
+        needSignal: 'Reconnect to answer. Your place is kept.',
+      },
+      done: {
+        heading: 'Lesson finished!',
+        body: '{{title}} is done. Every check was answered correctly.',
+        again: 'You have watched this lesson again. It was already finished.',
+        next: 'Next lesson',
+        moduleDone: '{{module}} is finished!',
+        gateLifted: 'This is one of the safety modules needed before you can be given a job. Its test comes next.',
+        saving: 'Saving your progress…',
+        pending: 'You finished, but there is no signal to record it. It will be saved as soon as you are back online.',
+        retry: 'Save now',
+        points: 'Key points to remember',
+      },
+      problem: {
+        forbidden: 'You cannot open that lesson.',
+        not_found: 'That lesson could not be found.',
+        locked: 'Finish the earlier lesson first.',
+        not_for_you: 'That module is not part of your role.',
+        retired: 'That module is no longer in use.',
+        invalid_state: 'That cannot be done yet. Play the lesson up to this point first.',
+        no_lessons: 'This module has no lessons yet.',
+        none_chosen: 'Choose an answer first.',
+        single_only: 'Choose just one answer.',
+        out_of_range: 'That answer is not one of the choices.',
+        not_finished: 'Play the lesson to the end first.',
+        checks_open: 'Answer every check correctly first.',
+        unknown_check: 'That question could not be found.',
+        offline: 'You need signal to check an answer. Your place is kept.',
+        generic: 'Something went wrong. Please try again.',
+      },
+    },
+    lessonContent: {
+      'onb-01': {
+        l1: {
+          title: 'Who AIEC is and what we promise',
+          summary: 'The company, the customers we serve and the promise we make to them.',
+          scene: {
+            1: 'All India Elevators Company installs and services lifts for builders, housing societies and offices across India.',
+            2: 'Our promise to every customer is simple: a safe lift, installed as agreed, on the day we said, and a clear answer when something changes.',
+            3: 'You are the face of that promise. Customers remember how you spoke to them as much as how well you worked.',
+          },
+          check: {
+            1: {
+              q: 'What is the promise AIEC makes to every customer?',
+              o: {
+                0: 'The cheapest lift in the city',
+                1: 'A safe lift, installed as agreed, with a clear answer when plans change',
+                2: 'Work finished early whatever the cost',
+              },
+              why: 'Safety, keeping to what was agreed and honest communication come first. Speed or price never outrank them.',
+            },
+          },
+          point: {
+            1: 'Safe first, then as agreed, then on time.',
+            2: 'Tell the customer early when something changes.',
+            3: 'How you speak is part of the work.',
+          },
+        },
+        l2: {
+          title: 'How we work together',
+          summary: 'Checking in, reporting what you find and asking for help.',
+          scene: {
+            1: 'When you reach a site, check in on the app. It tells the office you are safe and where you are.',
+            2: 'Report what you find as you find it: photos, short notes, problems. A small problem told early is easy to fix.',
+            3: 'If you are unsure or something looks unsafe, stop and ask. Nobody at AIEC will be upset that you asked.',
+          },
+          check: {
+            1: {
+              q: 'You notice something that looks unsafe at the site. What do you do?',
+              o: {
+                0: 'Finish the job first and mention it later',
+                1: 'Stop, report it on the app and ask for help',
+                2: 'Fix it yourself quietly so nobody worries',
+              },
+              why: 'Stopping and reporting is always right. A hidden problem becomes a bigger one.',
+            },
+          },
+          point: {
+            1: 'Check in on arrival and out on leaving.',
+            2: 'Report problems when you see them, with a photo.',
+            3: 'Unsafe? Stop and ask.',
+          },
+        },
+      },
+      'saf-02': {
+        l1: {
+          title: 'Before you go up: harness and inspection',
+          summary: 'Checking your harness and lanyard before every shift.',
+          scene: {
+            1: 'Your harness is the last thing between you and a fall. Check it before every shift, not just when it is new.',
+            2: 'Look at the webbing for cuts, fraying, burns and stains. Check stitching, buckles and the lanyard clip.',
+            3: 'If anything is damaged, tag it and do not use it. Report it on the app and ask for another one.',
+          },
+          check: {
+            1: {
+              q: 'Which of these mean you must not use the harness? Choose all that apply.',
+              o: {
+                0: 'Cut or frayed webbing',
+                1: 'A buckle that does not lock',
+                2: 'Dust on the strap',
+              },
+              why: 'Cuts, fraying and a buckle that does not lock make a harness unsafe. Dust on its own does not.',
+            },
+          },
+          point: {
+            1: 'Inspect webbing, stitching, buckles and clip every shift.',
+            2: 'Damaged? Tag it, do not use it, report it.',
+            3: 'Never lend or borrow a harness.',
+          },
+        },
+        l2: {
+          title: 'Anchor points in the hoistway',
+          summary: 'Choosing and using anchor points that will hold.',
+          scene: {
+            1: 'Connect only to an anchor point that is rated to hold a fall and is above the height you are working at.',
+            2: 'From this version, use two anchor points: your main lanyard on one and a backup on the second, so one failure never leaves you unprotected.',
+            3: 'Never use a pipe, cable, rail bracket or anything not marked as an anchor point.',
+          },
+          check: {
+            1: {
+              q: 'How many anchor points do you connect to when working in the hoistway?',
+              o: {
+                0: 'One is enough',
+                1: 'Two: a main and a backup',
+                2: 'Only when you feel unsafe',
+              },
+              why: 'Two anchor points mean one failure never leaves you unprotected. This is required for every shift.',
+            },
+          },
+          point: {
+            1: 'Only connect to a rated anchor point.',
+            2: 'Use two anchor points: main and backup.',
+            3: 'A pipe or rail bracket is not an anchor point.',
+          },
+        },
+        l3: {
+          title: 'Rescue and stopping work',
+          summary: 'What to do if someone falls or the plan is not safe.',
+          scene: {
+            1: 'Before work starts, know who will raise the alarm and how a person would be brought down. Never work in the shaft alone.',
+            2: 'If someone falls and is hanging, call for help at once and use the SOS button. Do not climb up to reach them unless you are trained and clipped on.',
+            3: 'A person hanging in a harness can become unwell within minutes. Time matters, so call first.',
+          },
+          check: {
+            1: {
+              q: 'A colleague is hanging in their harness after a slip. What do you do first?',
+              o: {
+                0: 'Call for help and press SOS',
+                1: 'Climb up without a harness to reach them',
+                2: 'Finish your task first',
+              },
+              why: 'Calling for help immediately gets trained rescuers moving. Going up unprotected could leave two people in danger.',
+            },
+          },
+          point: {
+            1: 'Never work alone in the shaft.',
+            2: 'Know the rescue plan before you start.',
+            3: 'Call for help first; use SOS.',
+          },
+        },
+      },
+      'saf-03': {
+        l1: {
+          title: 'Isolate the power',
+          summary: 'Switching off and separating the lift from every supply.',
+          scene: {
+            1: 'Before you work on any electrical part of a lift, switch off the main supply and separate it. Switching off at the panel is not enough on its own.',
+            2: 'Find every source of power: the main supply, the controller, and any backup or battery supply that could bring a part to life.',
+            3: 'Tell everyone nearby that power is going off and why.',
+          },
+          check: {
+            1: {
+              q: 'What must you do before working on an electrical part of the lift?',
+              o: {
+                0: 'Switch off the main supply and separate every source',
+                1: 'Switch off the light only',
+                2: 'Ask someone to watch you',
+              },
+              why: 'Every source of power has to be separated, including backups, before you begin.',
+            },
+          },
+          point: {
+            1: 'Isolate the main supply and every other source.',
+            2: 'Look for backup or battery supplies.',
+            3: 'Tell people nearby.',
+          },
+        },
+        l2: {
+          title: 'Lock-out and tag-out',
+          summary: 'Keeping the power off while you work.',
+          scene: {
+            1: 'After isolating, put your own padlock on the switch. Only you hold the key.',
+            2: 'Add a tag with your name, the date and the reason, so nobody switches it back on.',
+            3: 'If another person also works on the lift, each person adds their own lock. The power comes back only when every lock is removed.',
+          },
+          check: {
+            1: {
+              q: 'Which are part of lock-out and tag-out? Choose all that apply.',
+              o: {
+                0: 'Your own padlock on the switch',
+                1: 'A tag with your name and the reason',
+                2: 'Handing your key to a colleague to hold',
+              },
+              why: 'The lock and the tag are yours alone. Giving the key to someone else defeats the lock.',
+            },
+          },
+          point: {
+            1: 'Your own lock, your own key.',
+            2: 'Tag with name, date, reason.',
+            3: 'Every worker adds their own lock.',
+          },
+        },
+        l3: {
+          title: 'Test before you touch',
+          summary: 'Proving the circuit is dead.',
+          scene: {
+            1: 'Even after lock-out, test that the circuit is dead before you touch it.',
+            2: 'Use a voltage tester. First prove it works on a known live source, test the circuit, then prove the tester works again.',
+            3: 'If the tester shows voltage or you are unsure, stop. Do not touch anything and call for help.',
+          },
+          check: {
+            1: {
+              q: 'What do you do if your tester shows voltage on a circuit you locked out?',
+              o: {
+                0: 'Touch it quickly to be sure',
+                1: 'Stop and call for help',
+                2: 'Ignore it, the lock is on',
+              },
+              why: 'Voltage after lock-out means something is wrong. Stop and get help.',
+            },
+          },
+          point: {
+            1: 'Test every circuit, every time.',
+            2: 'Prove the tester on a live source before and after.',
+            3: 'Voltage after lock-out: stop, call.',
+          },
+        },
+      },
+    },
+  },
+  hi: {
+    lessonPlayer: {
+      title: 'पाठ',
+      loading: 'पाठ लोड हो रहा है',
+      error: {
+        title: 'पाठ लोड नहीं हो सका',
+        body: 'कनेक्शन जाँचें और फिर कोशिश करें।',
+      },
+      notFound: {
+        title: 'वह पाठ उपलब्ध नहीं है',
+        body: 'हो सकता है उसे हटा दिया गया हो, या वह आपके प्रशिक्षण का हिस्सा न हो।',
+      },
+      soon: {
+        title: 'पाठ तैयार हो रहे हैं',
+        body: 'इस मॉड्यूल के पाठ अभी नहीं हैं। कुछ खोया नहीं है: प्रकाशित होते ही यह यहाँ खुल जाएगा।',
+      },
+      locked: {
+        title: 'अभी नहीं खुला',
+        body: 'इसे खोलने के लिए पहले वाला पाठ, या वह मॉड्यूल पूरा करें जिस पर यह आधारित है।',
+      },
+      back: 'प्रशिक्षण पर वापस',
+      backToModule: 'मॉड्यूल पर वापस',
+      overview: {
+        progress: '{{total}} में से {{done}} पाठ पूरे हुए',
+        changed: 'क्या बदला:',
+        lessonsHeading: 'पाठ',
+        minutes: '{{count}} मिनट',
+        play: 'शुरू करें',
+        resume: 'जारी रखें',
+        replay: 'फिर देखें',
+        updatedBadge: 'अपडेट हुआ',
+        doneBadge: 'पूरा हुआ',
+        lockedHint: 'पाठ एक के बाद एक खुलते हैं। अगला खोलने के लिए एक पाठ, उसकी जाँच समेत, पूरा करें।',
+        allDone: 'इस मॉड्यूल के सभी पाठ पूरे हो गए हैं। आप कोई भी पाठ फिर से देख सकते हैं।',
+        keyPoints_one: '{{count}} मुख्य बात',
+        keyPoints_other: '{{count}} मुख्य बातें',
+      },
+      reference: {
+        heading: 'त्वरित संदर्भ शीट',
+        body: 'आपके पूरे किए पाठों की मुख्य बातें एक पन्ने पर, जिसे आप फ़ोन में रखकर साइट पर पढ़ सकते हैं।',
+        download: 'शीट डाउनलोड करें',
+        none: 'इसे खोलने के लिए कोई पाठ पूरा करें।',
+        lesson: 'इस पाठ की शीट डाउनलोड करें',
+        downloaded: 'शीट सेव हो गई',
+        brand: 'ऑल इंडिया एलिवेटर्स कंपनी',
+        generated: '{{date}} को सेव की गई',
+        footer: 'AIEC के पाठ का सार, जल्दी देखने के लिए। यह पूरे पाठ या आपके प्रशिक्षक का विकल्प नहीं है।',
+        version: 'पाठ संस्करण {{version}}',
+      },
+      player: {
+        sceneOf: 'भाग {{n}} / {{total}}',
+        play: 'चलाएँ',
+        pause: 'रोकें',
+        replaySection: 'यह भाग फिर चलाएँ',
+        restart: 'फिर से शुरू करें',
+        speed: 'गति',
+        speedValue: '{{value}}×',
+        captions: 'कैप्शन',
+        captionsOff: 'कैप्शन बंद हैं। इस भाग को पढ़ने के लिए इन्हें चालू करें।',
+        listen: 'सुनें',
+        listenOff: 'सुनना बंद है',
+        language: 'पाठ की भाषा',
+        timeline: 'पाठ में स्थिति',
+        time: '{{now}} / {{total}}',
+        resumed: 'जहाँ छोड़ा था वहीं से, {{time}} पर।',
+        sections: 'भाग',
+        sectionPlayed: 'देखा जा चुका',
+        sectionAhead: 'इस भाग तक पहुँचने के लिए पाठ चलाएँ।',
+        aheadNote: 'आप जो देख चुके हैं उस पर वापस जा सकते हैं, उससे आगे नहीं।',
+        offline: 'सिग्नल नहीं है। पाठ चलता रहेगा और आपकी जगह इस फ़ोन में सुरक्षित रहेगी। जाँच का उत्तर देने के लिए सिग्नल चाहिए।',
+        synced: 'आपकी जगह इस फ़ोन में सुरक्षित है और ऑनलाइन होते ही सेव हो जाएगी।',
+        replaying: 'फिर देख रहे हैं',
+        checkMarker: 'ज्ञान की जाँच',
+      },
+      lang: {
+        en: 'अंग्रेज़ी',
+        hi: 'हिन्दी',
+        mr: 'मराठी',
+      },
+      visual: {
+        welcome: 'हाथ मिलाते दो हाथ',
+        promise: 'सही का निशान वाली ढाल',
+        person: 'एक व्यक्ति',
+        phone: 'एक फ़ोन',
+        warning: 'चेतावनी का निशान',
+        harness: 'सुरक्षा हार्नेस',
+        inspect: 'एक आतिशी शीशा',
+        anchor: 'एक एंकर पॉइंट',
+        rescue: 'एक लाइफ़बॉय',
+        power: 'बिजली की कौंध',
+        lock: 'एक ताला',
+        tag: 'एक टैग',
+        meter: 'एक मीटर',
+      },
+      check: {
+        heading: 'अपनी समझ जाँचें',
+        blocked: 'इसका सही उत्तर देने पर पाठ आगे बढ़ेगा।',
+        single: 'एक चुनें',
+        multi: 'जो लागू हों सब चुनें',
+        submit: 'मेरा उत्तर जाँचें',
+        correct: 'सही',
+        notYet: 'ठीक नहीं',
+        attempts: 'प्रयास {{count}}',
+        tryAgain: 'फिर कोशिश करें',
+        watchAgain: 'यह भाग फिर देखें',
+        continue: 'पाठ जारी रखें',
+        needSignal: 'उत्तर देने के लिए फिर से जुड़ें। आपकी जगह सुरक्षित है।',
+      },
+      done: {
+        heading: 'पाठ पूरा हुआ!',
+        body: '{{title}} पूरा हुआ। हर जाँच का उत्तर सही रहा।',
+        again: 'आपने यह पाठ फिर देखा। यह पहले ही पूरा हो चुका था।',
+        next: 'अगला पाठ',
+        moduleDone: '{{module}} पूरा हुआ!',
+        gateLifted: 'यह उन सुरक्षा मॉड्यूल में से एक है जो काम मिलने से पहले ज़रूरी हैं। अब इसकी परीक्षा अगला क़दम है।',
+        saving: 'आपकी प्रगति सेव हो रही है…',
+        pending: 'आपने पूरा कर लिया, पर दर्ज करने के लिए सिग्नल नहीं है। ऑनलाइन होते ही यह सेव हो जाएगा।',
+        retry: 'अभी सेव करें',
+        points: 'याद रखने योग्य मुख्य बातें',
+      },
+      problem: {
+        forbidden: 'आप वह पाठ नहीं खोल सकते।',
+        not_found: 'वह पाठ नहीं मिला।',
+        locked: 'पहले वाला पाठ पूरा करें।',
+        not_for_you: 'वह मॉड्यूल आपकी भूमिका का हिस्सा नहीं है।',
+        retired: 'वह मॉड्यूल अब उपयोग में नहीं है।',
+        invalid_state: 'यह अभी नहीं हो सकता। पहले पाठ को यहाँ तक चलाएँ।',
+        no_lessons: 'इस मॉड्यूल में अभी पाठ नहीं हैं।',
+        none_chosen: 'पहले एक उत्तर चुनें।',
+        single_only: 'सिर्फ़ एक उत्तर चुनें।',
+        out_of_range: 'वह उत्तर विकल्पों में नहीं है।',
+        not_finished: 'पहले पाठ को अंत तक चलाएँ।',
+        checks_open: 'पहले हर जाँच का सही उत्तर दें।',
+        unknown_check: 'वह प्रश्न नहीं मिला।',
+        offline: 'उत्तर जाँचने के लिए सिग्नल चाहिए। आपकी जगह सुरक्षित है।',
+        generic: 'कुछ गड़बड़ हो गई। कृपया फिर कोशिश करें।',
+      },
+    },
+    lessonContent: {
+      'onb-01': {
+        l1: {
+          title: 'AIEC कौन है और हमारा वादा क्या है',
+          summary: 'कंपनी, हमारे ग्राहक और उनसे किया गया हमारा वादा।',
+          scene: {
+            1: 'ऑल इंडिया एलिवेटर्स कंपनी पूरे भारत में बिल्डरों, हाउसिंग सोसायटियों और दफ़्तरों के लिए लिफ़्ट लगाती और उनकी सर्विस करती है।',
+            2: 'हर ग्राहक से हमारा वादा सरल है: सुरक्षित लिफ़्ट, तय शर्तों के अनुसार, बताए गए दिन पर लगी हुई, और कुछ बदलने पर साफ़ जवाब।',
+            3: 'इस वादे का चेहरा आप हैं। ग्राहक यह भी याद रखते हैं कि आपने उनसे कैसे बात की, सिर्फ़ यह नहीं कि काम कितना अच्छा था।',
+          },
+          check: {
+            1: {
+              q: 'AIEC हर ग्राहक से कौन-सा वादा करता है?',
+              o: {
+                0: 'शहर की सबसे सस्ती लिफ़्ट',
+                1: 'सुरक्षित लिफ़्ट, तय शर्तों के अनुसार, और योजना बदलने पर साफ़ जवाब',
+                2: 'किसी भी कीमत पर समय से पहले काम पूरा',
+              },
+              why: 'सुरक्षा, तय बात का पालन और ईमानदार संवाद सबसे ऊपर हैं। गति या कीमत इनसे ऊपर नहीं आती।',
+            },
+          },
+          point: {
+            1: 'पहले सुरक्षा, फिर तय शर्तें, फिर समय।',
+            2: 'कुछ बदले तो ग्राहक को जल्दी बताएँ।',
+            3: 'आप कैसे बोलते हैं, यह भी काम का हिस्सा है।',
+          },
+        },
+        l2: {
+          title: 'हम साथ कैसे काम करते हैं',
+          summary: 'चेक-इन करना, जो मिले उसकी रिपोर्ट देना और मदद माँगना।',
+          scene: {
+            1: 'साइट पर पहुँचते ही ऐप में चेक-इन करें। इससे दफ़्तर को पता चलता है कि आप सुरक्षित हैं और कहाँ हैं।',
+            2: 'जो भी मिले, मिलते ही रिपोर्ट करें: फ़ोटो, छोटे नोट, समस्याएँ। छोटी समस्या जल्दी बताने पर आसानी से सुलझ जाती है।',
+            3: 'अगर आप निश्चित नहीं हैं या कुछ असुरक्षित लगे, तो रुकें और पूछें। AIEC में कोई आपके पूछने से नाराज़ नहीं होगा।',
+          },
+          check: {
+            1: {
+              q: 'आपको साइट पर कुछ असुरक्षित लगता है। आप क्या करेंगे?',
+              o: {
+                0: 'पहले काम पूरा करूँगा, बाद में बताऊँगा',
+                1: 'रुकूँगा, ऐप में रिपोर्ट करूँगा और मदद माँगूँगा',
+                2: 'चुपचाप खुद ठीक कर दूँगा ताकि किसी को चिंता न हो',
+              },
+              why: 'रुककर रिपोर्ट करना हमेशा सही है। छिपाई गई समस्या और बड़ी हो जाती है।',
+            },
+          },
+          point: {
+            1: 'पहुँचकर चेक-इन और जाते समय चेक-आउट करें।',
+            2: 'समस्या दिखते ही फ़ोटो के साथ रिपोर्ट करें।',
+            3: 'असुरक्षित लगे? रुकें और पूछें।',
+          },
+        },
+      },
+      'saf-02': {
+        l1: {
+          title: 'ऊपर जाने से पहले: हार्नेस और जाँच',
+          summary: 'हर शिफ़्ट से पहले अपना हार्नेस और लैनयार्ड जाँचना।',
+          scene: {
+            1: 'गिरने से बचाने वाली आख़िरी चीज़ आपका हार्नेस है। इसे हर शिफ़्ट से पहले जाँचें, सिर्फ़ नया होने पर नहीं।',
+            2: 'पट्टे पर कट, घिसाई, जलने के निशान और दाग़ देखें। सिलाई, बकल और लैनयार्ड की क्लिप जाँचें।',
+            3: 'कुछ भी खराब हो तो उस पर टैग लगाएँ और उसे इस्तेमाल न करें। ऐप में रिपोर्ट करें और दूसरा माँगें।',
+          },
+          check: {
+            1: {
+              q: 'इनमें से किन बातों का मतलब है कि हार्नेस इस्तेमाल नहीं करना है? जो लागू हों सब चुनें।',
+              o: {
+                0: 'कटा या घिसा हुआ पट्टा',
+                1: 'बकल जो लॉक न हो',
+                2: 'पट्टे पर धूल',
+              },
+              why: 'कट, घिसाई और लॉक न होने वाला बकल हार्नेस को असुरक्षित बनाते हैं। सिर्फ़ धूल से ऐसा नहीं होता।',
+            },
+          },
+          point: {
+            1: 'हर शिफ़्ट में पट्टा, सिलाई, बकल और क्लिप जाँचें।',
+            2: 'खराब है? टैग लगाएँ, इस्तेमाल न करें, रिपोर्ट करें।',
+            3: 'हार्नेस कभी उधार न दें, न लें।',
+          },
+        },
+        l2: {
+          title: 'हॉइस्टवे में एंकर पॉइंट',
+          summary: 'ऐसे एंकर पॉइंट चुनना और इस्तेमाल करना जो टिकें।',
+          scene: {
+            1: 'सिर्फ़ ऐसे एंकर पॉइंट से जुड़ें जो गिरने का झटका सह सके और आपके काम की ऊँचाई से ऊपर हो।',
+            2: 'इस संस्करण से दो एंकर पॉइंट इस्तेमाल करें: मुख्य लैनयार्ड एक पर और बैकअप दूसरे पर, ताकि एक के फेल होने पर भी आप असुरक्षित न रहें।',
+            3: 'पाइप, केबल, रेल ब्रैकेट या ऐसी किसी भी चीज़ का इस्तेमाल कभी न करें जिस पर एंकर पॉइंट का निशान न हो।',
+          },
+          check: {
+            1: {
+              q: 'हॉइस्टवे में काम करते समय आप कितने एंकर पॉइंट से जुड़ते हैं?',
+              o: {
+                0: 'एक काफ़ी है',
+                1: 'दो: एक मुख्य और एक बैकअप',
+                2: 'सिर्फ़ तब जब असुरक्षित लगे',
+              },
+              why: 'दो एंकर पॉइंट होने से एक के फेल होने पर भी आप असुरक्षित नहीं रहते। हर शिफ़्ट में यह ज़रूरी है।',
+            },
+          },
+          point: {
+            1: 'सिर्फ़ तय क्षमता वाले एंकर पॉइंट से जुड़ें।',
+            2: 'दो एंकर पॉइंट इस्तेमाल करें: मुख्य और बैकअप।',
+            3: 'पाइप या रेल ब्रैकेट एंकर पॉइंट नहीं है।',
+          },
+        },
+        l3: {
+          title: 'बचाव और काम रोकना',
+          summary: 'कोई गिर जाए या योजना सुरक्षित न हो तो क्या करें।',
+          scene: {
+            1: 'काम शुरू करने से पहले जान लें कि अलार्म कौन बजाएगा और किसी व्यक्ति को नीचे कैसे उतारा जाएगा। शाफ़्ट में कभी अकेले काम न करें।',
+            2: 'कोई गिरकर लटक जाए तो तुरंत मदद बुलाएँ और SOS बटन दबाएँ। प्रशिक्षित और क्लिप से जुड़े हुए न हों तो उन तक चढ़ने की कोशिश न करें।',
+            3: 'हार्नेस में लटका व्यक्ति कुछ ही मिनटों में अस्वस्थ हो सकता है। समय कीमती है, इसलिए पहले मदद बुलाएँ।',
+          },
+          check: {
+            1: {
+              q: 'फिसलने के बाद आपका साथी हार्नेस में लटका है। आप सबसे पहले क्या करेंगे?',
+              o: {
+                0: 'मदद बुलाऊँगा और SOS दबाऊँगा',
+                1: 'बिना हार्नेस के चढ़कर उन तक पहुँचूँगा',
+                2: 'पहले अपना काम पूरा करूँगा',
+              },
+              why: 'तुरंत मदद बुलाने से प्रशिक्षित बचावकर्ता हरकत में आते हैं। बिना सुरक्षा के चढ़ने से दो लोग ख़तरे में पड़ सकते हैं।',
+            },
+          },
+          point: {
+            1: 'शाफ़्ट में कभी अकेले काम न करें।',
+            2: 'शुरू करने से पहले बचाव योजना जान लें।',
+            3: 'पहले मदद बुलाएँ; SOS दबाएँ।',
+          },
+        },
+      },
+      'saf-03': {
+        l1: {
+          title: 'बिजली अलग करना',
+          summary: 'लिफ़्ट को हर बिजली स्रोत से बंद और अलग करना।',
+          scene: {
+            1: 'लिफ़्ट के किसी भी बिजली वाले हिस्से पर काम करने से पहले मुख्य सप्लाई बंद करके उसे अलग करें। सिर्फ़ पैनल पर बंद करना काफ़ी नहीं है।',
+            2: 'बिजली के हर स्रोत को खोजें: मुख्य सप्लाई, कंट्रोलर, और कोई भी बैकअप या बैटरी सप्लाई जो किसी हिस्से को चालू कर सकती हो।',
+            3: 'आसपास सभी को बताएँ कि बिजली बंद की जा रही है और क्यों।',
+          },
+          check: {
+            1: {
+              q: 'लिफ़्ट के बिजली वाले हिस्से पर काम करने से पहले आपको क्या करना चाहिए?',
+              o: {
+                0: 'मुख्य सप्लाई बंद करके हर स्रोत को अलग करना',
+                1: 'सिर्फ़ बत्ती बंद करना',
+                2: 'किसी से अपनी निगरानी करवाना',
+              },
+              why: 'काम शुरू करने से पहले बैकअप समेत बिजली के हर स्रोत को अलग करना ज़रूरी है।',
+            },
+          },
+          point: {
+            1: 'मुख्य सप्लाई और हर दूसरा स्रोत अलग करें।',
+            2: 'बैकअप या बैटरी सप्लाई खोजें।',
+            3: 'आसपास के लोगों को बताएँ।',
+          },
+        },
+        l2: {
+          title: 'लॉक-आउट और टैग-आउट',
+          summary: 'आपके काम करते समय बिजली बंद रखना।',
+          scene: {
+            1: 'बिजली अलग करने के बाद स्विच पर अपना ख़ुद का ताला लगाएँ। चाबी सिर्फ़ आपके पास रहे।',
+            2: 'अपने नाम, तारीख़ और कारण वाला टैग लगाएँ, ताकि कोई उसे दोबारा चालू न कर दे।',
+            3: 'अगर लिफ़्ट पर कोई और भी काम कर रहा है, तो हर व्यक्ति अपना ताला लगाए। बिजली तभी लौटेगी जब हर ताला हट जाए।',
+          },
+          check: {
+            1: {
+              q: 'इनमें से कौन-सी बातें लॉक-आउट और टैग-आउट का हिस्सा हैं? जो लागू हों सब चुनें।',
+              o: {
+                0: 'स्विच पर आपका अपना ताला',
+                1: 'आपके नाम और कारण वाला टैग',
+                2: 'अपनी चाबी किसी साथी को रखने के लिए देना',
+              },
+              why: 'ताला और टैग सिर्फ़ आपके हैं। चाबी किसी और को देने से ताले का मक़सद ख़त्म हो जाता है।',
+            },
+          },
+          point: {
+            1: 'अपना ताला, अपनी चाबी।',
+            2: 'नाम, तारीख़, कारण वाला टैग।',
+            3: 'हर कर्मचारी अपना ताला लगाए।',
+          },
+        },
+        l3: {
+          title: 'छूने से पहले जाँचें',
+          summary: 'यह साबित करना कि सर्किट बंद है।',
+          scene: {
+            1: 'लॉक-आउट के बाद भी सर्किट को छूने से पहले जाँचें कि वह बंद है।',
+            2: 'वोल्टेज टेस्टर इस्तेमाल करें। पहले किसी चालू स्रोत पर साबित करें कि टेस्टर काम करता है, फिर सर्किट जाँचें, फिर टेस्टर को दोबारा जाँचें।',
+            3: 'टेस्टर वोल्टेज दिखाए या आपको संदेह हो, तो रुकें। कुछ भी न छुएँ और मदद बुलाएँ।',
+          },
+          check: {
+            1: {
+              q: 'जिस सर्किट को आपने लॉक-आउट किया उस पर टेस्टर वोल्टेज दिखाए तो आप क्या करेंगे?',
+              o: {
+                0: 'पक्का करने के लिए जल्दी से छू लूँगा',
+                1: 'रुकूँगा और मदद बुलाऊँगा',
+                2: 'अनदेखा करूँगा, ताला तो लगा है',
+              },
+              why: 'लॉक-आउट के बाद वोल्टेज का मतलब है कि कुछ गड़बड़ है। रुकें और मदद लें।',
+            },
+          },
+          point: {
+            1: 'हर सर्किट, हर बार जाँचें।',
+            2: 'टेस्टर को पहले और बाद में चालू स्रोत पर परखें।',
+            3: 'लॉक-आउट के बाद वोल्टेज: रुकें, बुलाएँ।',
+          },
+        },
+      },
+    },
+  },
+  mr: {
+    lessonPlayer: {
+      title: 'धडा',
+      loading: 'धडा लोड होत आहे',
+      error: {
+        title: 'धडा लोड होऊ शकला नाही',
+        body: 'कनेक्शन तपासा आणि पुन्हा प्रयत्न करा.',
+      },
+      notFound: {
+        title: 'तो धडा उपलब्ध नाही',
+        body: 'तो काढून टाकला असावा, किंवा तो तुमच्या प्रशिक्षणाचा भाग नाही.',
+      },
+      soon: {
+        title: 'धडे तयार होत आहेत',
+        body: 'या मॉड्यूलचे धडे अजून नाहीत. काहीही गमावलेले नाही: प्रसिद्ध होताच हे येथे उघडेल.',
+      },
+      locked: {
+        title: 'अजून उघडलेले नाही',
+        body: 'ते उघडण्यासाठी आधीचा धडा, किंवा ज्यावर हे आधारित आहे ते मॉड्यूल पूर्ण करा.',
+      },
+      back: 'प्रशिक्षणाकडे परत',
+      backToModule: 'मॉड्यूलकडे परत',
+      overview: {
+        progress: '{{total}} पैकी {{done}} धडे पूर्ण झाले',
+        changed: 'काय बदलले:',
+        lessonsHeading: 'धडे',
+        minutes: '{{count}} मिनिटे',
+        play: 'सुरू करा',
+        resume: 'पुढे चालू ठेवा',
+        replay: 'पुन्हा पहा',
+        updatedBadge: 'अपडेट झाले',
+        doneBadge: 'पूर्ण झाले',
+        lockedHint: 'धडे एकामागून एक उघडतात. पुढचा उघडण्यासाठी एक धडा, त्याच्या तपासणीसह, पूर्ण करा.',
+        allDone: 'या मॉड्यूलमधील सर्व धडे पूर्ण झाले आहेत. तुम्ही कोणताही धडा पुन्हा पाहू शकता.',
+        keyPoints_one: '{{count}} मुख्य मुद्दा',
+        keyPoints_other: '{{count}} मुख्य मुद्दे',
+      },
+      reference: {
+        heading: 'झटपट संदर्भ पत्रक',
+        body: 'तुम्ही पूर्ण केलेल्या धड्यांचे मुख्य मुद्दे एका पानावर, जे तुम्ही फोनमध्ये ठेवून साइटवर वाचू शकता.',
+        download: 'पत्रक डाउनलोड करा',
+        none: 'ते उघडण्यासाठी एखादा धडा पूर्ण करा.',
+        lesson: 'या धड्याचे पत्रक डाउनलोड करा',
+        downloaded: 'पत्रक सेव्ह झाले',
+        brand: 'ऑल इंडिया एलिव्हेटर्स कंपनी',
+        generated: '{{date}} रोजी सेव्ह केले',
+        footer: 'AIEC च्या धड्याचा सारांश, झटपट पाहण्यासाठी. तो संपूर्ण धडा किंवा तुमच्या प्रशिक्षकाला पर्याय नाही.',
+        version: 'धड्याची आवृत्ती {{version}}',
+      },
+      player: {
+        sceneOf: 'भाग {{n}} / {{total}}',
+        play: 'चालवा',
+        pause: 'थांबवा',
+        replaySection: 'हा भाग पुन्हा चालवा',
+        restart: 'पुन्हा सुरू करा',
+        speed: 'गती',
+        speedValue: '{{value}}×',
+        captions: 'कॅप्शन',
+        captionsOff: 'कॅप्शन बंद आहेत. हा भाग वाचण्यासाठी ते चालू करा.',
+        listen: 'ऐका',
+        listenOff: 'ऐकणे बंद आहे',
+        language: 'धड्याची भाषा',
+        timeline: 'धड्यातील स्थान',
+        time: '{{now}} / {{total}}',
+        resumed: 'जिथे थांबला होतात तिथूनच, {{time}} वर.',
+        sections: 'भाग',
+        sectionPlayed: 'पाहून झाले',
+        sectionAhead: 'या भागापर्यंत पोहोचण्यासाठी धडा चालवा.',
+        aheadNote: 'तुम्ही जे पाहिले आहे त्यावर परत जाऊ शकता, त्याच्या पुढे नाही.',
+        offline: 'सिग्नल नाही. धडा चालू राहील आणि तुमची जागा या फोनमध्ये जपली जाईल. तपासणीचे उत्तर देण्यासाठी सिग्नल हवा.',
+        synced: 'तुमची जागा या फोनमध्ये जपली आहे आणि ऑनलाइन येताच सेव्ह होईल.',
+        replaying: 'पुन्हा पाहत आहात',
+        checkMarker: 'ज्ञान तपासणी',
+      },
+      lang: {
+        en: 'इंग्रजी',
+        hi: 'हिंदी',
+        mr: 'मराठी',
+      },
+      visual: {
+        welcome: 'हस्तांदोलन',
+        promise: 'बरोबरची खूण असलेली ढाल',
+        person: 'एक व्यक्ती',
+        phone: 'एक फोन',
+        warning: 'इशाऱ्याचे चिन्ह',
+        harness: 'सुरक्षा हार्नेस',
+        inspect: 'भिंग',
+        anchor: 'एक अँकर पॉइंट',
+        rescue: 'एक लाइफबॉय',
+        power: 'विजेचा लखलखाट',
+        lock: 'एक कुलूप',
+        tag: 'एक टॅग',
+        meter: 'एक मीटर',
+      },
+      check: {
+        heading: 'तुमची समज तपासा',
+        blocked: 'याचे बरोबर उत्तर दिल्यावर धडा पुढे जाईल.',
+        single: 'एक निवडा',
+        multi: 'लागू होतील ते सर्व निवडा',
+        submit: 'माझे उत्तर तपासा',
+        correct: 'बरोबर',
+        notYet: 'अगदी बरोबर नाही',
+        attempts: 'प्रयत्न {{count}}',
+        tryAgain: 'पुन्हा प्रयत्न करा',
+        watchAgain: 'हा भाग पुन्हा पहा',
+        continue: 'धडा पुढे चालू ठेवा',
+        needSignal: 'उत्तर देण्यासाठी पुन्हा जोडा. तुमची जागा जपली आहे.',
+      },
+      done: {
+        heading: 'धडा पूर्ण झाला!',
+        body: '{{title}} पूर्ण झाला. प्रत्येक तपासणीचे उत्तर बरोबर होते.',
+        again: 'तुम्ही हा धडा पुन्हा पाहिला. तो आधीच पूर्ण झाला होता.',
+        next: 'पुढचा धडा',
+        moduleDone: '{{module}} पूर्ण झाले!',
+        gateLifted: 'काम मिळण्यापूर्वी आवश्यक असलेल्या सुरक्षा मॉड्यूलपैकी हे एक आहे. आता त्याची चाचणी हा पुढचा टप्पा.',
+        saving: 'तुमची प्रगती सेव्ह होत आहे…',
+        pending: 'तुम्ही पूर्ण केले, पण नोंदवण्यासाठी सिग्नल नाही. ऑनलाइन येताच ते सेव्ह होईल.',
+        retry: 'आता सेव्ह करा',
+        points: 'लक्षात ठेवायचे मुख्य मुद्दे',
+      },
+      problem: {
+        forbidden: 'तुम्ही तो धडा उघडू शकत नाही.',
+        not_found: 'तो धडा सापडला नाही.',
+        locked: 'आधी आधीचा धडा पूर्ण करा.',
+        not_for_you: 'तो मॉड्यूल तुमच्या भूमिकेचा भाग नाही.',
+        retired: 'तो मॉड्यूल आता वापरात नाही.',
+        invalid_state: 'हे अजून करता येत नाही. आधी धडा येथपर्यंत चालवा.',
+        no_lessons: 'या मॉड्यूलचे धडे अजून नाहीत.',
+        none_chosen: 'आधी एक उत्तर निवडा.',
+        single_only: 'फक्त एकच उत्तर निवडा.',
+        out_of_range: 'ते उत्तर पर्यायांपैकी नाही.',
+        not_finished: 'आधी धडा शेवटपर्यंत चालवा.',
+        checks_open: 'आधी प्रत्येक तपासणीचे बरोबर उत्तर द्या.',
+        unknown_check: 'तो प्रश्न सापडला नाही.',
+        offline: 'उत्तर तपासण्यासाठी सिग्नल हवा. तुमची जागा जपली आहे.',
+        generic: 'काहीतरी चुकले. कृपया पुन्हा प्रयत्न करा.',
+      },
+    },
+    lessonContent: {
+      'onb-01': {
+        l1: {
+          title: 'AIEC कोण आहे आणि आमचे वचन काय आहे',
+          summary: 'कंपनी, आमचे ग्राहक आणि त्यांना दिलेले आमचे वचन.',
+          scene: {
+            1: 'ऑल इंडिया एलिव्हेटर्स कंपनी संपूर्ण भारतात बिल्डर, गृहनिर्माण संस्था आणि कार्यालयांसाठी लिफ्ट बसवते आणि त्यांची सेवा करते.',
+            2: 'प्रत्येक ग्राहकाला आमचे वचन सोपे आहे: सुरक्षित लिफ्ट, ठरल्याप्रमाणे, सांगितलेल्या दिवशी बसवलेली, आणि काही बदलल्यास स्पष्ट उत्तर.',
+            3: 'या वचनाचा चेहरा तुम्ही आहात. तुम्ही किती चांगले काम केले एवढेच नाही, तर ग्राहकांशी कसे बोललात तेही ते लक्षात ठेवतात.',
+          },
+          check: {
+            1: {
+              q: 'AIEC प्रत्येक ग्राहकाला कोणते वचन देते?',
+              o: {
+                0: 'शहरातील सर्वात स्वस्त लिफ्ट',
+                1: 'सुरक्षित लिफ्ट, ठरल्याप्रमाणे, आणि योजना बदलल्यास स्पष्ट उत्तर',
+                2: 'काहीही किंमत मोजून मुदतीआधी काम पूर्ण',
+              },
+              why: 'सुरक्षा, ठरलेल्या गोष्टीचे पालन आणि प्रामाणिक संवाद सर्वांत वर आहेत. वेग किंवा किंमत त्यांच्या वर नाही.',
+            },
+          },
+          point: {
+            1: 'आधी सुरक्षा, मग ठरल्याप्रमाणे, मग वेळेवर.',
+            2: 'काही बदलले तर ग्राहकाला लवकर सांगा.',
+            3: 'तुम्ही कसे बोलता हाही कामाचा भाग आहे.',
+          },
+        },
+        l2: {
+          title: 'आपण एकत्र कसे काम करतो',
+          summary: 'चेक-इन करणे, जे सापडते त्याचा अहवाल देणे आणि मदत मागणे.',
+          scene: {
+            1: 'साइटवर पोहोचताच अ‍ॅपमध्ये चेक-इन करा. त्यामुळे तुम्ही सुरक्षित आहात आणि कुठे आहात हे कार्यालयाला कळते.',
+            2: 'जे सापडेल ते लगेच कळवा: फोटो, छोट्या नोंदी, अडचणी. लहान अडचण लवकर सांगितली तर सहज सुटते.',
+            3: 'तुम्हाला खात्री नसेल किंवा काही असुरक्षित वाटले, तर थांबा आणि विचारा. विचारल्याने AIEC मध्ये कोणीही नाराज होणार नाही.',
+          },
+          check: {
+            1: {
+              q: 'साइटवर तुम्हाला काहीतरी असुरक्षित वाटते. तुम्ही काय कराल?',
+              o: {
+                0: 'आधी काम पूर्ण करीन, नंतर सांगेन',
+                1: 'थांबेन, अ‍ॅपमध्ये कळवेन आणि मदत मागेन',
+                2: 'कोणाला काळजी वाटू नये म्हणून शांतपणे स्वतः दुरुस्त करीन',
+              },
+              why: 'थांबून कळवणे नेहमीच योग्य आहे. लपवलेली अडचण आणखी मोठी होते.',
+            },
+          },
+          point: {
+            1: 'पोहोचल्यावर चेक-इन आणि निघताना चेक-आउट करा.',
+            2: 'अडचण दिसताच फोटोसह कळवा.',
+            3: 'असुरक्षित वाटले? थांबा आणि विचारा.',
+          },
+        },
+      },
+      'saf-02': {
+        l1: {
+          title: 'वर जाण्यापूर्वी: हार्नेस आणि तपासणी',
+          summary: 'प्रत्येक शिफ्टपूर्वी तुमचा हार्नेस आणि लॅन्यार्ड तपासणे.',
+          scene: {
+            1: 'पडण्यापासून वाचवणारी शेवटची गोष्ट तुमचा हार्नेस आहे. तो प्रत्येक शिफ्टपूर्वी तपासा, फक्त नवीन असताना नव्हे.',
+            2: 'पट्ट्यावर काप, झिजणे, जळण्याचे आणि डागांचे ठसे पहा. शिलाई, बकल आणि लॅन्यार्डची क्लिप तपासा.',
+            3: 'काही खराब असेल तर त्यावर टॅग लावा आणि वापरू नका. अ‍ॅपमध्ये कळवा आणि दुसरा मागा.',
+          },
+          check: {
+            1: {
+              q: 'यापैकी कशाचा अर्थ हार्नेस वापरायचा नाही असा आहे? लागू होतील ते सर्व निवडा.',
+              o: {
+                0: 'कापलेला किंवा झिजलेला पट्टा',
+                1: 'लॉक न होणारे बकल',
+                2: 'पट्ट्यावर धूळ',
+              },
+              why: 'काप, झिजणे आणि लॉक न होणारे बकल हार्नेस असुरक्षित करतात. फक्त धुळीमुळे तसे होत नाही.',
+            },
+          },
+          point: {
+            1: 'प्रत्येक शिफ्टमध्ये पट्टा, शिलाई, बकल आणि क्लिप तपासा.',
+            2: 'खराब आहे? टॅग लावा, वापरू नका, कळवा.',
+            3: 'हार्नेस कधीही उसना देऊ नका किंवा घेऊ नका.',
+          },
+        },
+        l2: {
+          title: 'हॉइस्टवेमधील अँकर पॉइंट',
+          summary: 'टिकतील असे अँकर पॉइंट निवडणे आणि वापरणे.',
+          scene: {
+            1: 'फक्त अशाच अँकर पॉइंटला जोडा जो पडण्याचा धक्का सहन करू शकतो आणि तुमच्या कामाच्या उंचीपेक्षा वर आहे.',
+            2: 'या आवृत्तीपासून दोन अँकर पॉइंट वापरा: मुख्य लॅन्यार्ड एकावर आणि बॅकअप दुसऱ्यावर, म्हणजे एक निकामी झाला तरी तुम्ही असुरक्षित राहत नाही.',
+            3: 'पाइप, केबल, रेल ब्रॅकेट किंवा अँकर पॉइंट म्हणून खूण नसलेली कोणतीही गोष्ट कधीही वापरू नका.',
+          },
+          check: {
+            1: {
+              q: 'हॉइस्टवेमध्ये काम करताना तुम्ही किती अँकर पॉइंटना जोडता?',
+              o: {
+                0: 'एक पुरेसा आहे',
+                1: 'दोन: एक मुख्य आणि एक बॅकअप',
+                2: 'फक्त असुरक्षित वाटेल तेव्हा',
+              },
+              why: 'दोन अँकर पॉइंट असल्यामुळे एक निकामी झाला तरी तुम्ही असुरक्षित राहत नाही. हे प्रत्येक शिफ्टसाठी आवश्यक आहे.',
+            },
+          },
+          point: {
+            1: 'फक्त मान्य क्षमतेच्या अँकर पॉइंटला जोडा.',
+            2: 'दोन अँकर पॉइंट वापरा: मुख्य आणि बॅकअप.',
+            3: 'पाइप किंवा रेल ब्रॅकेट हा अँकर पॉइंट नाही.',
+          },
+        },
+        l3: {
+          title: 'बचाव आणि काम थांबवणे',
+          summary: 'कोणी पडले किंवा योजना सुरक्षित नसेल तर काय करावे.',
+          scene: {
+            1: 'काम सुरू करण्यापूर्वी धोक्याची सूचना कोण देईल आणि एखाद्याला खाली कसे आणले जाईल हे जाणून घ्या. शाफ्टमध्ये कधीही एकटे काम करू नका.',
+            2: 'कोणी पडून लटकले तर लगेच मदत बोलवा आणि SOS बटण दाबा. प्रशिक्षित आणि क्लिपने जोडलेले नसाल तर त्यांच्यापर्यंत चढू नका.',
+            3: 'हार्नेसमध्ये लटकलेल्या व्यक्तीला काही मिनिटांतच त्रास होऊ शकतो. वेळ महत्त्वाचा आहे, म्हणून आधी मदत बोलवा.',
+          },
+          check: {
+            1: {
+              q: 'घसरल्यानंतर तुमचा सहकारी हार्नेसमध्ये लटकला आहे. तुम्ही सर्वात आधी काय कराल?',
+              o: {
+                0: 'मदत बोलवीन आणि SOS दाबीन',
+                1: 'हार्नेसशिवाय चढून त्यांच्यापर्यंत जाईन',
+                2: 'आधी माझे काम पूर्ण करीन',
+              },
+              why: 'लगेच मदत बोलावल्यामुळे प्रशिक्षित बचावकर्ते हालचाल करतात. संरक्षणाशिवाय चढल्यास दोघे धोक्यात येऊ शकतात.',
+            },
+          },
+          point: {
+            1: 'शाफ्टमध्ये कधीही एकटे काम करू नका.',
+            2: 'सुरू करण्यापूर्वी बचाव योजना जाणून घ्या.',
+            3: 'आधी मदत बोलवा; SOS दाबा.',
+          },
+        },
+      },
+      'saf-03': {
+        l1: {
+          title: 'वीज वेगळी करणे',
+          summary: 'लिफ्टला प्रत्येक वीजपुरवठ्यापासून बंद करून वेगळे करणे.',
+          scene: {
+            1: 'लिफ्टच्या कोणत्याही विद्युत भागावर काम करण्यापूर्वी मुख्य पुरवठा बंद करून तो वेगळा करा. फक्त पॅनेलवर बंद करणे पुरेसे नाही.',
+            2: 'विजेचा प्रत्येक स्रोत शोधा: मुख्य पुरवठा, कंट्रोलर आणि एखादा भाग सुरू करू शकणारा कोणताही बॅकअप किंवा बॅटरी पुरवठा.',
+            3: 'जवळच्या सर्वांना सांगा की वीज बंद केली जात आहे आणि का.',
+          },
+          check: {
+            1: {
+              q: 'लिफ्टच्या विद्युत भागावर काम करण्यापूर्वी तुम्ही काय केले पाहिजे?',
+              o: {
+                0: 'मुख्य पुरवठा बंद करून प्रत्येक स्रोत वेगळा करणे',
+                1: 'फक्त दिवा बंद करणे',
+                2: 'कोणाला तरी पाहत राहायला सांगणे',
+              },
+              why: 'काम सुरू करण्यापूर्वी बॅकअपसह विजेचा प्रत्येक स्रोत वेगळा करणे आवश्यक आहे.',
+            },
+          },
+          point: {
+            1: 'मुख्य पुरवठा आणि प्रत्येक दुसरा स्रोत वेगळा करा.',
+            2: 'बॅकअप किंवा बॅटरी पुरवठा शोधा.',
+            3: 'जवळच्या लोकांना सांगा.',
+          },
+        },
+        l2: {
+          title: 'लॉक-आउट आणि टॅग-आउट',
+          summary: 'तुम्ही काम करताना वीज बंद ठेवणे.',
+          scene: {
+            1: 'वीज वेगळी केल्यानंतर स्विचवर तुमचे स्वतःचे कुलूप लावा. चावी फक्त तुमच्याकडे असावी.',
+            2: 'तुमचे नाव, तारीख आणि कारण असलेला टॅग लावा, म्हणजे कोणी ती पुन्हा चालू करणार नाही.',
+            3: 'लिफ्टवर आणखी कोणी काम करत असेल तर प्रत्येकाने स्वतःचे कुलूप लावावे. प्रत्येक कुलूप निघाल्यावरच वीज परत येईल.',
+          },
+          check: {
+            1: {
+              q: 'यापैकी कोणत्या गोष्टी लॉक-आउट आणि टॅग-आउटचा भाग आहेत? लागू होतील ते सर्व निवडा.',
+              o: {
+                0: 'स्विचवर तुमचे स्वतःचे कुलूप',
+                1: 'तुमचे नाव आणि कारण असलेला टॅग',
+                2: 'तुमची चावी सहकाऱ्याकडे ठेवायला देणे',
+              },
+              why: 'कुलूप आणि टॅग फक्त तुमचे आहेत. चावी दुसऱ्याला दिल्याने कुलपाचा उद्देशच संपतो.',
+            },
+          },
+          point: {
+            1: 'तुमचे कुलूप, तुमची चावी.',
+            2: 'नाव, तारीख, कारण असलेला टॅग.',
+            3: 'प्रत्येक कामगार स्वतःचे कुलूप लावतो.',
+          },
+        },
+        l3: {
+          title: 'हात लावण्यापूर्वी तपासा',
+          summary: 'सर्किट बंद आहे हे सिद्ध करणे.',
+          scene: {
+            1: 'लॉक-आउटनंतरही सर्किटला हात लावण्यापूर्वी ते बंद आहे हे तपासा.',
+            2: 'व्होल्टेज टेस्टर वापरा. आधी तो चालू स्रोतावर चालतो हे सिद्ध करा, मग सर्किट तपासा, मग टेस्टर पुन्हा तपासा.',
+            3: 'टेस्टरने व्होल्टेज दाखवले किंवा तुम्हाला शंका असेल तर थांबा. काहीही हात लावू नका आणि मदत बोलवा.',
+          },
+          check: {
+            1: {
+              q: 'तुम्ही लॉक-आउट केलेल्या सर्किटवर टेस्टरने व्होल्टेज दाखवले तर तुम्ही काय कराल?',
+              o: {
+                0: 'खात्री करण्यासाठी पटकन हात लावीन',
+                1: 'थांबेन आणि मदत बोलवीन',
+                2: 'दुर्लक्ष करीन, कुलूप तर लावले आहे',
+              },
+              why: 'लॉक-आउटनंतर व्होल्टेज म्हणजे काहीतरी चुकले आहे. थांबा आणि मदत घ्या.',
+            },
+          },
+          point: {
+            1: 'प्रत्येक सर्किट, प्रत्येक वेळी तपासा.',
+            2: 'टेस्टर आधी आणि नंतर चालू स्रोतावर तपासा.',
+            3: 'लॉक-आउटनंतर व्होल्टेज: थांबा, बोलवा.',
+          },
+        },
+      },
+    },
+  },
+};
+
+export default translations;

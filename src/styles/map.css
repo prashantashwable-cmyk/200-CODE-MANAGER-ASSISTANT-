@@ -1,0 +1,132 @@
+/* Leaflet-specific styling for MapCanvas.tsx — real tiles, token-driven pins.
+   Leaflet's own stylesheet (leaflet/dist/leaflet.css) is imported before this
+   file, so these rules override its defaults. */
+
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: var(--color-surface-alt);
+  font-family: var(--font-ui);
+}
+
+/* Leaflet's controls and popups don't inherit our tokens by default. */
+.leaflet-control-zoom a {
+  background: var(--color-surface) !important;
+  color: var(--color-text-primary) !important;
+  border-color: var(--color-border) !important;
+}
+.leaflet-control-zoom a:hover {
+  background: var(--color-accent-primary-soft) !important;
+}
+.leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.75) !important;
+  color: var(--color-text-secondary) !important;
+  font-size: 10px !important;
+}
+.leaflet-tooltip {
+  background: var(--color-surface) !important;
+  color: var(--color-text-primary) !important;
+  border-color: var(--color-border) !important;
+  font-family: var(--font-ui) !important;
+  font-size: var(--text-xs) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+/*
+ * OpenStreetMap's raster tiles are drawn once, in a fixed light palette —
+ * there is no free per-theme dark tile set the way a paid vector service
+ * (Google/Mapbox styled JSON) would offer. Rather than let the map look like
+ * a bright rectangle dropped into a dark screen, dark-leaning modes invert
+ * and hue-rotate the tile layer, a standard technique that reads as a
+ * genuine dark map rather than a mismatched light one.
+ */
+:root:not([data-theme='light']):not([data-theme='snow']):not([data-theme='pure']) .leaflet-tile-pane,
+[data-theme='dark'] .leaflet-tile-pane,
+[data-theme='orbital'] .leaflet-tile-pane,
+[data-theme='lithium'] .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9) saturate(0.7);
+}
+/* Undo the inversion on markers/popups/tooltips, which sit in their own
+   panes above the tile pane and already carry correct token colours. */
+[data-theme='dark'] .leaflet-marker-pane,
+[data-theme='orbital'] .leaflet-marker-pane,
+[data-theme='lithium'] .leaflet-marker-pane,
+[data-theme='dark'] .leaflet-popup-pane,
+[data-theme='orbital'] .leaflet-popup-pane,
+[data-theme='lithium'] .leaflet-popup-pane {
+  filter: none;
+}
+@media (prefers-color-scheme: dark) {
+  [data-theme='system'] .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9) saturate(0.7);
+  }
+  [data-theme='system'] .leaflet-marker-pane,
+  [data-theme='system'] .leaflet-popup-pane {
+    filter: none;
+  }
+}
+
+/* ---- Custom marker pin, built from a divIcon in MapCanvas.tsx ---- */
+.ds-leaflet-pin {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+.ds-leaflet-pin__dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--pin-color);
+  border-style: solid;
+  border-color: var(--color-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-standard);
+}
+.ds-leaflet-pin:hover .ds-leaflet-pin__dot {
+  transform: scale(1.12);
+}
+.ds-leaflet-pin__glyph {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-surface);
+  pointer-events: none;
+}
+.ds-leaflet-pin__ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: var(--pin-color);
+  opacity: 0.3;
+  animation: aiec-marker-pulse 2.4s var(--ease-standard) infinite;
+  pointer-events: none;
+}
+@keyframes aiec-marker-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.35;
+  }
+  70% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ds-leaflet-pin__ring {
+    animation: none;
+    opacity: 0.15;
+  }
+}

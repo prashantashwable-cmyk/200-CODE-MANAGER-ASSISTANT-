@@ -1,0 +1,173 @@
+/** Screen 140 — Handover Completion Certificate. Types and translation keys only. */
+
+import { MILESTONES } from '@/features/qc/completion';
+import { JUDGEMENT_DECISIONS } from '@/features/commission/finalPayout';
+
+export type CompletionStatus = 'loading' | 'ready' | 'error' | 'not_found';
+export const POLL_MS = 20_000;
+export const boardPath = '/handover-certificate';
+export const walkthroughPath = (id: string) => `/handover-walkthrough/${id}`;
+export const warrantyPath = (id: string) => `/warranty/${id}`;
+export const judgementDraftKey = (userId: string, jobId: string) => `aiec.payoutJudgement.${userId}.${jobId}`;
+
+export const FINAL_ERRORS = [
+  'handover_not_ready', 'walkthrough_not_done', 'signoff_missing', 'warranty_not_registered', 'already_issued', 'waive_reason_required', 'waive_not_allowed',
+  'not_admin', 'not_found', 'forbidden', 'invalid_state', 'not_issued',
+  'issue_required', 'reason_required', 'decision_required', 'entries_required', 'amount_invalid', 'paid_entry_locked', 'not_held', 'already_held',
+] as const;
+export const DOC_IDS = ['quotation', 'contract', 'delivery', 'installation', 'safety', 'compliance', 'handover_checklist', 'walkthrough', 'warranty', 'materials'] as const;
+export const ROLES = ['surveyor', 'sales', 'technician_lead', 'technician', 'qc_inspector'] as const;
+export const PAYOUT_BASES = ['existing', 'time', 'steps', 'equal', 'fixed', 'percent'] as const;
+
+const rec = <T extends string>(ns: string, keys: readonly T[]) => Object.fromEntries(keys.map((k) => [k, `${ns}.${k}`])) as Record<T, string>;
+
+export const COMPLETION_KEYS = {
+  title: 'completion.title',
+  loading: 'completion.loading',
+  error: { title: 'completion.error.title', body: 'completion.error.body' },
+  notFound: { title: 'completion.notFound.title', body: 'completion.notFound.body', action: 'completion.notFound.action' },
+  board: { heading: 'completion.board.heading', emptyTitle: 'completion.board.emptyTitle', emptyBody: 'completion.board.emptyBody' },
+  problem: rec('completion.problem', [...FINAL_ERRORS, 'offline', 'generic'] as const),
+  status: rec('completion.status', ['not_ready', 'ready', 'issued'] as const),
+  hero: {
+    brand: 'completion.hero.brand',
+    heading: 'completion.hero.heading',
+    issued: 'completion.hero.issued',
+    complete: 'completion.hero.complete',
+    preparing: 'completion.hero.preparing',
+    statement: 'completion.hero.statement',
+    customer: 'completion.hero.customer',
+    warrantyUntil: 'completion.hero.warrantyUntil',
+    amc: 'completion.hero.amc',
+    amcNone: 'completion.hero.amcNone',
+    permanent: 'completion.hero.permanent',
+  },
+  ready: {
+    heading: 'completion.ready.heading',
+    customerIntro: 'completion.ready.customerIntro',
+    adminIntro: 'completion.ready.adminIntro',
+    done: 'completion.ready.done',
+    signoff: 'completion.ready.signoff',
+    warranty: 'completion.ready.warranty',
+    handover: 'completion.ready.handover',
+    walkthrough: 'completion.ready.walkthrough',
+    open: 'completion.ready.open',
+    waiveHeading: 'completion.ready.waiveHeading',
+    waiveBody: 'completion.ready.waiveBody',
+    waiveLabel: 'completion.ready.waiveLabel',
+    waiveHint: 'completion.ready.waiveHint',
+    dueOn: 'completion.ready.dueOn',
+  },
+  project: {
+    heading: 'completion.project.heading',
+    site: 'completion.project.site',
+    customer: 'completion.project.customer',
+    deal: 'completion.project.deal',
+    value: 'completion.project.value',
+    drive: 'completion.project.drive',
+    finish: 'completion.project.finish',
+    capacity: 'completion.project.capacity',
+    stops: 'completion.project.stops',
+    compliance: 'completion.project.compliance',
+    complianceNone: 'completion.project.complianceNone',
+    complianceNote: 'completion.project.complianceNote',
+    warranty: 'completion.project.warranty',
+    warrantyLine: 'completion.project.warrantyLine',
+    warrantyNone: 'completion.project.warrantyNone',
+    amcActive: 'completion.project.amcActive',
+    amcLater: 'completion.project.amcLater',
+    amcDeclined: 'completion.project.amcDeclined',
+    waived: 'completion.project.waived',
+  },
+  lifecycle: {
+    heading: 'completion.lifecycle.heading',
+    intro: 'completion.lifecycle.intro',
+    notOnRecord: 'completion.lifecycle.notOnRecord',
+    by: 'completion.lifecycle.by',
+    milestone: rec('completion.lifecycle.milestone', MILESTONES),
+    fact: {
+      visits: 'completion.lifecycle.fact.visits',
+      value: 'completion.lifecycle.fact.value',
+      count: 'completion.lifecycle.fact.count',
+      installation: 'completion.lifecycle.fact.installation',
+      standard: 'completion.lifecycle.fact.standard',
+      signed: 'completion.lifecycle.fact.signed',
+      unsigned: 'completion.lifecycle.fact.unsigned',
+      parts: 'completion.lifecycle.fact.parts',
+    },
+  },
+  team: {
+    heading: 'completion.team.heading',
+    intro: 'completion.team.intro',
+    role: rec('completion.team.role', ROLES),
+    work: 'completion.team.work',
+    hours: 'completion.team.hours',
+    steps: 'completion.team.steps',
+    results: 'completion.team.results',
+    none: 'completion.team.none',
+  },
+  docs: {
+    heading: 'completion.docs.heading',
+    intro: 'completion.docs.intro',
+    doc: rec('completion.docs.doc', DOC_IDS),
+    open: 'completion.docs.open',
+    onRecord: 'completion.docs.onRecord',
+  },
+  next: {
+    heading: 'completion.next.heading',
+    body: 'completion.next.body',
+    warranty: 'completion.next.warranty',
+    amcActive: 'completion.next.amcActive',
+    amcOther: 'completion.next.amcOther',
+    manage: 'completion.next.manage',
+  },
+  payout: {
+    heading: 'completion.payout.heading',
+    introPreview: 'completion.payout.introPreview',
+    introDone: 'completion.payout.introDone',
+    pools: 'completion.payout.pools',
+    placeholder: 'completion.payout.placeholder',
+    total: 'completion.payout.total',
+    basis: rec('completion.payout.basis', PAYOUT_BASES),
+    leadBonus: 'completion.payout.leadBonus',
+    leftEarly: 'completion.payout.leftEarly',
+    held: 'completion.payout.held',
+    statusProjected: 'completion.payout.statusProjected',
+    statusApproved: 'completion.payout.statusApproved',
+    statusPaid: 'completion.payout.statusPaid',
+    statusForfeited: 'completion.payout.statusForfeited',
+    changed: 'completion.payout.changed',
+    notPaid: 'completion.payout.notPaid',
+    none: 'completion.payout.none',
+  },
+  judge: {
+    heading: 'completion.judge.heading',
+    intro: 'completion.judge.intro',
+    issue: 'completion.judge.issue',
+    issueHint: 'completion.judge.issueHint',
+    decision: rec('completion.judge.decision', JUDGEMENT_DECISIONS),
+    decisionHint: rec('completion.judge.decisionHint', JUDGEMENT_DECISIONS),
+    entries: 'completion.judge.entries',
+    entryPaid: 'completion.judge.entryPaid',
+    amount: 'completion.judge.amount',
+    reason: 'completion.judge.reason',
+    reasonHint: 'completion.judge.reasonHint',
+    save: 'completion.judge.save',
+    saved: 'completion.judge.saved',
+    history: 'completion.judge.history',
+    none: 'completion.judge.none',
+    change: 'completion.judge.change',
+    draftRestored: 'completion.judge.draftRestored',
+  },
+  issue: {
+    button: 'completion.issue.button',
+    title: 'completion.issue.title',
+    body: 'completion.issue.body',
+    payouts: 'completion.issue.payouts',
+    confirm: 'completion.issue.confirm',
+    cancel: 'completion.issue.cancel',
+    toast: 'completion.issue.toast',
+  },
+  download: { button: 'completion.download.button', file: 'completion.download.file', footer: 'completion.download.footer' },
+  back: 'completion.back',
+} as const;

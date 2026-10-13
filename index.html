@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#F8F6F1" />
+    <meta
+      name="description"
+      content="ALL INDIA ELEVATORS COMPANY — survey, quote, install and hand over elevators on one orchestrated platform."
+    />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+
+    <!--
+      AIEC type system.
+      Latin pairing:      Fraunces (display) + Plus Jakarta Sans (UI) + IBM Plex Mono (numerals)
+      Devanagari pairing: Martel (display) + Hind (UI)  — required, see 000_DESIGN_SYSTEM.md.
+      Neither Fraunces nor Plus Jakarta Sans carries Devanagari glyphs, so Hindi/Marathi text
+      would silently fall back to a system font without the second pairing.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Martel:wght@400;600;700;800&family=Hind:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <title>AIEC — All India Elevators Company</title>
+  </head>
+  <body>
+    <!--
+      Shown until the app's code has arrived and started (it replaces this). On a phone on mobile data that can take
+      several seconds, and an empty page reads as broken. If the app cannot start (an error, a file that did not load,
+      or a browser too old to run it), the reason is shown here instead of a blank page.
+    -->
+    <div id="root">
+      <div id="boot" style="min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; text-align: center; background: var(--color-bg); color: var(--color-text-primary); font-family: system-ui, sans-serif;">
+        <div style="font-size: 28px; font-weight: 700; letter-spacing: 0.04em;">AIEC</div>
+        <div style="font-size: 14px; color: var(--color-text-secondary);">All India Elevators Company</div>
+        <div data-boot-wait style="font-size: 14px; color: var(--color-text-secondary); margin-top: 16px;">
+          Loading… · लोड हो रहा है… · लोड होत आहे…
+        </div>
+        <div data-boot-problem hidden style="max-width: 34ch; font-size: 14px; line-height: 1.5;">
+          <p style="margin: 0 0 8px; font-weight: 600;">The app could not start on this browser.</p>
+          <p style="margin: 0 0 8px;">यह ऐप इस ब्राउज़र पर शुरू नहीं हो सका।</p>
+          <p style="margin: 0 0 12px;">हे ॲप या ब्राउझरवर सुरू होऊ शकले नाही.</p>
+          <p data-boot-reason style="margin: 0 0 12px; font-family: monospace; font-size: 12px; color: var(--color-text-secondary); word-break: break-word;"></p>
+          <button type="button" onclick="location.reload()" style="min-height: 44px; padding: 0 20px; border-radius: 8px; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-primary); font: inherit;">
+            Try again · फिर कोशिश करें · पुन्हा प्रयत्न करा
+          </button>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function () {
+        function problem(reason) {
+          var boot = document.getElementById('boot');
+          if (!boot) return; // the app has started: its own screens report their errors
+          boot.querySelector('[data-boot-wait]').hidden = true;
+          boot.querySelector('[data-boot-problem]').hidden = false;
+          if (reason) boot.querySelector('[data-boot-reason]').textContent = String(reason).slice(0, 300);
+        }
+        window.addEventListener('error', function (e) {
+          var t = e.target;
+          if (t && t !== window && (t.tagName === 'SCRIPT' || t.tagName === 'LINK')) problem('Could not load ' + (t.src || t.href));
+          else problem(e.message || 'Script error');
+        }, true);
+        window.addEventListener('unhandledrejection', function (e) { problem(e.reason && (e.reason.message || e.reason)); });
+        // Still nothing after a minute: say so rather than leave the person waiting on a page that will not change.
+        setTimeout(function () { problem('Still loading after 60 seconds. Check the connection.'); }, 60000);
+      })();
+    </script>
+    <script nomodule>
+      document.querySelector('[data-boot-wait]').hidden = true;
+      document.querySelector('[data-boot-problem]').hidden = false;
+      document.querySelector('[data-boot-reason]').textContent = 'This browser is too old. Please update it or use Chrome.';
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

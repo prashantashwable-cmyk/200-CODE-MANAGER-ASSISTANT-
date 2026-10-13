@@ -1,0 +1,137 @@
+import type { ScreenTranslations } from '@/i18n/types';
+
+const translations: ScreenTranslations = {
+  en: {
+    alertsBoard: {
+      title: 'Alerts & exceptions',
+      subtitle: 'Everything that needs a human decision, in one queue.',
+      loading: 'Loading exceptions',
+      statusFilter: { open: 'Open', resolved: 'Resolved' },
+      ageFilter: { all: 'Any age', '24h': 'Last 24 hours', '7d': 'Last 7 days' },
+      category: {
+        safety: 'Safety',
+        sla_breach: 'SLA breach',
+        payment: 'Payment',
+        automation: 'Automation',
+        quality: 'Quality',
+        staffing: 'Staffing',
+        supplier: 'Supplier',
+      },
+      ageHours: '{{hours}}h old',
+      related: 'Linked to: {{codes}}',
+      bulkAcknowledge: 'Acknowledge {{count}} selected',
+      bulkAcknowledged: 'Acknowledged',
+      snooze: 'Snooze 24h',
+      snoozed: 'Snoozed for 24 hours',
+      delegate: 'Delegate',
+      delegateTo: 'Who should own this?',
+      delegated: 'Delegated to {{name}}',
+      delegatePick: 'Choose a person',
+      delegateNote: 'They are told at once and own the follow-up: if they do not acknowledge it in time, it comes back up to you.',
+      actionFailed: 'That did not go through. Try again in a moment.',
+      resolvedElsewhere: 'Resolved elsewhere — cleared automatically',
+      criticalFirst: 'Sorted by severity first, always — a critical item never gets buried by a newer, smaller one.',
+      liveLinkNote:
+        'Nothing here is a copy — resolving an exception in its own module (a payment, a lead, a job) clears it here too.',
+      openInto: 'Open',
+      empty: {
+        title: 'Nothing needs you right now',
+        body: 'Every exception the system could raise has either been handled or has not happened. New ones will land here the moment they do.',
+      },
+      error: {
+        title: 'Could not load exceptions',
+        body: 'We could not reach the alerts data. Check your connection and try again.',
+      },
+    },
+  },
+
+  hi: {
+    alertsBoard: {
+      title: 'चेतावनी और अपवाद',
+      subtitle: 'जिसमें भी इंसानी फ़ैसला चाहिए, वह सब एक ही क़तार में।',
+      loading: 'अपवाद लोड हो रहे हैं',
+      statusFilter: { open: 'खुले', resolved: 'निपटे' },
+      ageFilter: { all: 'कोई भी उम्र', '24h': 'पिछले 24 घंटे', '7d': 'पिछले 7 दिन' },
+      category: {
+        safety: 'सुरक्षा',
+        sla_breach: 'SLA उल्लंघन',
+        payment: 'भुगतान',
+        automation: 'ऑटोमेशन',
+        quality: 'गुणवत्ता',
+        staffing: 'स्टाफ़िंग',
+        supplier: 'आपूर्तिकर्ता',
+      },
+      ageHours: '{{hours}} घंटे पुराना',
+      related: 'इनसे जुड़ा: {{codes}}',
+      bulkAcknowledge: '{{count}} चुने हुए देखे गए मानें',
+      bulkAcknowledged: 'देख लिया गया',
+      snooze: '24 घंटे टालें',
+      snoozed: '24 घंटे के लिए टाला गया',
+      delegate: 'सौंपें',
+      delegateTo: 'यह किसके ज़िम्मे हो?',
+      delegated: '{{name}} को सौंपा गया',
+      delegatePick: 'व्यक्ति चुनें',
+      delegateNote: 'उन्हें तुरंत बताया जाता है और आगे की कार्रवाई उनकी ज़िम्मेदारी होती है: समय पर स्वीकार न करें तो यह वापस आप तक आता है।',
+      actionFailed: 'यह हो नहीं पाया। थोड़ी देर में फिर कोशिश करें।',
+      resolvedElsewhere: 'कहीं और निपटा — अपने आप साफ़ हुआ',
+      criticalFirst: 'हमेशा गंभीरता के हिसाब से पहले क्रमबद्ध — कोई गंभीर मामला किसी नए, छोटे मामले तले दबता नहीं।',
+      liveLinkNote:
+        'यहाँ कुछ भी नक़ल नहीं है — किसी अपवाद को उसके अपने मॉड्यूल (भुगतान, लीड, काम) में निपटाने से वह यहाँ भी साफ़ हो जाता है।',
+      openInto: 'खोलें',
+      empty: {
+        title: 'अभी आपकी ज़रूरत किसी को नहीं',
+        body: 'सिस्टम जो भी अपवाद उठा सकता था, या तो निपट चुका है या हुआ ही नहीं। नए अपवाद होते ही यहीं आएँगे।',
+      },
+      error: {
+        title: 'अपवाद लोड नहीं हो पाए',
+        body: 'हम चेतावनी डेटा तक नहीं पहुँच पाए। नेटवर्क जाँचिए और दोबारा कोशिश कीजिए।',
+      },
+    },
+  },
+
+  mr: {
+    alertsBoard: {
+      title: 'सूचना आणि अपवाद',
+      subtitle: 'ज्याला माणसाचा निर्णय हवा ते सर्व, एकाच रांगेत.',
+      loading: 'अपवाद लोड होत आहेत',
+      statusFilter: { open: 'खुले', resolved: 'निकाली' },
+      ageFilter: { all: 'कोणतेही वय', '24h': 'गेले 24 तास', '7d': 'गेले 7 दिवस' },
+      category: {
+        safety: 'सुरक्षा',
+        sla_breach: 'SLA उल्लंघन',
+        payment: 'पेमेंट',
+        automation: 'स्वयंचलन',
+        quality: 'गुणवत्ता',
+        staffing: 'कर्मचारी',
+        supplier: 'पुरवठादार',
+      },
+      ageHours: '{{hours}} तास जुने',
+      related: 'याच्याशी जोडलेले: {{codes}}',
+      bulkAcknowledge: '{{count}} निवडलेले पाहिले म्हणून नोंदवा',
+      bulkAcknowledged: 'पाहिले',
+      snooze: '24 तास पुढे ढकला',
+      snoozed: '24 तासांसाठी पुढे ढकलले',
+      delegate: 'सोपवा',
+      delegateTo: 'हे कोणाकडे सोपवायचे?',
+      delegated: '{{name}} कडे सोपवले',
+      delegatePick: 'व्यक्ती निवडा',
+      delegateNote: 'त्यांना लगेच कळवले जाते आणि पुढची कार्यवाही त्यांची जबाबदारी असते: वेळेत स्वीकारले नाही तर ते परत तुमच्याकडे येते.',
+      actionFailed: 'हे झाले नाही. थोड्या वेळाने पुन्हा प्रयत्न करा.',
+      resolvedElsewhere: 'दुसरीकडे निकाली — आपोआप साफ झाले',
+      criticalFirst: 'नेहमी तीव्रतेनुसार आधी क्रमवारी — एखादे गंभीर प्रकरण नवीन, छोट्या प्रकरणाखाली दबले जात नाही.',
+      liveLinkNote:
+        'इथे काहीही प्रत नाही — एखादा अपवाद त्याच्या स्वतःच्या विभागात (पेमेंट, लीड, काम) निकाली काढल्यास तो इथेही साफ होतो.',
+      openInto: 'उघडा',
+      empty: {
+        title: 'सध्या तुमची गरज कोणालाही नाही',
+        body: 'प्रणाली जे अपवाद उठवू शकत होती ते एकतर निकाली निघाले आहेत किंवा घडलेच नाहीत. नवीन अपवाद घडताच इथे येतील.',
+      },
+      error: {
+        title: 'अपवाद लोड होऊ शकले नाहीत',
+        body: 'आम्ही सूचना माहितीपर्यंत पोहोचू शकलो नाही. नेटवर्क तपासा आणि पुन्हा प्रयत्न करा.',
+      },
+    },
+  },
+};
+
+export default translations;

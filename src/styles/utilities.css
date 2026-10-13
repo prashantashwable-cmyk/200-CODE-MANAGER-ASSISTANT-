@@ -1,0 +1,263 @@
+/* AIEC utility layer.
+   A deliberately small, fixed vocabulary — every screen in the build uses these
+   same class names so 40 screens stay visually consistent. All spacing values
+   come from the 8pt scale in tokens.css; there are no arbitrary values here. */
+
+/* ---- Layout primitives -------------------------------------------------- */
+.stack {
+  display: flex;
+  flex-direction: column;
+}
+.row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+.row-top {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+}
+.wrap {
+  flex-wrap: wrap;
+}
+.grow {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.shrink-0 {
+  flex-shrink: 0;
+}
+.between {
+  justify-content: space-between;
+}
+.center {
+  justify-content: center;
+  align-items: center;
+}
+.end {
+  justify-content: flex-end;
+}
+.items-start {
+  align-items: flex-start;
+}
+.items-end {
+  align-items: flex-end;
+}
+
+.gap-1 {
+  gap: var(--space-1);
+}
+.gap-2 {
+  gap: var(--space-2);
+}
+.gap-3 {
+  gap: var(--space-3);
+}
+.gap-4 {
+  gap: var(--space-4);
+}
+.gap-5 {
+  gap: var(--space-5);
+}
+.gap-6 {
+  gap: var(--space-6);
+}
+
+.mt-2 {
+  margin-top: var(--space-2);
+}
+.mt-3 {
+  margin-top: var(--space-3);
+}
+.mt-4 {
+  margin-top: var(--space-4);
+}
+.mt-5 {
+  margin-top: var(--space-5);
+}
+.mb-2 {
+  margin-bottom: var(--space-2);
+}
+.mb-3 {
+  margin-bottom: var(--space-3);
+}
+.mb-4 {
+  margin-bottom: var(--space-4);
+}
+
+.p-2 {
+  padding: var(--space-2);
+}
+.p-3 {
+  padding: var(--space-3);
+}
+.p-4 {
+  padding: var(--space-4);
+}
+
+/* Responsive auto-grid: single column on a phone, fills wider screens.
+   --min is the smallest a cell may get before the grid drops a column. */
+.grid-auto {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(var(--min, 220px), 1fr));
+}
+.grid-2 {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: 1fr 1fr;
+}
+
+/* ---- Type helpers ------------------------------------------------------- */
+.t-display {
+  font-family: var(--font-display);
+}
+.t-xs {
+  font-size: var(--text-xs);
+}
+.t-sm {
+  font-size: var(--text-sm);
+}
+.t-md {
+  font-size: var(--text-md);
+}
+.t-lg {
+  font-size: var(--text-lg);
+}
+.t-xl {
+  font-size: var(--text-xl);
+}
+.t-2xl {
+  font-size: var(--text-2xl);
+}
+.t-3xl {
+  font-size: var(--text-3xl);
+}
+.t-muted {
+  color: var(--color-text-secondary);
+}
+.t-accent {
+  color: var(--color-accent-primary);
+}
+.t-emerald {
+  color: var(--color-accent-secondary);
+}
+.t-success {
+  color: var(--color-success);
+}
+.t-warning {
+  color: var(--color-warning);
+}
+.t-error {
+  color: var(--color-error);
+}
+.t-center {
+  text-align: center;
+}
+.t-right {
+  text-align: right;
+}
+.t-medium {
+  font-weight: 500;
+}
+.t-semibold {
+  font-weight: 600;
+}
+.t-bold {
+  font-weight: 700;
+}
+.t-balance {
+  text-wrap: balance;
+}
+/* Clamp long field-captured names to keep list rows a single height. */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ---- Surface helpers ---------------------------------------------------- */
+.divider {
+  height: 1px;
+  background: var(--color-border);
+  border: 0;
+  margin: 0;
+}
+.hairline-top {
+  border-top: var(--border-width) solid var(--color-border);
+}
+.scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.full-w {
+  width: 100%;
+}
+
+/* Any tappable element must clear 48x48 — surveyors and technicians use this
+   one-handed, outdoors, sometimes gloved. */
+.tappable {
+  min-width: var(--tap-target);
+  min-height: var(--tap-target);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-control);
+  color: inherit;
+  transition: background var(--dur-fast) var(--ease-standard);
+}
+.tappable:hover {
+  background: var(--color-accent-primary-soft);
+}
+
+/* Bottom padding so a sticky action bar never covers the last list row. */
+.pb-action-bar {
+  padding-bottom: calc(var(--space-8) + var(--space-4));
+}
+
+/* A list beside its detail on wide screens; one at a time on a phone. */
+.split-pane {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+.split-pane > * {
+  min-width: 0;
+}
+@media (min-width: 1024px) {
+  .split-pane {
+    grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  }
+}
+@media (max-width: 1023px) {
+  .split-pane--open > .split-pane__list,
+  .split-pane:not(.split-pane--open) > .split-pane__detail {
+    display: none;
+  }
+}
+
+/* A main column with a narrower aside beside it on wide screens; stacked, in
+   reading order, on a phone. */
+.main-aside {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+@media (min-width: 1024px) {
+  .main-aside {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  }
+}

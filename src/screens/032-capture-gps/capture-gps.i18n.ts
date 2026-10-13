@@ -1,0 +1,152 @@
+import type { ScreenTranslations } from '@/i18n/types';
+
+const translations: ScreenTranslations = {
+  en: {
+    captureGps: {
+      title: 'New lead',
+      subtitle: 'Start with exactly where you are and what the site looks like.',
+      step: {
+        location: 'Location',
+        contact: 'Contact',
+        spec: 'Building',
+        duplicate: 'Check',
+        confirm: 'Confirm',
+      },
+      gps: {
+        locating: 'Finding your location…',
+        located: 'Location confirmed',
+        manuallyPlaced: 'Pin placed by hand — confirmed',
+        accuracy: 'accurate to {{accuracy}} m',
+        denied: 'Location access was declined',
+        deniedAction: 'This capture needs your real location to be trustworthy. Allow location access in your browser or device settings, then try again.',
+        unavailable: 'Could not get a location fix',
+        poorAccuracy: 'This fix is only accurate to {{accuracy}} m — wider than we would like',
+        poorAccuracyAction: 'Move to more open sky if you can, or tap the exact spot on the map below to correct the pin by hand.',
+        retry: 'Try again',
+        mapLabel: 'Your current location',
+        manualAdjustNote: 'Tap anywhere on the map to place the pin exactly where you are standing.',
+      },
+      photos: {
+        heading: 'Site photos',
+        body: 'Three guided shots — this is what makes a captured lead trustworthy.',
+        slot: { front: 'Building front', entrance: 'Entrance', landmark: 'Nearest landmark' },
+        slotHint: {
+          front: 'Stand back far enough to get the whole front elevation in frame.',
+          entrance: 'The main entrance, clear enough to read any signage.',
+          landmark: 'Anything nearby that would help someone find this site again.',
+        },
+        minRequired: '{{count}} of {{min}} photos taken',
+        liveOnlyNote: 'Only a fresh camera shot is accepted here — importing an old photo from your gallery is blocked, since a live shot with matching GPS is what keeps this lead trustworthy.',
+        geotagNote: 'Your location and the time are recorded with every photo automatically.',
+      },
+      landmarkNote: {
+        label: 'Anything worth noting',
+        hint: 'Optional — access notes, a gate code, whatever the next person on this lead should know.',
+      },
+      offlineQueued: 'No signal right now — everything you capture here is saved and will upload the moment you are back online.',
+      continue: 'Continue',
+      discard: 'Discard this lead',
+      discardConfirm: 'Discard everything captured so far?',
+    },
+  },
+
+  hi: {
+    captureGps: {
+      title: 'नया लीड',
+      subtitle: 'शुरुआत वहीं से कीजिए जहाँ आप हैं, और साइट कैसी दिखती है वहाँ से।',
+      step: {
+        location: 'जगह',
+        contact: 'संपर्क',
+        spec: 'इमारत',
+        duplicate: 'जाँच',
+        confirm: 'पुष्टि',
+      },
+      gps: {
+        locating: 'आपकी जगह ढूँढी जा रही है…',
+        located: 'जगह पक्की हुई',
+        manuallyPlaced: 'हाथ से पिन लगाया गया — पक्का हुआ',
+        accuracy: '{{accuracy}} मीटर तक सटीक',
+        denied: 'लोकेशन एक्सेस मना कर दी गई',
+        deniedAction: 'इस कैप्चर के भरोसेमंद होने के लिए असली लोकेशन चाहिए। अपने ब्राउज़र या डिवाइस सेटिंग में लोकेशन एक्सेस दीजिए, फिर दोबारा कोशिश कीजिए।',
+        unavailable: 'लोकेशन फ़िक्स नहीं मिल पाया',
+        poorAccuracy: 'यह फ़िक्स सिर्फ़ {{accuracy}} मीटर तक ही सटीक है — जितना चाहिए उससे ज़्यादा चौड़ा',
+        poorAccuracyAction: 'हो सके तो खुले आसमान की तरफ़ जाइए, या नीचे नक़्शे पर सही जगह टैप करके पिन ख़ुद ठीक कीजिए।',
+        retry: 'दोबारा कोशिश करें',
+        mapLabel: 'आपकी मौजूदा जगह',
+        manualAdjustNote: 'आप जहाँ खड़े हैं ठीक वहीं पिन लगाने के लिए नक़्शे पर कहीं भी टैप कीजिए।',
+      },
+      photos: {
+        heading: 'साइट की फ़ोटो',
+        body: 'तीन गाइडेड फ़ोटो — यही दर्ज किए गए लीड को भरोसेमंद बनाता है।',
+        slot: { front: 'इमारत का सामने का हिस्सा', entrance: 'प्रवेश द्वार', landmark: 'सबसे नज़दीकी पहचान-चिह्न' },
+        slotHint: {
+          front: 'इतना पीछे खड़े हों कि पूरा सामने का हिस्सा फ़्रेम में आ जाए।',
+          entrance: 'मुख्य प्रवेश द्वार, इतना साफ़ कि कोई भी बोर्ड पढ़ा जा सके।',
+          landmark: 'आस-पास कुछ भी जो इस साइट को दोबारा ढूँढने में मदद करे।',
+        },
+        minRequired: '{{min}} में से {{count}} फ़ोटो ली गईं',
+        liveOnlyNote: 'यहाँ सिर्फ़ ताज़ी कैमरा फ़ोटो स्वीकार होती है — गैलरी से पुरानी फ़ोटो लगाना बंद है, क्योंकि सही GPS वाली लाइव फ़ोटो ही इस लीड को भरोसेमंद बनाती है।',
+        geotagNote: 'हर फ़ोटो के साथ आपकी जगह और समय अपने आप दर्ज हो जाते हैं।',
+      },
+      landmarkNote: {
+        label: 'कुछ भी बताने लायक',
+        hint: 'वैकल्पिक — पहुँचने का तरीक़ा, गेट का कोड, जो भी अगला व्यक्ति इस लीड पर जानना चाहेगा।',
+      },
+      offlineQueued: 'अभी सिग्नल नहीं है — यहाँ जो भी दर्ज करेंगे वह सहेजा जाता है और नेटवर्क वापस आते ही अपलोड हो जाएगा।',
+      continue: 'आगे बढ़ें',
+      discard: 'यह लीड छोड़ें',
+      discardConfirm: 'अब तक जो भी दर्ज हुआ, सब छोड़ें?',
+    },
+  },
+
+  mr: {
+    captureGps: {
+      title: 'नवीन लीड',
+      subtitle: 'तुम्ही जिथे आहात तिथून, आणि साइट कशी दिसते तिथून सुरुवात करा.',
+      step: {
+        location: 'ठिकाण',
+        contact: 'संपर्क',
+        spec: 'इमारत',
+        duplicate: 'तपासणी',
+        confirm: 'निश्चिती',
+      },
+      gps: {
+        locating: 'तुमचे ठिकाण शोधत आहे…',
+        located: 'ठिकाण निश्चित झाले',
+        manuallyPlaced: 'हाताने पिन लावली — निश्चित झाले',
+        accuracy: '{{accuracy}} मीटरपर्यंत अचूक',
+        denied: 'स्थान प्रवेश नाकारला',
+        deniedAction: 'ही नोंद विश्वासार्ह होण्यासाठी खरे स्थान हवे. तुमच्या ब्राउझर किंवा डिव्हाइस सेटिंगमध्ये स्थान प्रवेश द्या, मग पुन्हा प्रयत्न करा.',
+        unavailable: 'स्थान निश्चिती मिळाली नाही',
+        poorAccuracy: 'ही निश्चिती फक्त {{accuracy}} मीटरपर्यंतच अचूक आहे — हवे त्यापेक्षा जास्त रुंद',
+        poorAccuracyAction: 'शक्य असल्यास मोकळ्या आकाशाकडे जा, किंवा खालील नकाशावर बरोबर जागी टॅप करून पिन स्वतः दुरुस्त करा.',
+        retry: 'पुन्हा प्रयत्न करा',
+        mapLabel: 'तुमचे सध्याचे ठिकाण',
+        manualAdjustNote: 'तुम्ही जिथे उभे आहात नेमके तिथेच पिन ठेवण्यासाठी नकाशावर कुठेही टॅप करा.',
+      },
+      photos: {
+        heading: 'साइटचे फोटो',
+        body: 'तीन मार्गदर्शित फोटो — हेच नोंदवलेला लीड विश्वासार्ह बनवते.',
+        slot: { front: 'इमारतीचा पुढील भाग', entrance: 'प्रवेशद्वार', landmark: 'सर्वात जवळची खूण' },
+        slotHint: {
+          front: 'संपूर्ण पुढील भाग चौकटीत येईल इतके मागे उभे रहा.',
+          entrance: 'मुख्य प्रवेशद्वार, कोणतीही पाटी वाचता येईल इतके स्पष्ट.',
+          landmark: 'जवळपासचे काहीही जे ही साइट पुन्हा शोधण्यास मदत करेल.',
+        },
+        minRequired: '{{min}} पैकी {{count}} फोटो घेतले',
+        liveOnlyNote: 'इथे फक्त ताजा कॅमेरा फोटो स्वीकारला जातो — गॅलरीतून जुना फोटो आयात करणे बंद आहे, कारण योग्य GPS असलेला थेट फोटोच हा लीड विश्वासार्ह ठेवतो.',
+        geotagNote: 'प्रत्येक फोटोसोबत तुमचे ठिकाण आणि वेळ आपोआप नोंदवली जाते.',
+      },
+      landmarkNote: {
+        label: 'सांगण्यासारखे काही',
+        hint: 'ऐच्छिक — पोहोचण्याची पद्धत, गेट कोड, पुढच्या व्यक्तीला या लीडबद्दल जे माहीत असायला हवे ते.',
+      },
+      offlineQueued: 'सध्या सिग्नल नाही — इथे जे काही नोंदवाल ते जतन होते आणि नेटवर्क परत येताच अपलोड होईल.',
+      continue: 'पुढे जा',
+      discard: 'हा लीड सोडून द्या',
+      discardConfirm: 'आतापर्यंत नोंदवलेले सर्व सोडून द्यायचे?',
+    },
+  },
+};
+
+export default translations;

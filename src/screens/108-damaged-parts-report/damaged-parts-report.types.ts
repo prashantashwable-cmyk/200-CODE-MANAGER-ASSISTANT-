@@ -1,0 +1,193 @@
+/** Screen 108 — Damaged/Missing Parts Report. Types and translation keys only. */
+
+import type { DefectAttribution, DiscrepancyKind, ReportResolution } from '@/data/types';
+import type { ReportImpactLevel } from '@/data/repository';
+
+export type DamagedPartsStatus = 'loading' | 'ready' | 'error';
+
+/** How often the board re-reads while open. */
+export const POLL_MS = 30_000;
+
+export type ReportFilter = 'open' | 'unjudged' | 'rush' | 'resolved';
+export const REPORT_FILTERS: ReportFilter[] = ['open', 'unjudged', 'rush', 'resolved'];
+
+export const CAUSES: DefectAttribution[] = ['transport', 'installation', 'supplier'];
+export const KINDS: DiscrepancyKind[] = ['damaged', 'count', 'wrong_spec'];
+export const RESOLUTIONS: ReportResolution[] = ['reported', 'replacement_requested', 'replacement_shipped', 'resolved', 'credited'];
+export const CONTACT_CHANNELS = ['phone', 'email', 'whatsapp', 'in_person'] as const;
+export const IMPACT_LEVELS: ReportImpactLevel[] = ['none', 'unknown', 'ok', 'tight', 'blocks'];
+
+const rec = <T extends string>(ns: string, keys: readonly T[]) => Object.fromEntries(keys.map((k) => [k, `${ns}.${k}`])) as Record<T, string>;
+
+export const DAMAGED_PARTS_KEYS = {
+  title: 'damagedParts.title',
+  subtitle: 'damagedParts.subtitle',
+  loading: 'damagedParts.loading',
+  error: { title: 'damagedParts.error.title', body: 'damagedParts.error.body' },
+  filter: {
+    label: 'damagedParts.filter.label',
+    search: 'damagedParts.filter.search',
+    ...rec('damagedParts.filter', REPORT_FILTERS),
+  },
+  list: {
+    emptyTitle: 'damagedParts.list.emptyTitle',
+    emptyBody: 'damagedParts.list.emptyBody',
+    emptyFilteredTitle: 'damagedParts.list.emptyFilteredTitle',
+    emptyFilteredBody: 'damagedParts.list.emptyFilteredBody',
+    clearFilter: 'damagedParts.list.clearFilter',
+    parts: 'damagedParts.list.parts',
+    notFound: 'damagedParts.list.notFound',
+    backToList: 'damagedParts.list.backToList',
+    rush: 'damagedParts.list.rush',
+    unjudged: 'damagedParts.list.unjudged',
+    raised: 'damagedParts.list.raised',
+  },
+  resolution: rec('damagedParts.resolution', RESOLUTIONS),
+  cause: rec('damagedParts.cause', CAUSES),
+  causeHint: rec('damagedParts.causeHint', CAUSES),
+  kind: rec('damagedParts.kind', KINDS),
+  impact: rec('damagedParts.impact', IMPACT_LEVELS),
+  impactBody: {
+    none: 'damagedParts.impactBody.none',
+    unknown: 'damagedParts.impactBody.unknown',
+    ok: 'damagedParts.impactBody.ok',
+    tight: 'damagedParts.impactBody.tight',
+    blocks: 'damagedParts.impactBody.blocks',
+  },
+  detail: {
+    itemsHeading: 'damagedParts.detail.itemsHeading',
+    expected: 'damagedParts.detail.expected',
+    received: 'damagedParts.detail.received',
+    noNote: 'damagedParts.detail.noNote',
+    photos: 'damagedParts.detail.photos',
+    noPhotos: 'damagedParts.detail.noPhotos',
+    photoAlt: 'damagedParts.detail.photoAlt',
+    affected: 'damagedParts.detail.affected',
+    site: 'damagedParts.detail.site',
+    order: 'damagedParts.detail.order',
+    supplier: 'damagedParts.detail.supplier',
+    reporter: 'damagedParts.detail.reporter',
+    seeChecklist: 'damagedParts.detail.seeChecklist',
+    seeThread: 'damagedParts.detail.seeThread',
+    deliveryOpen: 'damagedParts.detail.deliveryOpen',
+  },
+  happened: {
+    heading: 'damagedParts.happened.heading',
+    hint: 'damagedParts.happened.hint',
+    causes: 'damagedParts.happened.causes',
+    note: 'damagedParts.happened.note',
+    noteHint: 'damagedParts.happened.noteHint',
+    rush: 'damagedParts.happened.rush',
+    rushHint: 'damagedParts.happened.rushHint',
+    neededBy: 'damagedParts.happened.neededBy',
+    save: 'damagedParts.happened.save',
+    edit: 'damagedParts.happened.edit',
+    causesShown: 'damagedParts.happened.causesShown',
+    noneGiven: 'damagedParts.happened.noneGiven',
+    readOnly: 'damagedParts.happened.readOnly',
+  },
+  judge: {
+    heading: 'damagedParts.judge.heading',
+    hint: 'damagedParts.judge.hint',
+    banner: 'damagedParts.judge.banner',
+    bannerBody: 'damagedParts.judge.bannerBody',
+    waiting: 'damagedParts.judge.waiting',
+    suspected: 'damagedParts.judge.suspected',
+    pick: 'damagedParts.judge.pick',
+    note: 'damagedParts.judge.note',
+    noteHint: 'damagedParts.judge.noteHint',
+    save: 'damagedParts.judge.save',
+    change: 'damagedParts.judge.change',
+    decided: 'damagedParts.judge.decided',
+    supplierCounts: 'damagedParts.judge.supplierCounts',
+    notCounted: 'damagedParts.judge.notCounted',
+    needsSigned: 'damagedParts.judge.needsSigned',
+    waitingForAdmin: 'damagedParts.judge.waitingForAdmin',
+  },
+  supplierSection: {
+    heading: 'damagedParts.supplierSection.heading',
+    sentAt: 'damagedParts.supplierSection.sentAt',
+    notSent: 'damagedParts.supplierSection.notSent',
+    noLogin: 'damagedParts.supplierSection.noLogin',
+    sendInApp: 'damagedParts.supplierSection.sendInApp',
+    logCall: 'damagedParts.supplierSection.logCall',
+    channel: 'damagedParts.supplierSection.channel',
+    send: 'damagedParts.supplierSection.send',
+    open: 'damagedParts.supplierSection.open',
+    channelName: {
+      phone: 'damagedParts.supplierSection.channelName.phone',
+      email: 'damagedParts.supplierSection.channelName.email',
+      whatsapp: 'damagedParts.supplierSection.channelName.whatsapp',
+      in_person: 'damagedParts.supplierSection.channelName.in_person',
+    },
+  },
+  track: {
+    heading: 'damagedParts.track.heading',
+    hint: 'damagedParts.track.hint',
+    eta: 'damagedParts.track.eta',
+    etaHint: 'damagedParts.track.etaHint',
+    credit: 'damagedParts.track.credit',
+    creditHint: 'damagedParts.track.creditHint',
+    note: 'damagedParts.track.note',
+    next: 'damagedParts.track.next',
+    closed: 'damagedParts.track.closed',
+    endHeading: 'damagedParts.track.endHeading',
+    confirm: 'damagedParts.track.confirm',
+    replacementBy: 'damagedParts.track.replacementBy',
+    creditedAmount: 'damagedParts.track.creditedAmount',
+    action: {
+      replacement_requested: 'damagedParts.track.action.replacement_requested',
+      replacement_shipped: 'damagedParts.track.action.replacement_shipped',
+      resolved: 'damagedParts.track.action.resolved',
+      credited: 'damagedParts.track.action.credited',
+    },
+  },
+  impactSection: {
+    heading: 'damagedParts.impactSection.heading',
+    installStarts: 'damagedParts.impactSection.installStarts',
+    replacementBy: 'damagedParts.impactSection.replacementBy',
+    tellCustomer: 'damagedParts.impactSection.tellCustomer',
+    needEta: 'damagedParts.impactSection.needEta',
+    preview: 'damagedParts.impactSection.preview',
+    told: 'damagedParts.impactSection.told',
+    optedOut: 'damagedParts.impactSection.optedOut',
+    send: 'damagedParts.impactSection.send',
+  },
+  timeline: {
+    heading: 'damagedParts.timeline.heading',
+    raised: 'damagedParts.timeline.raised',
+    details: 'damagedParts.timeline.details',
+    routed: 'damagedParts.timeline.routed',
+    attributed: 'damagedParts.timeline.attributed',
+    resolution: 'damagedParts.timeline.resolution',
+    customer_told: 'damagedParts.timeline.customer_told',
+    rush: 'damagedParts.timeline.rush',
+    by: 'damagedParts.timeline.by',
+  },
+  toast: {
+    saved: 'damagedParts.toast.saved',
+    rush: 'damagedParts.toast.rush',
+    judged: 'damagedParts.toast.judged',
+    moved: 'damagedParts.toast.moved',
+    sent: 'damagedParts.toast.sent',
+    logged: 'damagedParts.toast.logged',
+    customerTold: 'damagedParts.toast.customerTold',
+    alreadyTold: 'damagedParts.toast.alreadyTold',
+    optedOut: 'damagedParts.toast.optedOut',
+    noContact: 'damagedParts.toast.noContact',
+  },
+  problem: {
+    forbidden: 'damagedParts.problem.forbidden',
+    not_found: 'damagedParts.problem.not_found',
+    invalid_state: 'damagedParts.problem.invalid_state',
+    invalid_input: 'damagedParts.problem.invalid_input',
+    invalid_transition: 'damagedParts.problem.invalid_transition',
+    cause_required: 'damagedParts.problem.cause_required',
+    note_required: 'damagedParts.problem.note_required',
+    checklist_open: 'damagedParts.problem.checklist_open',
+    eta_required: 'damagedParts.problem.eta_required',
+    credit_invalid: 'damagedParts.problem.credit_invalid',
+    no_portal: 'damagedParts.problem.no_portal',
+    generic: 'damagedParts.problem.generic',
+  },
+} as const;

@@ -1,0 +1,19 @@
+{
+  "name": "AIEC — All India Elevators Company",
+  "short_name": "AIEC",
+  "description": "Survey, quote, install and hand over elevators on one orchestrated platform.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F8F6F1",
+  "theme_color": "#B8873D",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

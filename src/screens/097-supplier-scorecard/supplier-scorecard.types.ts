@@ -1,0 +1,145 @@
+/** Screen 097 — Supplier Rating & Quality Scorecard. Types and translation keys only. */
+
+export type SupplierScorecardStatus = 'loading' | 'ready' | 'error' | 'pick' | 'not_found';
+
+export type ScorecardTab = 'breakdown' | 'orders' | 'disputes';
+export const SCORECARD_TABS: ScorecardTab[] = ['breakdown', 'orders', 'disputes'];
+
+/** How many recent orders the trend chart plots. */
+export const TREND_POINTS = 12;
+
+export const SUPPLIER_SCORECARD_KEYS = {
+  title: 'supplierScorecard.title',
+  subtitleAdmin: 'supplierScorecard.subtitleAdmin',
+  subtitleSupplier: 'supplierScorecard.subtitleSupplier',
+  loading: 'supplierScorecard.loading',
+  error: { title: 'supplierScorecard.error.title', body: 'supplierScorecard.error.body' },
+  notFound: { title: 'supplierScorecard.notFound.title', body: 'supplierScorecard.notFound.body' },
+  pick: { heading: 'supplierScorecard.pick.heading', score: 'supplierScorecard.pick.score', unrated: 'supplierScorecard.pick.unrated' },
+
+  hero: {
+    score: 'supplierScorecard.hero.score',
+    up: 'supplierScorecard.hero.up',
+    down: 'supplierScorecard.hero.down',
+    steady: 'supplierScorecard.hero.steady',
+    onTime: 'supplierScorecard.hero.onTime',
+    quality: 'supplierScorecard.hero.quality',
+    basis: 'supplierScorecard.hero.basis',
+    noOrders: 'supplierScorecard.hero.noOrders',
+    unrated: 'supplierScorecard.hero.unrated',
+    agreed: 'supplierScorecard.hero.agreed',
+    belowAgreed: 'supplierScorecard.hero.belowAgreed',
+    noAgreement: 'supplierScorecard.hero.noAgreement',
+    viewAgreement: 'supplierScorecard.hero.viewAgreement',
+  },
+  context: {
+    heading: 'supplierScorecard.context.heading',
+    by: 'supplierScorecard.context.by',
+    add: 'supplierScorecard.context.add',
+    addTitle: 'supplierScorecard.context.addTitle',
+    addHint: 'supplierScorecard.context.addHint',
+    save: 'supplierScorecard.context.save',
+    fromMessage: 'supplierScorecard.context.fromMessage',
+  },
+  tab: {
+    breakdown: 'supplierScorecard.tab.breakdown',
+    orders: 'supplierScorecard.tab.orders',
+    disputes: 'supplierScorecard.tab.disputes',
+  },
+  breakdown: {
+    intro: 'supplierScorecard.breakdown.intro',
+    component: {
+      onTime: 'supplierScorecard.breakdown.component.onTime',
+      quality: 'supplierScorecard.breakdown.component.quality',
+      price: 'supplierScorecard.breakdown.component.price',
+      responsiveness: 'supplierScorecard.breakdown.component.responsiveness',
+    },
+    row: 'supplierScorecard.breakdown.row',
+    placeholder: 'supplierScorecard.breakdown.placeholder',
+    total: 'supplierScorecard.breakdown.total',
+    howOnTime: 'supplierScorecard.breakdown.howOnTime',
+    howQuality: 'supplierScorecard.breakdown.howQuality',
+    howWindow: 'supplierScorecard.breakdown.howWindow',
+    reschedules: 'supplierScorecard.breakdown.reschedules',
+    trend: 'supplierScorecard.breakdown.trend',
+    trendHint: 'supplierScorecard.breakdown.trendHint',
+    trendEmpty: 'supplierScorecard.breakdown.trendEmpty',
+    trendTooltip: 'supplierScorecard.breakdown.trendTooltip',
+  },
+  orders: {
+    empty: 'supplierScorecard.orders.empty',
+    onTime: 'supplierScorecard.orders.onTime',
+    late: 'supplierScorecard.orders.late',
+    quality: 'supplierScorecard.orders.quality',
+    defects: 'supplierScorecard.orders.defects',
+    outsideWindow: 'supplierScorecard.orders.outsideWindow',
+    disputeOpen: 'supplierScorecard.orders.disputeOpen',
+    disputeUpheld: 'supplierScorecard.orders.disputeUpheld',
+    disputeRejected: 'supplierScorecard.orders.disputeRejected',
+  },
+  disputes: {
+    empty: 'supplierScorecard.disputes.empty',
+    raised: 'supplierScorecard.disputes.raised',
+  },
+  sheet: {
+    title: 'supplierScorecard.sheet.title',
+    delivered: 'supplierScorecard.sheet.delivered',
+    promised: 'supplierScorecard.sheet.promised',
+    orderScore: 'supplierScorecard.sheet.orderScore',
+    timeline: 'supplierScorecard.sheet.timeline',
+    tlDelivered: 'supplierScorecard.sheet.tlDelivered',
+    tlDefect: 'supplierScorecard.sheet.tlDefect',
+    tlReattributed: 'supplierScorecard.sheet.tlReattributed',
+    tlAdminQuality: 'supplierScorecard.sheet.tlAdminQuality',
+    tlDisputed: 'supplierScorecard.sheet.tlDisputed',
+    tlResolved: 'supplierScorecard.sheet.tlResolved',
+    attribution: {
+      supplier: 'supplierScorecard.sheet.attribution.supplier',
+      installation: 'supplierScorecard.sheet.attribution.installation',
+      transport: 'supplierScorecard.sheet.attribution.transport',
+    },
+    notCounted: 'supplierScorecard.sheet.notCounted',
+    dispute: {
+      heading: 'supplierScorecard.sheet.dispute.heading',
+      hint: 'supplierScorecard.sheet.dispute.hint',
+      reason: 'supplierScorecard.sheet.dispute.reason',
+      submit: 'supplierScorecard.sheet.dispute.submit',
+      pending: 'supplierScorecard.sheet.dispute.pending',
+    },
+    defect: {
+      heading: 'supplierScorecard.sheet.defect.heading',
+      note: 'supplierScorecard.sheet.defect.note',
+      attribution: 'supplierScorecard.sheet.defect.attribution',
+      submit: 'supplierScorecard.sheet.defect.submit',
+    },
+    quality: {
+      heading: 'supplierScorecard.sheet.quality.heading',
+      hint: 'supplierScorecard.sheet.quality.hint',
+      none: 'supplierScorecard.sheet.quality.none',
+      note: 'supplierScorecard.sheet.quality.note',
+      submit: 'supplierScorecard.sheet.quality.submit',
+    },
+    resolve: {
+      heading: 'supplierScorecard.sheet.resolve.heading',
+      upheld: 'supplierScorecard.sheet.resolve.upheld',
+      rejected: 'supplierScorecard.sheet.resolve.rejected',
+      reattribute: 'supplierScorecard.sheet.resolve.reattribute',
+      keep: 'supplierScorecard.sheet.resolve.keep',
+      note: 'supplierScorecard.sheet.resolve.note',
+      submit: 'supplierScorecard.sheet.resolve.submit',
+      preview: 'supplierScorecard.sheet.resolve.preview',
+    },
+  },
+  action: {
+    disputeHint: 'supplierScorecard.action.disputeHint',
+    disputeCta: 'supplierScorecard.action.disputeCta',
+  },
+  toast: {
+    disputed: 'supplierScorecard.toast.disputed',
+    resolved: 'supplierScorecard.toast.resolved',
+    defectLogged: 'supplierScorecard.toast.defectLogged',
+    qualitySet: 'supplierScorecard.toast.qualitySet',
+    noteAdded: 'supplierScorecard.toast.noteAdded',
+    error: 'supplierScorecard.toast.error',
+  },
+} as const;

@@ -1,0 +1,360 @@
+/* =============================================================================
+   AIEC Design Tokens — "Alabaster & Ascension"
+   -----------------------------------------------------------------------------
+   THE STANDING RULE: no component anywhere in this app may contain a hardcoded
+   hex value. Every colour is consumed as a CSS custom property declared here.
+   That rule is what makes 7 appearance modes a token swap instead of 7x the
+   components.
+
+   Seven modes, exactly as specified in the numbered screen prompts:
+     light   — Alabaster (default, warm ivory)      [000_DESIGN_SYSTEM.md]
+     snow    — Snow White (cooler, crisper)         [000_DESIGN_SYSTEM.md]
+     dark    — warm near-black, brightened accents  [000_DESIGN_SYSTEM.md]
+     orbital — mission control, dot-grid, telemetry [screen prompts]
+     lithium — matte automotive dashboard           [screen prompts]
+     pure    — extreme minimalist, hairlines only   [screen prompts]
+     system  — follows OS light/dark -> light|dark  [000_DESIGN_SYSTEM.md]
+
+   NOTE ON PROVENANCE: 000_DESIGN_SYSTEM.md documents full token tables for
+   light / snow / dark only. Orbital, Lithium and Pure are specified in the
+   numbered screen prompts by background + accent hexes only; the remaining
+   tokens for those three modes are derived here to preserve the same contrast
+   relationships as the three documented modes. Same brand gold + emerald
+   underneath all seven — only mood, texture and density change.
+   ========================================================================== */
+
+:root {
+  /* ---- Type ------------------------------------------------------------- */
+  --font-display: 'Fraunces', 'Times New Roman', serif;
+  --font-ui: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+  /* Devanagari pairing — swapped in by [lang] below, never per-screen. */
+  --font-display-deva: 'Martel', 'Noto Serif Devanagari', serif;
+  --font-ui-deva: 'Hind', 'Noto Sans Devanagari', sans-serif;
+  /* Per-mode label face. Orbital overrides this to the mono telemetry face. */
+  --font-label: var(--font-ui);
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 1.875rem;
+  --text-3xl: 2.375rem;
+  /* Lithium enlarges this; every KPI numeral scales from it. */
+  --numeral-scale: 1;
+
+  /* ---- 8pt spacing system ----------------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+  --space-6: 40px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  --screen-margin: var(--space-3);
+
+  /* ---- Shape ------------------------------------------------------------ */
+  --radius-card: 18px;
+  --radius-control: 12px;
+  --radius-pill: 999px;
+  --border-width: 1px;
+  --tap-target: 48px;
+
+  /* ---- Motion (subtle and purposeful only) ------------------------------ */
+  --ease-standard: cubic-bezier(0.32, 0.08, 0.24, 1);
+  --dur-fast: 150ms;
+  --dur-base: 220ms;
+  --dur-slow: 320ms;
+
+  /* ---- Surface texture, overridden by Orbital only ---------------------- */
+  --texture-bg: none;
+  --texture-size: 0;
+
+  --z-shell: 40;
+  --z-sheet: 60;
+  --z-toast: 80;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --screen-margin: var(--space-4);
+  }
+}
+
+/* Devanagari swap is language-driven, never chosen per screen. */
+[lang='hi'],
+[lang='mr'] {
+  --font-display: var(--font-display-deva);
+  --font-ui: var(--font-ui-deva);
+  --font-label: var(--font-ui-deva);
+}
+[lang='hi'] .num,
+[lang='mr'] .num {
+  /* Western digits in every language — India's finance UI convention. */
+  font-family: var(--font-mono);
+}
+
+/* =============================================================================
+   MODE: Light / Alabaster (default)
+   ========================================================================== */
+:root,
+[data-theme='light'] {
+  --color-bg: #f8f6f1;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f2efe8;
+  --color-text-primary: #2a2723;
+  --color-text-secondary: #6b6560;
+  --color-accent-primary: #b8873d;
+  --color-accent-secondary: #0e4b3d;
+  --color-success: #2f8f5b;
+  --color-warning: #c97c1f;
+  --color-error: #b23b3b;
+  --color-border: rgba(184, 135, 61, 0.15);
+
+  --color-accent-primary-soft: rgba(184, 135, 61, 0.12);
+  --color-accent-secondary-soft: rgba(14, 75, 61, 0.1);
+  --color-success-soft: rgba(47, 143, 91, 0.12);
+  --color-warning-soft: rgba(201, 124, 31, 0.12);
+  --color-error-soft: rgba(178, 59, 59, 0.1);
+  --color-on-accent: #ffffff;
+  --color-scrim: rgba(42, 39, 35, 0.45);
+  --color-skeleton: rgba(42, 39, 35, 0.07);
+
+  --shadow-card: 0 1px 2px rgba(42, 39, 35, 0.04), 0 8px 24px rgba(42, 39, 35, 0.06);
+  --shadow-raised: 0 2px 6px rgba(42, 39, 35, 0.06), 0 18px 40px rgba(42, 39, 35, 0.1);
+  --glow-accent: 0 0 0 4px rgba(184, 135, 61, 0.18);
+  color-scheme: light;
+}
+
+/* =============================================================================
+   MODE: Snow White — same brand, cooler and crisper, tighter shadows
+   ========================================================================== */
+[data-theme='snow'] {
+  --color-bg: #ffffff;
+  --color-surface: #fbfcfd;
+  --color-surface-alt: #f2f5f8;
+  --color-text-primary: #1f2124;
+  --color-text-secondary: #6b7178;
+  --color-accent-primary: #b8873d;
+  --color-accent-secondary: #0e4b3d;
+  --color-success: #2f8f5b;
+  --color-warning: #c97c1f;
+  --color-error: #b23b3b;
+  --color-border: rgba(184, 135, 61, 0.12);
+
+  --color-accent-primary-soft: rgba(184, 135, 61, 0.1);
+  --color-accent-secondary-soft: rgba(14, 75, 61, 0.08);
+  --color-success-soft: rgba(47, 143, 91, 0.1);
+  --color-warning-soft: rgba(201, 124, 31, 0.1);
+  --color-error-soft: rgba(178, 59, 59, 0.08);
+  --color-on-accent: #ffffff;
+  --color-scrim: rgba(31, 33, 36, 0.4);
+  --color-skeleton: rgba(31, 33, 36, 0.06);
+
+  --shadow-card: 0 1px 2px rgba(31, 33, 36, 0.05), 0 4px 12px rgba(31, 33, 36, 0.05);
+  --shadow-raised: 0 2px 4px rgba(31, 33, 36, 0.07), 0 12px 24px rgba(31, 33, 36, 0.08);
+  --glow-accent: 0 0 0 4px rgba(184, 135, 61, 0.16);
+  color-scheme: light;
+}
+
+/* =============================================================================
+   MODE: Dark — warm near-black, never pure #000; accents brightened for
+   contrast, not re-hued (see 000_DESIGN_SYSTEM.md on why).
+   ========================================================================== */
+[data-theme='dark'] {
+  --color-bg: #1a1815;
+  --color-surface: #242019;
+  --color-surface-alt: #2e2921;
+  --color-text-primary: #f0ede6;
+  --color-text-secondary: #a69f92;
+  --color-accent-primary: #d4a855;
+  --color-accent-secondary: #2e9b78;
+  --color-success: #4fbb82;
+  --color-warning: #e0954a;
+  --color-error: #e0605c;
+  --color-border: rgba(212, 168, 85, 0.2);
+
+  --color-accent-primary-soft: rgba(212, 168, 85, 0.16);
+  --color-accent-secondary-soft: rgba(46, 155, 120, 0.16);
+  --color-success-soft: rgba(79, 187, 130, 0.16);
+  --color-warning-soft: rgba(224, 149, 74, 0.16);
+  --color-error-soft: rgba(224, 96, 92, 0.14);
+  --color-on-accent: #1a1815;
+  --color-scrim: rgba(10, 9, 7, 0.62);
+  --color-skeleton: rgba(240, 237, 230, 0.08);
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 28px rgba(0, 0, 0, 0.36);
+  --shadow-raised: 0 2px 6px rgba(0, 0, 0, 0.45), 0 20px 44px rgba(0, 0, 0, 0.45);
+  --glow-accent: 0 0 0 4px rgba(212, 168, 85, 0.24);
+  color-scheme: dark;
+}
+
+/* =============================================================================
+   MODE: Orbital — mission control. Deep space black, fine dot-grid texture,
+   monospace telemetry labels.
+   ========================================================================== */
+[data-theme='orbital'] {
+  --color-bg: #0b0e14;
+  --color-surface: #121722;
+  --color-surface-alt: #19202e;
+  --color-text-primary: #e6edf7;
+  --color-text-secondary: #8a97ab;
+  --color-accent-primary: #d9ae5c;
+  --color-accent-secondary: #35b48a;
+  --color-success: #3fc08f;
+  --color-warning: #e0a94a;
+  --color-error: #e86a66;
+  --color-border: rgba(217, 174, 92, 0.18);
+
+  --color-accent-primary-soft: rgba(217, 174, 92, 0.14);
+  --color-accent-secondary-soft: rgba(53, 180, 138, 0.14);
+  --color-success-soft: rgba(63, 192, 143, 0.14);
+  --color-warning-soft: rgba(224, 169, 74, 0.14);
+  --color-error-soft: rgba(232, 106, 102, 0.14);
+  --color-on-accent: #0b0e14;
+  --color-scrim: rgba(4, 6, 10, 0.68);
+  --color-skeleton: rgba(230, 237, 247, 0.07);
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5), 0 12px 30px rgba(0, 0, 0, 0.4);
+  --shadow-raised: 0 2px 8px rgba(0, 0, 0, 0.55), 0 22px 48px rgba(0, 0, 0, 0.5);
+  --glow-accent: 0 0 0 4px rgba(217, 174, 92, 0.22);
+
+  --font-label: var(--font-mono);
+  --radius-card: 12px;
+  --radius-control: 8px;
+  --texture-bg: radial-gradient(circle at 1px 1px, rgba(138, 151, 171, 0.22) 1px, transparent 0);
+  --texture-size: 22px 22px;
+  color-scheme: dark;
+}
+/* Telemetry character: small caps-ish tracking on labels, mono face. */
+[data-theme='orbital'] .label,
+[data-theme='orbital'] .ds-stat__label,
+[data-theme='orbital'] .ds-nav__label {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: var(--text-xs);
+}
+
+/* =============================================================================
+   MODE: Lithium — matte automotive dashboard. Flat surfaces, oversized
+   numerals, desaturated accents, effectively no shadow.
+   ========================================================================== */
+[data-theme='lithium'] {
+  --color-bg: #101012;
+  --color-surface: #17171a;
+  --color-surface-alt: #1f1f23;
+  --color-text-primary: #ededef;
+  --color-text-secondary: #93939b;
+  --color-accent-primary: #c99a52;
+  --color-accent-secondary: #2e8968;
+  --color-success: #3e9a72;
+  --color-warning: #c9954a;
+  --color-error: #ce5f5c;
+  --color-border: rgba(201, 154, 82, 0.14);
+
+  --color-accent-primary-soft: rgba(201, 154, 82, 0.12);
+  --color-accent-secondary-soft: rgba(46, 137, 104, 0.12);
+  --color-success-soft: rgba(62, 154, 114, 0.12);
+  --color-warning-soft: rgba(201, 149, 74, 0.12);
+  --color-error-soft: rgba(206, 95, 92, 0.12);
+  --color-on-accent: #101012;
+  --color-scrim: rgba(6, 6, 8, 0.66);
+  --color-skeleton: rgba(237, 237, 239, 0.06);
+
+  --shadow-card: none;
+  --shadow-raised: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --glow-accent: 0 0 0 3px rgba(201, 154, 82, 0.2);
+
+  --radius-card: 10px;
+  --radius-control: 6px;
+  --numeral-scale: 1.35;
+  color-scheme: dark;
+}
+
+/* =============================================================================
+   MODE: Pure — extreme minimalist. Hairline dividers instead of shadow,
+   maximum whitespace, the brand accents used far more sparingly.
+   ========================================================================== */
+[data-theme='pure'] {
+  --color-bg: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-alt: #fafafa;
+  --color-text-primary: #111111;
+  --color-text-secondary: #767676;
+  --color-accent-primary: #b8873d;
+  --color-accent-secondary: #0e4b3d;
+  --color-success: #2f8f5b;
+  --color-warning: #c97c1f;
+  --color-error: #b23b3b;
+  --color-border: #e6e6e6;
+
+  --color-accent-primary-soft: rgba(184, 135, 61, 0.07);
+  --color-accent-secondary-soft: rgba(14, 75, 61, 0.06);
+  --color-success-soft: rgba(47, 143, 91, 0.07);
+  --color-warning-soft: rgba(201, 124, 31, 0.07);
+  --color-error-soft: rgba(178, 59, 59, 0.06);
+  --color-on-accent: #ffffff;
+  --color-scrim: rgba(17, 17, 17, 0.35);
+  --color-skeleton: rgba(17, 17, 17, 0.05);
+
+  --shadow-card: none;
+  --shadow-raised: none;
+  --glow-accent: 0 0 0 3px rgba(184, 135, 61, 0.16);
+
+  --radius-card: 4px;
+  --radius-control: 4px;
+  --space-3: 20px;
+  --screen-margin: var(--space-4);
+  color-scheme: light;
+}
+
+/* =============================================================================
+   MODE: System — the OS only knows light vs dark, so it maps to Light or Dark.
+   Snow White / Orbital / Lithium / Pure stay deliberate user choices.
+   ========================================================================== */
+@media (prefers-color-scheme: dark) {
+  [data-theme='system'] {
+    --color-bg: #1a1815;
+    --color-surface: #242019;
+    --color-surface-alt: #2e2921;
+    --color-text-primary: #f0ede6;
+    --color-text-secondary: #a69f92;
+    --color-accent-primary: #d4a855;
+    --color-accent-secondary: #2e9b78;
+    --color-success: #4fbb82;
+    --color-warning: #e0954a;
+    --color-error: #e0605c;
+    --color-border: rgba(212, 168, 85, 0.2);
+
+    --color-accent-primary-soft: rgba(212, 168, 85, 0.16);
+    --color-accent-secondary-soft: rgba(46, 155, 120, 0.16);
+    --color-success-soft: rgba(79, 187, 130, 0.16);
+    --color-warning-soft: rgba(224, 149, 74, 0.16);
+    --color-error-soft: rgba(224, 96, 92, 0.14);
+    --color-on-accent: #1a1815;
+    --color-scrim: rgba(10, 9, 7, 0.62);
+    --color-skeleton: rgba(240, 237, 230, 0.08);
+
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 28px rgba(0, 0, 0, 0.36);
+    --shadow-raised: 0 2px 6px rgba(0, 0, 0, 0.45), 0 20px 44px rgba(0, 0, 0, 0.45);
+    --glow-accent: 0 0 0 4px rgba(212, 168, 85, 0.24);
+    color-scheme: dark;
+  }
+}
+@media (prefers-color-scheme: light) {
+  [data-theme='system'] {
+    color-scheme: light;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+  }
+}

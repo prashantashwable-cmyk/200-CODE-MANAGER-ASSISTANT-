@@ -1,0 +1,206 @@
+export const POLL_MS = 6_000;
+export const WAITING_POLL_MS = 3_000;
+export const SUPPORT_PATH = '/support-chat';
+export const threadPath = (id: string) => `/support-chat/${id}`;
+export const viewKey = (userId: string) => `aiec.supportChat.${userId}`;
+export const outboxKey = (userId: string) => `aiec.supportOutbox.${userId}`;
+export const MAX_LENGTH = 1000;
+
+export const CHAT_KEYS = {
+  title: 'supportChat.title',
+  subtitle: {
+    customer: 'supportChat.subtitle.customer',
+    admin: 'supportChat.subtitle.admin',
+  },
+  loading: 'supportChat.loading',
+  error: {
+    title: 'supportChat.error.title',
+    body: 'supportChat.error.body',
+  },
+  offline: 'supportChat.offline',
+  refresh: 'supportChat.refresh',
+  back: 'supportChat.back',
+  close: 'supportChat.close',
+  notFound: 'supportChat.notFound',
+  link: {
+    open: 'supportChat.link.open',
+    documents: 'supportChat.link.documents',
+    payments: 'supportChat.link.payments',
+    status: 'supportChat.link.status',
+    request: 'supportChat.link.request',
+    emergency: 'supportChat.link.emergency',
+  },
+  notice: {
+    placeholders: 'supportChat.notice.placeholders',
+  },
+  handling: {
+    bot: {
+      title: 'supportChat.handling.bot.title',
+      body: 'supportChat.handling.bot.body',
+      badge: 'supportChat.handling.bot.badge',
+    },
+    waiting: {
+      title: 'supportChat.handling.waiting.title',
+      body: 'supportChat.handling.waiting.body',
+      busy: 'supportChat.handling.waiting.busy',
+      badge: 'supportChat.handling.waiting.badge',
+    },
+    human: {
+      title: 'supportChat.handling.human.title',
+      body: 'supportChat.handling.human.body',
+      badge: 'supportChat.handling.human.badge',
+    },
+  },
+  tag: {
+    bot: 'supportChat.tag.bot',
+    team: 'supportChat.tag.team',
+    you: 'supportChat.tag.you',
+  },
+  empty: {
+    title: 'supportChat.empty.title',
+    body: 'supportChat.empty.body',
+  },
+  quick: {
+    label: 'supportChat.quick.label',
+    payment_status: 'supportChat.quick.payment_status',
+    progress: 'supportChat.quick.progress',
+    amc: 'supportChat.quick.amc',
+    troubleshoot: 'supportChat.quick.troubleshoot',
+    human: 'supportChat.quick.human',
+  },
+  composer: {
+    placeholder: 'supportChat.composer.placeholder',
+    send: 'supportChat.composer.send',
+    notSent: 'supportChat.composer.notSent',
+    sending: 'supportChat.composer.sending',
+    failed: 'supportChat.composer.failed',
+  },
+  emergency: {
+    note: 'supportChat.emergency.note',
+    call: 'supportChat.emergency.call',
+  },
+  bot: {
+    greeting: 'supportChat.bot.greeting',
+    thanks: 'supportChat.bot.thanks',
+    outOfScope: 'supportChat.bot.outOfScope',
+    documents: 'supportChat.bot.documents',
+    payment: {
+      none: 'supportChat.bot.payment.none',
+      overdue: 'supportChat.bot.payment.overdue',
+      due: 'supportChat.bot.payment.due',
+      confirming: 'supportChat.bot.payment.confirming',
+      disputed: 'supportChat.bot.payment.disputed',
+      upcoming: 'supportChat.bot.payment.upcoming',
+      complete: 'supportChat.bot.payment.complete',
+    },
+    progress: {
+      none: 'supportChat.bot.progress.none',
+      agreed: 'supportChat.bot.progress.agreed',
+      contract: 'supportChat.bot.progress.contract',
+      materials: 'supportChat.bot.progress.materials',
+      installation: 'supportChat.bot.progress.installation',
+      installation_noeta: 'supportChat.bot.progress.installation_noeta',
+      quality: 'supportChat.bot.progress.quality',
+      handover: 'supportChat.bot.progress.handover',
+      service: 'supportChat.bot.progress.service',
+    },
+    amc: {
+      notYet: 'supportChat.bot.amc.notYet',
+      active: 'supportChat.bot.amc.active',
+      warranty: 'supportChat.bot.amc.warranty',
+      offer: 'supportChat.bot.amc.offer',
+    },
+    tip: {
+      door: 'supportChat.bot.tip.door',
+      call_button: 'supportChat.bot.tip.call_button',
+      slow: 'supportChat.bot.tip.slow',
+      display: 'supportChat.bot.tip.display',
+      power: 'supportChat.bot.tip.power',
+      noise_light: 'supportChat.bot.tip.noise_light',
+      general: 'supportChat.bot.tip.general',
+    },
+    safety: 'supportChat.bot.safety',
+    handoff: {
+      requested: 'supportChat.bot.handoff.requested',
+      unsure: 'supportChat.bot.handoff.unsure',
+      needsPerson: 'supportChat.bot.handoff.needsPerson',
+    },
+    busy: 'supportChat.bot.busy',
+  },
+  board: {
+    filter: {
+      waiting: 'supportChat.board.filter.waiting',
+      human: 'supportChat.board.filter.human',
+      bot: 'supportChat.board.filter.bot',
+      all: 'supportChat.board.filter.all',
+    },
+    empty: {
+      title: 'supportChat.board.empty.title',
+      body: 'supportChat.board.empty.body',
+    },
+    waited: 'supportChat.board.waited',
+    sla: 'supportChat.board.sla',
+    urgent: 'supportChat.board.urgent',
+    busy: 'supportChat.board.busy',
+  },
+  reason: {
+    requested: 'supportChat.reason.requested',
+    low_confidence: 'supportChat.reason.low_confidence',
+    borderline: 'supportChat.reason.borderline',
+    safety: 'supportChat.reason.safety',
+    needs_person: 'supportChat.reason.needs_person',
+  },
+  ctx: {
+    title: 'supportChat.ctx.title',
+    frozen: 'supportChat.ctx.frozen',
+    live: 'supportChat.ctx.live',
+    projects: 'supportChat.ctx.projects',
+    percent: 'supportChat.ctx.percent',
+    stage: {
+      agreed: 'supportChat.ctx.stage.agreed',
+      contract: 'supportChat.ctx.stage.contract',
+      materials: 'supportChat.ctx.stage.materials',
+      installation: 'supportChat.ctx.stage.installation',
+      quality: 'supportChat.ctx.stage.quality',
+      handover: 'supportChat.ctx.stage.handover',
+      service: 'supportChat.ctx.stage.service',
+    },
+    pay: {
+      overdue: 'supportChat.ctx.pay.overdue',
+      due: 'supportChat.ctx.pay.due',
+      confirming: 'supportChat.ctx.pay.confirming',
+      disputed: 'supportChat.ctx.pay.disputed',
+      upcoming: 'supportChat.ctx.pay.upcoming',
+      complete: 'supportChat.ctx.pay.complete',
+      empty: 'supportChat.ctx.pay.empty',
+    },
+    ticketsTitle: 'supportChat.ctx.ticketsTitle',
+    tickets: {
+      none: 'supportChat.ctx.tickets.none',
+    },
+    coverage: 'supportChat.ctx.coverage',
+    documents: 'supportChat.ctx.documents',
+    language: 'supportChat.ctx.language',
+    call: 'supportChat.ctx.call',
+  },
+  agent: {
+    placeholder: 'supportChat.agent.placeholder',
+    send: 'supportChat.agent.send',
+    handBack: 'supportChat.agent.handBack',
+    templates: 'supportChat.agent.templates',
+    template: {
+      greet: 'supportChat.agent.template.greet',
+      looking: 'supportChat.agent.template.looking',
+      call: 'supportChat.agent.template.call',
+      ticket: 'supportChat.agent.template.ticket',
+      thanks: 'supportChat.agent.template.thanks',
+    },
+    youHandle: 'supportChat.agent.youHandle',
+    assistantHandles: 'supportChat.agent.assistantHandles',
+    sent: 'supportChat.agent.sent',
+  },
+  alert: {
+    safety: 'supportChat.alert.safety',
+    waiting: 'supportChat.alert.waiting',
+  },
+} as const;

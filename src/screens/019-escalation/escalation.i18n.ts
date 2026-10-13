@@ -1,0 +1,201 @@
+import type { ScreenTranslations } from '@/i18n/types';
+
+/**
+ * Alert titles are resolved through `Alert.titleKey` (e.g.
+ * 'alerts.type.safetyStepBlocked'), set by whichever module raised the alert.
+ * This screen is the first to render them, so it owns the shared `alerts.type.*`
+ * namespace here — the alerts dashboard (029) and any other alert-reading
+ * screen reuses these rather than redefining them.
+ */
+const translations: ScreenTranslations = {
+  en: {
+    alerts: {
+      type: {
+        safetyStepBlocked: 'Safety step blocked — no evidence attached',
+        paymentOverdue: 'Payment overdue',
+        automationFailing: 'Automation is failing',
+        leadStalled: 'Lead stalled past its SLA',
+        supplierLate: 'Supplier running late',
+        gpsMismatch: 'Site photo GPS does not match the recorded site',
+        technicianIdle: 'Technician has not checked in',
+        fieldSos: 'SOS from the field',
+        scheduleClash: 'A technician is booked on two jobs the same day',
+        recruitmentSurge: 'A surge of new partner applications: expect a screening backlog',
+        qcFailed: 'Quality check failed',
+        counterOfferAging: 'Counter-offer waiting too long for a decision',
+        loanDisbursementDelayed: 'Loan disbursement delayed past a reasonable window',
+      },
+    },
+    escalation: {
+      title: 'Emergency alerts',
+      subtitle: 'One tap from any field screen. Nothing here can be dismissed unread.',
+      loading: 'Loading alerts',
+      mapLabel: 'Where this alert was raised',
+      liveCall: 'Call now',
+      acknowledge: 'Acknowledge',
+      resolve: 'Mark resolved',
+      resolveNote: 'What happened, and how it was handled',
+      resolveNoteHint: 'A short note — this becomes part of the permanent safety record.',
+      resolveRequired: 'Write at least a few words before resolving.',
+      resolved: 'Resolved',
+      acknowledged: 'Acknowledged',
+      stage: { received: 'Received', acknowledged: 'Acknowledged', resolved: 'Resolved' },
+      stageMeta: {
+        received: 'Reached the admin screen',
+        acknowledged: 'A person is on it',
+        resolved: 'Closed with a note',
+      },
+      cluster: '{{count}} alerts close together in place and time: {{codes}}',
+      clusterNote: 'This is grouped because it may be one larger incident rather than several small ones.',
+      overdue: 'Not acknowledged in time',
+      chainProgress: 'Escalation: step {{done}} of {{total}} reached. Told: {{names}}.',
+      chainOut: 'Everyone in the chain was tried and nobody answered. This is the limit of the current escalation design.',
+      chainNone: 'No escalation chain has run for this alert.',
+      chainLink: 'Open the escalation matrix',
+      safetyBanner: 'Safety incident — treat as urgent',
+      history: 'Resolved incidents',
+      historyNote: 'Kept permanently for safety review. Nothing here is ever deleted.',
+      cancelWindowNote:
+        'Field staff get {{seconds}} seconds to cancel an accidental SOS before it reaches you — but every attempt, cancelled or not, is logged.',
+      noDismiss: 'This cannot be dismissed — only acknowledged, then resolved with a note.',
+      raisedAt: 'Raised {{time}}',
+      category: '{{category}}',
+      empty: {
+        title: 'No emergencies right now',
+        body: 'When a field staff member raises an SOS, or a critical alert fires, it will appear here within seconds.',
+      },
+      error: {
+        title: 'Could not load alerts',
+        body: 'We could not reach the escalation queue. Check your connection and try again.',
+      },
+    },
+  },
+
+  hi: {
+    alerts: {
+      type: {
+        safetyStepBlocked: 'सुरक्षा-चरण रुका — कोई सबूत नहीं लगा',
+        paymentOverdue: 'भुगतान बकाया',
+        automationFailing: 'ऑटोमेशन नाकाम हो रहा है',
+        leadStalled: 'लीड अपनी तय समय-सीमा से आगे अटका है',
+        supplierLate: 'आपूर्तिकर्ता देरी कर रहा है',
+        gpsMismatch: 'साइट फ़ोटो का GPS दर्ज साइट से मेल नहीं खाता',
+        technicianIdle: 'तकनीशियन ने चेक-इन नहीं किया',
+        fieldSos: 'फ़ील्ड से SOS',
+        scheduleClash: 'एक तकनीशियन एक ही दिन दो काम पर बुक है',
+        recruitmentSurge: 'नए पार्टनर आवेदनों की बाढ़: स्क्रीनिंग में बैकलॉग की आशंका',
+        qcFailed: 'गुणवत्ता जाँच में फ़ेल',
+        counterOfferAging: 'काउंटर-ऑफ़र पर फ़ैसले का इंतज़ार बहुत लंबा हो गया है',
+        loanDisbursementDelayed: 'लोन वितरण उचित समय-सीमा से आगे टल गया है',
+      },
+    },
+    escalation: {
+      title: 'आपातकालीन चेतावनी',
+      subtitle: 'किसी भी फ़ील्ड स्क्रीन से एक टैप में। यहाँ बिना पढ़े कुछ भी नहीं छोड़ा जा सकता।',
+      loading: 'चेतावनियाँ लोड हो रही हैं',
+      mapLabel: 'यह चेतावनी कहाँ से उठी',
+      liveCall: 'अभी कॉल करें',
+      acknowledge: 'देख लिया',
+      resolve: 'निपटा हुआ चिह्नित करें',
+      resolveNote: 'क्या हुआ, और उसे कैसे संभाला गया',
+      resolveNoteHint: 'एक छोटा नोट — यह स्थायी सुरक्षा रिकॉर्ड का हिस्सा बन जाता है।',
+      resolveRequired: 'निपटाने से पहले कम से कम कुछ शब्द लिखिए।',
+      resolved: 'निपट गया',
+      acknowledged: 'देख लिया गया',
+      stage: { received: 'मिली', acknowledged: 'देखी गई', resolved: 'निपटी' },
+      stageMeta: {
+        received: 'एडमिन स्क्रीन तक पहुँची',
+        acknowledged: 'कोई इस पर काम कर रहा है',
+        resolved: 'नोट के साथ बंद',
+      },
+      cluster: 'जगह और समय में पास-पास {{count}} चेतावनियाँ: {{codes}}',
+      clusterNote: 'इन्हें साथ दिखाया गया है क्योंकि यह कई छोटी घटनाओं की बजाय एक बड़ी घटना हो सकती है।',
+      overdue: 'समय पर नहीं देखी गई',
+      chainProgress: 'एस्केलेशन: {{total}} में से चरण {{done}} तक पहुँचा। बताया गया: {{names}}।',
+      chainOut: 'चेन के हर व्यक्ति को आज़माया गया और किसी ने जवाब नहीं दिया। यह मौजूदा एस्केलेशन डिज़ाइन की सीमा है।',
+      chainNone: 'इस अलर्ट के लिए कोई एस्केलेशन चेन नहीं चली।',
+      chainLink: 'एस्केलेशन मैट्रिक्स खोलें',
+      safetyBanner: 'सुरक्षा घटना — तुरंत ध्यान दें',
+      history: 'निपटी हुई घटनाएँ',
+      historyNote: 'सुरक्षा समीक्षा के लिए हमेशा के लिए रखी जाती हैं। यहाँ से कुछ भी कभी हटाया नहीं जाता।',
+      cancelWindowNote:
+        'ग़लती से उठे SOS को फ़ील्ड स्टाफ़ के पास आप तक पहुँचने से पहले रद्द करने के लिए {{seconds}} सेकंड होते हैं — पर हर कोशिश, रद्द हो या न हो, दर्ज होती है।',
+      noDismiss: 'इसे छोड़ा नहीं जा सकता — सिर्फ़ देखा और फिर नोट के साथ निपटाया जा सकता है।',
+      raisedAt: '{{time}} उठी',
+      category: '{{category}}',
+      empty: {
+        title: 'अभी कोई आपातकाल नहीं',
+        body: 'जब कोई फ़ील्ड स्टाफ़ SOS उठाएगा, या कोई गंभीर चेतावनी बजेगी, वह कुछ ही सेकंड में यहाँ दिख जाएगी।',
+      },
+      error: {
+        title: 'चेतावनियाँ लोड नहीं हो पाईं',
+        body: 'हम एस्केलेशन क़तार तक नहीं पहुँच पाए। नेटवर्क जाँचिए और दोबारा कोशिश कीजिए।',
+      },
+    },
+  },
+
+  mr: {
+    alerts: {
+      type: {
+        safetyStepBlocked: 'सुरक्षा-टप्पा अडला — कोणताही पुरावा जोडलेला नाही',
+        paymentOverdue: 'पैसे थकीत',
+        automationFailing: 'स्वयंचलन अयशस्वी होत आहे',
+        leadStalled: 'लीड त्याच्या ठरलेल्या वेळेपेक्षा जास्त अडकला आहे',
+        supplierLate: 'पुरवठादार उशीर करत आहे',
+        gpsMismatch: 'साइट फोटोचा GPS नोंदलेल्या साइटशी जुळत नाही',
+        technicianIdle: 'तंत्रज्ञाने चेक-इन केलेले नाही',
+        fieldSos: 'क्षेत्रातून SOS',
+        scheduleClash: 'एक तंत्रज्ञ एकाच दिवशी दोन कामांवर बुक आहे',
+        recruitmentSurge: 'नवीन भागीदार अर्जांची लाट: स्क्रीनिंगमध्ये बॅकलॉग होण्याची शक्यता',
+        qcFailed: 'गुणवत्ता तपासणीत नापास',
+        counterOfferAging: 'काउंटर-ऑफरवर निर्णयाची प्रतीक्षा खूप लांबली आहे',
+        loanDisbursementDelayed: 'लोन वितरण योग्य कालमर्यादेपेक्षा जास्त लांबले आहे',
+      },
+    },
+    escalation: {
+      title: 'आणीबाणी सूचना',
+      subtitle: 'कोणत्याही क्षेत्रीय स्क्रीनवरून एका टॅपमध्ये. इथे न वाचता काहीही सोडता येत नाही.',
+      loading: 'सूचना लोड होत आहेत',
+      mapLabel: 'ही सूचना कुठून आली',
+      liveCall: 'आत्ता फोन करा',
+      acknowledge: 'पाहिले',
+      resolve: 'निकाली म्हणून नोंदवा',
+      resolveNote: 'काय झाले, आणि ते कसे हाताळले',
+      resolveNoteHint: 'एक छोटी नोंद — ही कायमस्वरूपी सुरक्षा नोंदीचा भाग बनते.',
+      resolveRequired: 'निकाली काढण्यापूर्वी किमान काही शब्द लिहा.',
+      resolved: 'निकाली',
+      acknowledged: 'पाहिले गेले',
+      stage: { received: 'मिळाली', acknowledged: 'पाहिली', resolved: 'निकाली' },
+      stageMeta: {
+        received: 'प्रशासक स्क्रीनवर पोहोचली',
+        acknowledged: 'कोणीतरी यावर काम करत आहे',
+        resolved: 'नोंदीसह बंद',
+      },
+      cluster: 'जागा आणि वेळेत जवळ असलेल्या {{count}} सूचना: {{codes}}',
+      clusterNote: 'या एकत्र दाखवल्या आहेत कारण अनेक लहान घटनांऐवजी ही एक मोठी घटना असू शकते.',
+      overdue: 'वेळेत पाहिली गेली नाही',
+      chainProgress: 'एस्केलेशन: {{total}} पैकी पायरी {{done}} पर्यंत पोहोचले. कळवले: {{names}}.',
+      chainOut: 'साखळीतील प्रत्येकाला प्रयत्न केला आणि कोणीही उत्तर दिले नाही. ही सध्याच्या एस्केलेशन रचनेची मर्यादा आहे.',
+      chainNone: 'या अलर्टसाठी कोणतीही एस्केलेशन साखळी चालली नाही.',
+      chainLink: 'एस्केलेशन मॅट्रिक्स उघडा',
+      safetyBanner: 'सुरक्षा घटना — तातडीने लक्ष द्या',
+      history: 'निकाली झालेल्या घटना',
+      historyNote: 'सुरक्षा आढाव्यासाठी कायमस्वरूपी ठेवल्या जातात. इथून काहीही कधीच हटवले जात नाही.',
+      cancelWindowNote:
+        'चुकून उठलेला SOS तुमच्यापर्यंत पोहोचण्यापूर्वी रद्द करण्यासाठी क्षेत्रीय कर्मचाऱ्याला {{seconds}} सेकंद मिळतात — पण प्रत्येक प्रयत्न, रद्द झाला किंवा नाही, नोंदवला जातो.',
+      noDismiss: 'हे सोडता येत नाही — फक्त पाहून मग नोंदीसह निकाली काढता येते.',
+      raisedAt: '{{time}} उठली',
+      category: '{{category}}',
+      empty: {
+        title: 'सध्या कोणतीही आणीबाणी नाही',
+        body: 'एखादा क्षेत्रीय कर्मचारी SOS उठवेल, किंवा गंभीर सूचना वाजेल, तेव्हा ती काही सेकंदांत इथे दिसेल.',
+      },
+      error: {
+        title: 'सूचना लोड होऊ शकल्या नाहीत',
+        body: 'आम्ही एस्केलेशन रांगेपर्यंत पोहोचू शकलो नाही. नेटवर्क तपासा आणि पुन्हा प्रयत्न करा.',
+      },
+    },
+  },
+};
+
+export default translations;

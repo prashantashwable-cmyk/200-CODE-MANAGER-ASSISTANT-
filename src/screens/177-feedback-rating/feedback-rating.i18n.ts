@@ -1,0 +1,505 @@
+import type { ScreenTranslations } from '@/i18n/types';
+
+/** Screen 177. Customer feedback and ratings, and Admin follow-up, in three languages. `alert.*` titles are read by the alerts board, `link.open` by the screens that link here. */
+const translations: ScreenTranslations = {
+  en: {
+    feedback: {
+      title: 'Feedback',
+      subtitle: {
+        customer: 'A minute of your time helps us look after you, and recognise our team, better.',
+        admin: 'What customers told us, who needs a personal call, and how the team is rated.',
+      },
+      loading: 'Loading…',
+      error: {
+        title: 'We could not load this',
+        body: 'Nothing has changed. Check your connection and try again.',
+      },
+      refresh: 'Refresh',
+      close: 'Close',
+      back: 'Back',
+      notFound: 'We could not find that.',
+      link: {
+        open: 'Give feedback',
+      },
+      notice: {
+        placeholders: 'When we ask, how low a score must be for a personal call, and how much customers’ ratings count toward a person’s score are starting values for the owner to confirm.',
+      },
+      ask: {
+        title: 'How did we do?',
+        start: 'Give feedback',
+        later: 'Not now',
+        laterNote: 'Understood. We will not ask about this one again.',
+      },
+      moment: {
+        handover: {
+          title: 'Your installation',
+          body: '{{site}}: how the work was done, how well we kept you informed, and the timing.',
+          short: 'your installation',
+        },
+        ongoing: {
+          title: 'Your lift, now you have lived with it',
+          body: '{{site}}: how is the service going, now there has been time to use it?',
+          short: 'how things are going',
+        },
+        visit: {
+          title: 'Your service visit',
+          body: 'Request {{code}} at {{site}}.',
+          short: 'your visit',
+        },
+        people: 'About {{people}}',
+      },
+      none: {
+        title: 'You are all caught up',
+        body: 'We ask only at the right moment. Nothing is waiting for you.',
+      },
+      upcoming: {
+        title: 'Coming up',
+        body: 'We will ask about {{moment}} on {{date}}, once you have had time to use it.',
+      },
+      given: {
+        title: 'What you told us',
+        empty: 'Nothing yet.',
+        followUp: {
+          reaching_out: 'A person from our team will reach out to you personally.',
+          done: 'A person from our team reached out to you.',
+        },
+      },
+      form: {
+        overall: 'Overall, how was it?',
+        dimensionsTitle: 'A little more detail (optional)',
+        dimensions: {
+          hint: 'Tap a number for any part you want to rate. Tap it again to clear it.',
+        },
+        commentLabel: 'Anything you would like to tell us?',
+        comment: {
+          hint: 'If someone helped you especially well, tell us their name.',
+        },
+        note: 'Your rating counts toward the people it is about, so it helps recognise those who looked after you.',
+        submit: 'Send feedback',
+        sending: 'Sending…',
+      },
+      rating: {
+        '1': 'Poor',
+        '2': 'Fair',
+        '3': 'Good',
+        '4': 'Very good',
+        '5': 'Excellent',
+      },
+      dim: {
+        installation: 'Quality of the installation',
+        service: 'Quality of the service',
+        communication: 'How well we kept you informed',
+        timeliness: 'Timeliness',
+        value: 'Value for money',
+      },
+      thanks: {
+        title: 'Thank you',
+        body: 'This helps us look after you, and recognise our team.',
+        reach: 'We are sorry it was not better. A person from our team will reach out to you personally.',
+        reachWeak: 'Thank you for telling us about {{parts}}. A person from our team will reach out so we can put it right.',
+        passed: 'We will pass your thanks on to {{names}}.',
+        done: 'Done',
+      },
+      problem: {
+        overall_required: 'Please choose an overall rating.',
+        rating_invalid: 'Ratings are from 1 to 5.',
+        dimension_unknown: 'That part is not asked about here.',
+        comment_long: 'That comment is too long.',
+        not_due: 'It is not time to ask about that yet.',
+        already_given: 'You have already told us about this. Thank you.',
+        note_short: 'Please write a little more.',
+        generic: 'That did not work. Please try again.',
+      },
+      board: {
+        filter: {
+          outreach: 'Needs a call',
+          weak: 'A weak part',
+          staff: 'Names someone',
+          low: 'Low scores',
+          all: 'All',
+        },
+        empty: {
+          title: 'Nothing here',
+          body: 'No feedback matches.',
+        },
+        outreachDone: 'Reached out',
+      },
+      flag: {
+        negative: 'Unhappy',
+        weak_dimension: 'A weak part',
+        staff_concern: 'Names a person',
+      },
+      sentiment: {
+        positive: 'Thanks',
+      },
+      summary: {
+        title: 'How we are rated',
+        count_one: '{{count}} rating',
+        count_other: '{{count}} ratings',
+        avg: 'Average {{avg}} of 5',
+        early: 'An early look, not a trend: fewer than {{min}} ratings so far.',
+        byDimension: 'By part of the experience',
+        byPerson: 'By person',
+        person: '{{name}} · {{n}} · {{avg}}',
+        small: 'early look',
+      },
+      detail: {
+        customer: 'Customer',
+        call: 'Call',
+        ratings: 'Ratings',
+        overall: 'Overall',
+        comment: 'Their words',
+        noComment: 'No comment.',
+        rated: 'Counts toward',
+        mentioned: 'The comment names: {{names}}. Please confirm who is meant.',
+        ticket: 'From request {{code}}',
+        outreach: {
+          title: 'Reach out',
+          body: 'Call or message the customer personally, then record what you said so it is kept.',
+          note: 'What you did and said (at least {{min}} letters)',
+          save: 'Record the outreach',
+          done: '{{name}} reached out on {{date}}',
+        },
+        recognition: 'This feedback names someone with thanks. They hear it on their own list.',
+      },
+      alert: {
+        negative: 'A customer gave notably negative feedback',
+        staff: 'A customer’s negative feedback names a member of staff',
+      },
+    },
+  },
+  hi: {
+    feedback: {
+      title: 'प्रतिक्रिया',
+      subtitle: {
+        customer: 'आपका एक मिनट हमें आपकी बेहतर देखभाल करने और हमारी टीम को पहचानने में मदद करता है।',
+        admin: 'ग्राहकों ने हमें क्या बताया, किसे व्यक्तिगत कॉल चाहिए, और टीम की रेटिंग कैसी है।',
+      },
+      loading: 'लोड हो रहा है…',
+      error: {
+        title: 'हम इसे लोड नहीं कर सके',
+        body: 'कुछ नहीं बदला है। अपना कनेक्शन देखें और फिर कोशिश करें।',
+      },
+      refresh: 'ताज़ा करें',
+      close: 'बंद करें',
+      back: 'वापस',
+      notFound: 'हमें वह नहीं मिला।',
+      link: {
+        open: 'प्रतिक्रिया दें',
+      },
+      notice: {
+        placeholders: 'हम कब पूछते हैं, व्यक्तिगत कॉल के लिए स्कोर कितना कम हो, और ग्राहकों की रेटिंग किसी व्यक्ति के स्कोर में कितना गिनी जाए, ये शुरुआती मान हैं जिन्हें मालिक को पक्का करना है।',
+      },
+      ask: {
+        title: 'हमारा काम कैसा रहा?',
+        start: 'प्रतिक्रिया दें',
+        later: 'अभी नहीं',
+        laterNote: 'ठीक है। हम इसके बारे में दोबारा नहीं पूछेंगे।',
+      },
+      moment: {
+        handover: {
+          title: 'आपका इंस्टॉलेशन',
+          body: '{{site}}: काम कैसा हुआ, हमने आपको कितना सूचित रखा, और समय।',
+          short: 'आपका इंस्टॉलेशन',
+        },
+        ongoing: {
+          title: 'आपकी लिफ़्ट, अब जब आपने इसका उपयोग किया है',
+          body: '{{site}}: उपयोग के कुछ समय बाद सर्विस कैसी चल रही है?',
+          short: 'चीज़ें कैसी चल रही हैं',
+        },
+        visit: {
+          title: 'आपकी सर्विस विज़िट',
+          body: '{{site}} पर अनुरोध {{code}}।',
+          short: 'आपकी विज़िट',
+        },
+        people: '{{people}} के बारे में',
+      },
+      none: {
+        title: 'आप पूरी तरह अपडेट हैं',
+        body: 'हम केवल सही समय पर पूछते हैं। आपके लिए कुछ प्रतीक्षा में नहीं।',
+      },
+      upcoming: {
+        title: 'आगे',
+        body: 'हम {{date}} को {{moment}} के बारे में पूछेंगे, जब आपको उपयोग का समय मिल चुका होगा।',
+      },
+      given: {
+        title: 'आपने हमें क्या बताया',
+        empty: 'अभी कुछ नहीं।',
+        followUp: {
+          reaching_out: 'हमारी टीम का एक व्यक्ति आपसे व्यक्तिगत रूप से संपर्क करेगा।',
+          done: 'हमारी टीम के एक व्यक्ति ने आपसे संपर्क किया।',
+        },
+      },
+      form: {
+        overall: 'कुल मिलाकर, कैसा रहा?',
+        dimensionsTitle: 'थोड़ा और विवरण (वैकल्पिक)',
+        dimensions: {
+          hint: 'जिस हिस्से को रेट करना हो उसके लिए एक संख्या दबाएँ। हटाने के लिए फिर दबाएँ।',
+        },
+        commentLabel: 'क्या आप हमें कुछ बताना चाहेंगे?',
+        comment: {
+          hint: 'यदि किसी ने आपकी विशेष रूप से अच्छी मदद की, तो हमें उनका नाम बताएँ।',
+        },
+        note: 'आपकी रेटिंग उन लोगों के स्कोर में गिनी जाती है जिनके बारे में है, इसलिए यह आपकी देखभाल करने वालों को पहचानने में मदद करती है।',
+        submit: 'प्रतिक्रिया भेजें',
+        sending: 'भेज रहे हैं…',
+      },
+      rating: {
+        '1': 'खराब',
+        '2': 'ठीक-ठाक',
+        '3': 'अच्छा',
+        '4': 'बहुत अच्छा',
+        '5': 'उत्कृष्ट',
+      },
+      dim: {
+        installation: 'इंस्टॉलेशन की गुणवत्ता',
+        service: 'सर्विस की गुणवत्ता',
+        communication: 'हमने आपको कितना सूचित रखा',
+        timeliness: 'समय की पाबंदी',
+        value: 'पैसे का मूल्य',
+      },
+      thanks: {
+        title: 'धन्यवाद',
+        body: 'इससे हमें आपकी देखभाल करने और हमारी टीम को पहचानने में मदद मिलती है।',
+        reach: 'हमें खेद है कि यह बेहतर नहीं रहा। हमारी टीम का एक व्यक्ति आपसे व्यक्तिगत रूप से संपर्क करेगा।',
+        reachWeak: '{{parts}} के बारे में बताने के लिए धन्यवाद। हमारी टीम का एक व्यक्ति संपर्क करेगा ताकि हम इसे ठीक कर सकें।',
+        passed: 'हम आपका धन्यवाद {{names}} तक पहुँचाएँगे।',
+        done: 'हो गया',
+      },
+      problem: {
+        overall_required: 'कृपया कुल रेटिंग चुनें।',
+        rating_invalid: 'रेटिंग 1 से 5 तक होती है।',
+        dimension_unknown: 'यहाँ उस हिस्से के बारे में नहीं पूछा जाता।',
+        comment_long: 'वह टिप्पणी बहुत लंबी है।',
+        not_due: 'उसके बारे में पूछने का अभी समय नहीं है।',
+        already_given: 'आप इसके बारे में पहले ही बता चुके हैं। धन्यवाद।',
+        note_short: 'कृपया थोड़ा और लिखें।',
+        generic: 'यह नहीं हो सका। कृपया फिर कोशिश करें।',
+      },
+      board: {
+        filter: {
+          outreach: 'कॉल चाहिए',
+          weak: 'कमज़ोर हिस्सा',
+          staff: 'किसी का नाम',
+          low: 'कम स्कोर',
+          all: 'सभी',
+        },
+        empty: {
+          title: 'यहाँ कुछ नहीं',
+          body: 'कोई प्रतिक्रिया मेल नहीं खाती।',
+        },
+        outreachDone: 'संपर्क किया गया',
+      },
+      flag: {
+        negative: 'असंतुष्ट',
+        weak_dimension: 'कमज़ोर हिस्सा',
+        staff_concern: 'किसी का नाम',
+      },
+      sentiment: {
+        positive: 'धन्यवाद',
+      },
+      summary: {
+        title: 'हमारी रेटिंग कैसी है',
+        count_one: '{{count}} रेटिंग',
+        count_other: '{{count}} रेटिंग',
+        avg: 'औसत 5 में से {{avg}}',
+        early: 'एक शुरुआती झलक, रुझान नहीं: अब तक {{min}} से कम रेटिंग।',
+        byDimension: 'अनुभव के हिस्से के अनुसार',
+        byPerson: 'व्यक्ति के अनुसार',
+        person: '{{name}} · {{n}} · {{avg}}',
+        small: 'शुरुआती झलक',
+      },
+      detail: {
+        customer: 'ग्राहक',
+        call: 'फ़ोन करें',
+        ratings: 'रेटिंग',
+        overall: 'कुल',
+        comment: 'उनके शब्द',
+        noComment: 'कोई टिप्पणी नहीं।',
+        rated: 'इनके स्कोर में गिना गया',
+        mentioned: 'टिप्पणी में नाम है: {{names}}। कृपया पुष्टि करें कि किसका मतलब है।',
+        ticket: 'अनुरोध {{code}} से',
+        outreach: {
+          title: 'संपर्क करें',
+          body: 'ग्राहक को व्यक्तिगत रूप से फ़ोन या संदेश करें, फिर जो कहा उसे दर्ज करें ताकि वह रखा जाए।',
+          note: 'आपने क्या किया और कहा (कम से कम {{min}} अक्षर)',
+          save: 'संपर्क दर्ज करें',
+          done: '{{name}} ने {{date}} को संपर्क किया',
+        },
+        recognition: 'इस प्रतिक्रिया में किसी को धन्यवाद के साथ नामित किया गया है। उन्हें यह उनकी अपनी सूची में सुनाई देता है।',
+      },
+      alert: {
+        negative: 'एक ग्राहक ने काफ़ी नकारात्मक प्रतिक्रिया दी',
+        staff: 'ग्राहक की नकारात्मक प्रतिक्रिया में एक कर्मचारी का नाम है',
+      },
+    },
+  },
+  mr: {
+    feedback: {
+      title: 'अभिप्राय',
+      subtitle: {
+        customer: 'तुमचा एक मिनिट आम्हाला तुमची अधिक चांगली काळजी घेण्यास आणि आमच्या टीमची दखल घेण्यास मदत करतो.',
+        admin: 'ग्राहकांनी आम्हाला काय सांगितले, कोणाला वैयक्तिक फोन हवा, आणि टीमचे रेटिंग कसे आहे.',
+      },
+      loading: 'लोड होत आहे…',
+      error: {
+        title: 'आम्ही हे लोड करू शकलो नाही',
+        body: 'काहीही बदललेले नाही. तुमचे कनेक्शन तपासा आणि पुन्हा प्रयत्न करा.',
+      },
+      refresh: 'ताजे करा',
+      close: 'बंद करा',
+      back: 'मागे',
+      notFound: 'ते आम्हाला सापडले नाही.',
+      link: {
+        open: 'अभिप्राय द्या',
+      },
+      notice: {
+        placeholders: 'आम्ही केव्हा विचारतो, वैयक्तिक फोनसाठी गुण किती कमी असावेत, आणि ग्राहकांचे रेटिंग एखाद्याच्या गुणांमध्ये किती गणले जावे ही सुरुवातीची मूल्ये आहेत, जी मालकाने निश्चित करायची आहेत.',
+      },
+      ask: {
+        title: 'आमचे काम कसे झाले?',
+        start: 'अभिप्राय द्या',
+        later: 'आत्ता नको',
+        laterNote: 'ठीक आहे. आम्ही याबद्दल पुन्हा विचारणार नाही.',
+      },
+      moment: {
+        handover: {
+          title: 'तुमचे इन्स्टॉलेशन',
+          body: '{{site}}: काम कसे झाले, आम्ही तुम्हाला किती माहिती दिली, आणि वेळ.',
+          short: 'तुमचे इन्स्टॉलेशन',
+        },
+        ongoing: {
+          title: 'तुमची लिफ्ट, आता तुम्ही ती वापरली आहे',
+          body: '{{site}}: वापरल्यानंतर काही काळाने सर्व्हिस कशी चालली आहे?',
+          short: 'गोष्टी कशा चालल्या आहेत',
+        },
+        visit: {
+          title: 'तुमची सर्व्हिस भेट',
+          body: '{{site}} येथील विनंती {{code}}.',
+          short: 'तुमची भेट',
+        },
+        people: '{{people}} बद्दल',
+      },
+      none: {
+        title: 'तुम्ही पूर्णपणे अद्ययावत आहात',
+        body: 'आम्ही फक्त योग्य वेळीच विचारतो. तुमच्यासाठी काहीही प्रतीक्षेत नाही.',
+      },
+      upcoming: {
+        title: 'पुढे',
+        body: 'तुम्हाला वापरण्यास वेळ मिळाल्यावर आम्ही {{date}} रोजी {{moment}} बद्दल विचारू.',
+      },
+      given: {
+        title: 'तुम्ही आम्हाला काय सांगितले',
+        empty: 'अजून काही नाही.',
+        followUp: {
+          reaching_out: 'आमच्या टीमचा एक माणूस तुमच्याशी वैयक्तिकरित्या संपर्क साधेल.',
+          done: 'आमच्या टीमच्या एका माणसाने तुमच्याशी संपर्क साधला.',
+        },
+      },
+      form: {
+        overall: 'एकूणच, कसे होते?',
+        dimensionsTitle: 'थोडे अधिक तपशील (ऐच्छिक)',
+        dimensions: {
+          hint: 'ज्या भागाला रेट करायचे त्यासाठी एक अंक दाबा. काढण्यासाठी पुन्हा दाबा.',
+        },
+        commentLabel: 'तुम्हाला आम्हाला काही सांगायचे आहे का?',
+        comment: {
+          hint: 'कोणी तुम्हाला विशेष चांगली मदत केली असल्यास त्यांचे नाव सांगा.',
+        },
+        note: 'तुमचे रेटिंग ज्यांच्याबद्दल आहे त्यांच्या गुणांमध्ये गणले जाते, त्यामुळे तुमची काळजी घेणाऱ्यांची दखल घेण्यास मदत होते.',
+        submit: 'अभिप्राय पाठवा',
+        sending: 'पाठवत आहोत…',
+      },
+      rating: {
+        '1': 'वाईट',
+        '2': 'बरे',
+        '3': 'चांगले',
+        '4': 'खूप चांगले',
+        '5': 'उत्कृष्ट',
+      },
+      dim: {
+        installation: 'इन्स्टॉलेशनची गुणवत्ता',
+        service: 'सर्व्हिसची गुणवत्ता',
+        communication: 'आम्ही तुम्हाला किती माहिती दिली',
+        timeliness: 'वेळेचे पालन',
+        value: 'पैशाचे मूल्य',
+      },
+      thanks: {
+        title: 'धन्यवाद',
+        body: 'यामुळे आम्हाला तुमची काळजी घेण्यास आणि आमच्या टीमची दखल घेण्यास मदत होते.',
+        reach: 'ते अधिक चांगले झाले नाही याचा आम्हाला खेद आहे. आमच्या टीमचा एक माणूस तुमच्याशी वैयक्तिकरित्या संपर्क साधेल.',
+        reachWeak: '{{parts}} बद्दल सांगितल्याबद्दल धन्यवाद. आमच्या टीमचा एक माणूस संपर्क साधेल म्हणजे आम्ही ते सुधारू शकू.',
+        passed: 'आम्ही तुमचे आभार {{names}} यांच्यापर्यंत पोहोचवू.',
+        done: 'झाले',
+      },
+      problem: {
+        overall_required: 'कृपया एकूण रेटिंग निवडा.',
+        rating_invalid: 'रेटिंग 1 ते 5 असते.',
+        dimension_unknown: 'येथे त्या भागाबद्दल विचारले जात नाही.',
+        comment_long: 'ती टिप्पणी खूप लांब आहे.',
+        not_due: 'त्याबद्दल विचारण्याची अजून वेळ आलेली नाही.',
+        already_given: 'तुम्ही याबद्दल आधीच सांगितले आहे. धन्यवाद.',
+        note_short: 'कृपया थोडे आणखी लिहा.',
+        generic: 'ते झाले नाही. कृपया पुन्हा प्रयत्न करा.',
+      },
+      board: {
+        filter: {
+          outreach: 'फोन हवा',
+          weak: 'कमकुवत भाग',
+          staff: 'कोणाचे नाव',
+          low: 'कमी गुण',
+          all: 'सर्व',
+        },
+        empty: {
+          title: 'येथे काही नाही',
+          body: 'कोणताही अभिप्राय जुळत नाही.',
+        },
+        outreachDone: 'संपर्क साधला',
+      },
+      flag: {
+        negative: 'असंतुष्ट',
+        weak_dimension: 'कमकुवत भाग',
+        staff_concern: 'व्यक्तीचे नाव',
+      },
+      sentiment: {
+        positive: 'आभार',
+      },
+      summary: {
+        title: 'आमचे रेटिंग कसे आहे',
+        count_one: '{{count}} रेटिंग',
+        count_other: '{{count}} रेटिंग',
+        avg: 'सरासरी 5 पैकी {{avg}}',
+        early: 'सुरुवातीची झलक, कल नाही: आतापर्यंत {{min}} पेक्षा कमी रेटिंग.',
+        byDimension: 'अनुभवाच्या भागानुसार',
+        byPerson: 'व्यक्तीनुसार',
+        person: '{{name}} · {{n}} · {{avg}}',
+        small: 'सुरुवातीची झलक',
+      },
+      detail: {
+        customer: 'ग्राहक',
+        call: 'फोन करा',
+        ratings: 'रेटिंग',
+        overall: 'एकूण',
+        comment: 'त्यांचे शब्द',
+        noComment: 'टिप्पणी नाही.',
+        rated: 'यांच्या गुणांमध्ये गणले',
+        mentioned: 'टिप्पणीत नाव आहे: {{names}}. कृपया कोणाबद्दल आहे याची खात्री करा.',
+        ticket: 'विनंती {{code}} मधून',
+        outreach: {
+          title: 'संपर्क साधा',
+          body: 'ग्राहकाला वैयक्तिकरित्या फोन किंवा संदेश करा, मग तुम्ही जे सांगितले ते नोंदवा म्हणजे ते जतन राहील.',
+          note: 'तुम्ही काय केले आणि सांगितले (किमान {{min}} अक्षरे)',
+          save: 'संपर्क नोंदवा',
+          done: '{{name}} यांनी {{date}} रोजी संपर्क साधला',
+        },
+        recognition: 'या अभिप्रायात आभारासह कोणाचे नाव आहे. त्यांना ते त्यांच्या स्वतःच्या यादीत कळते.',
+      },
+      alert: {
+        negative: 'एका ग्राहकाने बराच नकारात्मक अभिप्राय दिला',
+        staff: 'ग्राहकाच्या नकारात्मक अभिप्रायात एका कर्मचाऱ्याचे नाव आहे',
+      },
+    },
+  },
+};
+
+export default translations;
