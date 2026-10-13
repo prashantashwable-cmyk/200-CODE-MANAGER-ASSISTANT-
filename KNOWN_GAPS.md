@@ -106,3 +106,6 @@ memory), backups. Each screen that depends on one says so; see
 - **The Owner role was added to an existing enum**, and `app.is_admin()` now also returns true for the Owner (the Owner holds every authority Admin holds). The 34 earlier database tests still pass. Any policy added later that must be Owner-only has to check `app.is_owner()`.
 - **The correction window is fixed at 15 minutes in SQL**, not Owner-settable. Making it a setting needs a settings table the Owner alone can write; a session setting would let any browser widen it.
 - **Admin's view has no `lat`/`lng` and no geo, but the site name still appears** in event payloads. Whether Admin may see site names (as opposed to places) is an open question.
+
+## Free-tier policy (2026-10-13)
+See docs/FREE_TIER_POLICY.md. Supabase free plan: pauses after inactivity, no daily backups, 500 MB cap, no SMS. Limits quoted from third-party sources, unverified against the vendor.
