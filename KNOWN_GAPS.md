@@ -118,3 +118,10 @@ See docs/FREE_TIER_POLICY.md. Supabase free plan: pauses after inactivity, no da
 - A below-floor quote by Admin raises a `fee_change` Decision Desk card but the quote itself is not saved until the Owner re-saves it; accepting the card does not yet create the quote.
 - Mode P (principal) is only a flag: `computeQuote` refuses it. The comparison table is not built.
 - The customer's quote is reachable by URL (`/my-quote`, Documents tab); nothing on the customer home links to it yet.
+
+## Quotes on the database (2026-10-14)
+- Migration `20261014000001_facilitator_quotes.sql`: fee history (Owner-only, append-only), quotes (server prices them and writes the totals; Admin cannot go below the person floor; the priced facts never change; only a draft can be sent), per-component acceptances (own customer only, once each). Proved on real Postgres 16 (`tests/db/quotes.test.ts`, incl. SQL = TypeScript maths for the same lines).
+- `withServer` now overrides the quote and fee methods (`src/data/supabase/serverRepository.ts`). **Not run against PostgREST/Supabase**: this sandbox could not pull the Supabase images (Docker Hub 429, ghcr 403), so the client calls are only type-checked and their row mapping unit-tested (`quoteMapping.test.ts`). First thing to run on a real free project: sign in as Owner, save a fee setting, build and send a quote.
+- Leads, deals and users are still in memory, so on the server a quote keeps the lead only as text (`lead_ref`) and has **no customer link** (`customer_id` null) until leads/deals move to the database. A customer therefore cannot yet see a server-side quote.
+- Quote and acceptance events are not written to the server event log yet (the in-memory log still receives them); the acceptance rows themselves are the durable record.
+- A quote needs the Owner's fee card decision but accepting the card still does not create the quote.
