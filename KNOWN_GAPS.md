@@ -133,3 +133,11 @@ See docs/FREE_TIER_POLICY.md. Supabase free plan: pauses after inactivity, no da
 - Pins on the map are still computed in the app from in-memory leads. The database exposes exact sites only to the Owner and the lead's own scout; fuzzed pins for partners and the customer are not in the database yet.
 - Capture events (`lead.captured`) are not written to the server event log by this function.
 - Deals do not exist on the server, so `leads.customer_id` is never set and a customer still cannot see a server-side quote (the quote now links to the lead with `lead_id`).
+
+## Decision Desk on the database (2026-10-14)
+- Migration `20261014000003_decisions.sql`: kinds (a test compares them to `AUTHORITY_MATRIX`), cards, SHA-256 chained immutable records, `prepare_decision` (Admin or Owner), `decide_decision` (Owner; a delegate for one card, one week, within the kind's limit; Admin never), `verify_decision_chain`, an Admin status view with no evidence or amounts, and a trigger that turns a scout dispute (`lead_reviews`) into exactly one Owner card. Proved on Postgres 16 (`tests/db/decisions.test.ts`, incl. a tamper that is found).
+- `withServer` overrides the five decision methods. **Not run against Supabase** (same image-pull block). Unit-tested row mapping only.
+- The in-memory demo cards and the in-memory store still serve the app without a Supabase project. With one, the Desk starts empty (no demo cards).
+- Other things that raise cards in memory (tier rules, payouts, event corrections, ownership disputes from the in-memory capture) do not raise them on the server yet. Only scout disputes and below-floor fee quotes do.
+- Accepting a below-floor fee card still does not create the quote; a delegated card's grant is per card (as in the app), not a standing grant table.
+- The server chain uses SHA-256 (64 zeros as start); the in-memory chain uses the app's fast hash. They are separate chains, never mixed.
