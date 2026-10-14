@@ -1,3 +1,5 @@
+import type { FeeSettings, CostRates, QuoteLine } from '@/features/quotes/facilitatorQuote';
+import type { FeeSettingsVersion, QuotePreview, SaveQuoteInput, SaveQuoteResult, FacilitatorQuote, CustomerQuoteView } from '@/features/quotes/types';
 import type { VaultKind } from '@/features/documents/vault';
 import type { AppendInput, CorrectionClass, PlatformEvent } from '@/features/events/eventLog';
 import type { ContactLevel, RevealLevel } from '@/features/geo/privacy';
@@ -10170,6 +10172,16 @@ export interface Repository {
   decideEventCorrection(userId: string, proposalId: string, approve: boolean, reason: string): Promise<PlatformEvent>;
   markEvent(userId: string, eventId: string, kind: 'flagged' | 'annotated' | 'disputed', text: string): Promise<PlatformEvent>;
   verifyEventLog(userId: string): Promise<ChainCheck>;
+  /* 206 — facilitator quote: partner prices + a disclosed platform fee (master prompt P0.5) */
+  getFeeSettings(userId: string): Promise<{ current: FeeSettingsVersion; history: FeeSettingsVersion[] }>;
+  saveFeeSettings(userId: string, settings: FeeSettings, costRates: CostRates, reason: string): Promise<FeeSettingsVersion>;
+  previewFacilitatorQuote(userId: string, input: { lines: QuoteLine[]; bundleDiscountInr?: number }): Promise<QuotePreview>;
+  saveFacilitatorQuote(userId: string, input: SaveQuoteInput): Promise<SaveQuoteResult>;
+  listFacilitatorQuotes(userId: string): Promise<FacilitatorQuote[]>;
+  sendFacilitatorQuote(userId: string, quoteId: string): Promise<FacilitatorQuote>;
+  /* 207 — the customer's own quote: accept component by component */
+  getMyQuote(userId: string): Promise<CustomerQuoteView | null>;
+  acceptQuoteComponents(userId: string, quoteId: string, lineIds: string[]): Promise<CustomerQuoteView>;
   /* 204 — map workspace: what each role may see of each site, decided here and not on the screen */
   listMapSites(userId: string, from?: { lat: number; lng: number }): Promise<MapSitesView>;
   /* 205 — lead capture with the ownership rule. Idempotent on `clientEventId`, so an offline retry never records twice. */

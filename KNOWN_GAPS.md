@@ -114,3 +114,4 @@ See docs/FREE_TIER_POLICY.md. Supabase free plan: pauses after inactivity, no da
 - `src/features/quotes/facilitatorQuote.ts` (pure fee/GST/waterfall/alternatives rules) restored with 11 unit tests. Verification: unit only.
 - NOT restored: screens 206/207, repository methods, quotes/leads/decisions migrations. They remain on `backup-before-rewind-1cc5682`.
 - Fee numbers (60% target, 30% / 20% floors, ₹10,000 token, 18% GST) are `[ASSUMPTION]`s for the Owner to confirm; GST treatment is `[VERIFY]` with an accountant.
+- Update: fee numbers confirmed by the Owner on 2026-10-14. Screens 206/207 and in-memory repository quote methods restored (verification: unit, e2e on the in-memory repository, build). Still NOT restored: quotes/leads/decisions migrations and server overrides; nothing is verified against Postgres or real Supabase for quotes.
