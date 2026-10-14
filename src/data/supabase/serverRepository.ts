@@ -9,6 +9,8 @@ import type { Role, SignInRequest } from '@/data/types';
 import { supabase } from './client';
 import { DEFAULT_COST_RATES, alternatives, computeQuote, mayOffer, maxBundleDiscountInr, quoteProblems, settingsProblem, waterfall } from '@/features/quotes/facilitatorQuote';
 import type { QuotePreview } from '@/features/quotes/types';
+import { captureErrorCode, captureResultOf } from './leadMapping';
+import type { CaptureRpc } from './leadMapping';
 import { customerViewOf, errorCode, feeFromRow, quoteFromRow } from './quoteMapping';
 import type { AcceptanceRow, FeeRow, QuoteRow } from './quoteMapping';
 
@@ -55,6 +57,18 @@ export function withServer(base: Repository): Repository {
   return {
     ...base,
 
+    // ---- 205 lead capture: the database decides who owns the site ----
+    submitLeadCapture: async (_userId, input) => {
+      const d = input.draft;
+      const { data, error } = await supabase().rpc('submit_lead_capture', {
+        p_client_event_id: input.clientEventId, p_site_name: d.siteName, p_contact_name: d.contactName, p_contact_phone: d.contactPhone, p_builder_name: d.builderName,
+        p_address: d.address, p_city: d.city, p_pincode: d.pincode, p_lat: d.location.lat, p_lng: d.location.lng, p_accuracy_m: input.accuracyM ?? null,
+        p_captured_at: input.capturedAt ?? null, p_device_sent_at: input.deviceSentAt ?? null,
+      });
+      if (error || !data) throw new RepositoryError(captureErrorCode(error?.message ?? ''));
+      return captureResultOf(data as CaptureRpc, input, new Date().toISOString());
+    },
+
     // ---- 206/207 facilitator quote: the database prices, owns the fee history and records acceptance ----
     getFeeSettings: async () => {
       const { data, error } = await supabase().from('fee_settings_versions').select('*').order('version', { ascending: false }).returns<FeeRow[]>();
@@ -84,7 +98,7 @@ export function withServer(base: Repository): Repository {
       if (existing.data) return { status: 'saved', quote: quoteFromRow(existing.data) };
       // The database recomputes the fee, the totals, the code and who made it: only the lines and the discount are ours to send.
       const { data, error } = await supabase().from('facilitator_quotes').insert({
-        code: 'pending', lead_ref: input.leadId, site_name: lead?.siteName ?? input.leadId, components: input.lines, bundle_discount_inr: input.bundleDiscountInr ?? 0,
+        code: 'pending', lead_ref: input.leadId, lead_id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.leadId) ? input.leadId : null, site_name: lead?.siteName ?? input.leadId, components: input.lines, bundle_discount_inr: input.bundleDiscountInr ?? 0,
         totals: {}, client_event_id: input.clientEventId,
       }).select('*').single<QuoteRow>();
       if (error || !data) throw new RepositoryError(errorCode(error?.message ?? ''));

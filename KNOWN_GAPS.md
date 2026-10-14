@@ -125,3 +125,11 @@ See docs/FREE_TIER_POLICY.md. Supabase free plan: pauses after inactivity, no da
 - Leads, deals and users are still in memory, so on the server a quote keeps the lead only as text (`lead_ref`) and has **no customer link** (`customer_id` null) until leads/deals move to the database. A customer therefore cannot yet see a server-side quote.
 - Quote and acceptance events are not written to the server event log yet (the in-memory log still receives them); the acceptance rows themselves are the durable record.
 - A quote needs the Owner's fee card decision but accepting the card still does not create the quote.
+
+## Leads and ownership on the database (2026-10-14)
+- Migration `20261014000002_leads.sql`: leads, every capture, reviews, an Owner-set ownership rule (append-only versions), `submit_lead_capture` (the server decides claims / supporting / review; browsers cannot write leads directly), scout sees own sites exactly, Owner sees all, Admin sees only `lead_density()` (cells of about 1 km with at least 3 leads). Proved on Postgres 16 (`tests/db/leads.test.ts`), including 120 random pairs where the SQL and `decideOwnership` give the same outcome and reason.
+- `withServer` overrides `submitLeadCapture` only. **Not run against Supabase** (same image-pull block as above). The rest of the lead screens (list, pipeline, detail, assignment) still read the in-memory sample leads, so a lead captured on the server does not appear in them yet.
+- A review (two scouts, unfair to order) is stored in `lead_reviews`; the Owner's Decision Desk does not read it yet (cards are still in memory), so the client returns an empty `decisionCardId`.
+- Pins on the map are still computed in the app from in-memory leads. The database exposes exact sites only to the Owner and the lead's own scout; fuzzed pins for partners and the customer are not in the database yet.
+- Capture events (`lead.captured`) are not written to the server event log by this function.
+- Deals do not exist on the server, so `leads.customer_id` is never set and a customer still cannot see a server-side quote (the quote now links to the lead with `lead_id`).
