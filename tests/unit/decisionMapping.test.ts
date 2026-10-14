@@ -11,7 +11,8 @@ describe('decision row mapping', () => {
     expect(c.decidedAt).toBeUndefined();
   });
   it('a system card has no user, and the status row carries no evidence, impact or amount', () => {
-    const s = statusRowFromRow({ ...row, proposed_by_kind: 'system', proposed_by: null });
+    const { proposed_by: _by, ...rest } = row;
+    const s = statusRowFromRow({ ...rest, proposed_by_kind: 'system' });
     expect(s.proposedBy).toEqual({ role: 'system', name: 'Admin' });
     expect(Object.keys(s)).not.toContain('evidence');
     expect(Object.keys(s)).not.toContain('amountInr');
