@@ -1017,7 +1017,7 @@ import type { Candidate as BookingCandidate } from '@/features/service/booking';
 import { DRIVE_SKILL } from '@/features/training/skills';
 import { isEmail, isIndianMobile, isPincode } from '@/features/validation/india';
 import { randomCode, randomToken } from '@/features/ids/clientId';
-import { DEFAULT_TEMPLATES as WO_TEMPLATES, acceptanceLabel as woAcceptanceLabel, evidenceNamesProblem as woEvidenceProblem, milestonesOf as woMilestonesOf, skipsWorkOrder as woSkips, paymentProblem as woPaymentProblem, permissionsOf as woPermissionsOf, mayVerify as woMayVerify, qcAssignProblem as woQcAssignProblem, sideOf as woSideOf, referenceProblem as woReferenceProblem, startProblem as woStartProblem, statusOfMilestones as woStatus, submitEvidenceProblem as woSubmitProblem, verifyProblem as woVerifyProblem } from '@/features/workorders/workOrder';
+import { DEFAULT_TEMPLATES as WO_TEMPLATES, acceptanceLabel as woAcceptanceLabel, evidenceNamesProblem as woEvidenceProblem, milestonesOf as woMilestonesOf, skipsWorkOrder as woSkips, paymentProblem as woPaymentProblem, permissionsOf as woPermissionsOf, confirmProblem as woConfirmProblem, mayVerify as woMayVerify, qcAssignProblem as woQcAssignProblem, sideOf as woSideOf, referenceProblem as woReferenceProblem, startProblem as woStartProblem, statusOfMilestones as woStatus, submitEvidenceProblem as woSubmitProblem, verifyProblem as woVerifyProblem } from '@/features/workorders/workOrder';
 import type { PartnerAccount, ProviderStatus, WorkOrder, WorkOrderView } from '@/features/workorders/types';
 import { DEFAULT_COST_RATES, DEFAULT_FEE_SETTINGS, alternatives as fqAlternatives, computeQuote as fqCompute, mayOffer as fqMayOffer, maxBundleDiscountInr as fqMaxDiscount, quoteProblems as fqProblems, settingsProblem as fqSettingsProblem, waterfall as fqWaterfall } from '@/features/quotes/facilitatorQuote';
 import type { CostRates as FqCostRates, FeeActor as FqActor, FeeSettings as FqSettings, QuoteLine as FqLine } from '@/features/quotes/facilitatorQuote';
@@ -28779,6 +28779,16 @@ export const memoryRepository: Repository = {
     m.status = 'payment_recorded';
     w.status = woStatus(w.milestones);
     eventLog.append(userId, { type: 'milestone.payment_recorded', subject: { kind: 'lead', id: w.leadId }, capturedAt: new Date().toISOString(), payload: { workOrderId: w.id, milestoneId, amountInr: m.amountInr, reference: ref, movedByPlatform: false } });
+    return woView(w, userId);
+  }),
+  confirmMilestonePayment: (userId, id, milestoneId) => simulateWrite(() => {
+    const w = woFind(userId, id);
+    if (woView(w, userId).side !== 'partner') throw new RepositoryError('forbidden'); // only the partner who was paid can say they were paid
+    const m = woMilestone(w, milestoneId);
+    const bad = woConfirmProblem(m);
+    if (bad) throw new RepositoryError(bad);
+    m.status = 'closed';
+    eventLog.append(userId, { type: 'milestone.payment_confirmed', subject: { kind: 'lead', id: w.leadId }, capturedAt: new Date().toISOString(), payload: { workOrderId: w.id, milestoneId, amountInr: m.amountInr, movedByPlatform: false } });
     return woView(w, userId);
   }),
   getProviderStatus: (userId) => simulateRead((): ProviderStatus[] => {

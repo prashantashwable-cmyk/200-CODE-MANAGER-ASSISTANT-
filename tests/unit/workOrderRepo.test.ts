@@ -131,6 +131,22 @@ describe('work orders from an accepted quote', () => {
     await repo.recordMilestonePayment(CUST, w.id, m.id, 'UTR55555');
   });
 
+  it('the partner confirms receipt of a recorded payment, which closes the milestone; nobody else can', async () => {
+    const w = (await repo.listWorkOrders(TECH))[0];
+    const m = w.milestones[0];
+    expect(m.status).toBe('payment_recorded');
+    expect(w.can.confirmPayment).toBe(true);
+    for (const who of [CUST, OWNER, ADMIN]) expect(await refusal(repo.confirmMilestonePayment(who, w.id, m.id))).toBe('forbidden');
+    expect(await refusal(repo.confirmMilestonePayment(OTHER_TECH, w.id, m.id))).toMatch(/forbidden|not_found/);
+    const closed = await repo.confirmMilestonePayment(TECH, w.id, m.id);
+    expect(closed.milestones[0].status).toBe('closed');
+    expect(closed.milestones[1].status).toBe('payment_recorded'); // only the one confirmed
+    expect(await refusal(repo.confirmMilestonePayment(TECH, w.id, m.id))).toBe('already_confirmed');
+    expect(await refusal(repo.recordMilestonePayment(CUST, w.id, m.id, 'UTR99999'))).toBe('locked');
+    const log = await repo.listEvents(OWNER, {});
+    expect(log.some((e) => e.type === 'milestone.payment_confirmed')).toBe(true);
+  });
+
   it('emits the events and says which providers are not connected', async () => {
     const log = await repo.listEvents(OWNER, {});
     const types = new Set(log.map((e) => e.type));

@@ -10192,6 +10192,8 @@ export interface Repository {
   /** Owner only: name the technician who checks this milestone. The platform never picks one. */
   assignMilestoneInspector(userId: string, workOrderId: string, milestoneId: string, inspectorId: string): Promise<WorkOrderView>;
   recordMilestonePayment(userId: string, workOrderId: string, milestoneId: string, reference: string): Promise<WorkOrderView>;
+  /** The partner says the money the customer recorded has reached them; that closes the milestone. */
+  confirmMilestonePayment(userId: string, workOrderId: string, milestoneId: string): Promise<WorkOrderView>;
   getProviderStatus(userId: string): Promise<ProviderStatus[]>;
   /* 207 — the customer's own quote: accept component by component */
   getMyQuote(userId: string): Promise<CustomerQuoteView | null>;

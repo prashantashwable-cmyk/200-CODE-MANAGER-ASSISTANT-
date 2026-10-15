@@ -348,3 +348,37 @@ describe('QC inspectors for a milestone', () => {
     expect(await read(w.supplier)).toBe(0);
   });
 });
+
+describe('the partner confirms the payment', () => {
+  it('only the paid partner closes a recorded milestone; a closed milestone never changes; the event is the partner\'s', async () => {
+    const w = await world();
+    await issue(w);
+    const inst = (await ordersOf(w, w.tech))[0];
+    for (const who of [w.customer, w.tech]) await call(who.authId, 'select public.accept_work_order($1)', [inst.id]);
+    await call(w.tech.authId, 'select public.start_work_order($1)', [inst.id]);
+    const ms = (await milestones(w.owner.authId, inst.id)).map((m) => m.milestone_id);
+    const confirm = (who: P, ms0: string) => call(who.authId, 'select public.confirm_milestone_payment($1, $2)', [inst.id, ms0]);
+    const [a, b] = ms;
+    await call(w.tech.authId, 'select public.submit_milestone_evidence($1, $2, $3::text[])', [inst.id, a, ['a.jpg']]);
+    expect(await refusal(confirm(w.tech, a))).toBe('not_recorded'); // nothing recorded yet
+    await call(w.owner.authId, 'select public.verify_milestone($1, $2)', [inst.id, a]);
+    expect(await refusal(confirm(w.tech, a))).toBe('not_recorded');
+    await call(w.customer.authId, 'select public.record_milestone_payment($1, $2, $3)', [inst.id, a, 'UTR12345']);
+    for (const who of [w.customer, w.admin, w.owner]) expect(await refusal(confirm(who, a))).toMatch(/forbidden|not_found/);
+    expect(await refusal(confirm(w.otherTech, a))).toBe('not_found');
+    expect(await refusal(as(null, (c) => c.query('select public.confirm_milestone_payment($1, $2)', [inst.id, a])))).toMatch(/permission denied/);
+    expect(await refusal(confirm(w.tech, a))).toBe('ok');
+    expect((await milestones(w.owner.authId, inst.id)).find((m) => m.milestone_id === a)!.status).toBe('closed');
+    expect(await refusal(confirm(w.tech, a))).toBe('already_confirmed');
+    expect(await refusal(call(w.customer.authId, 'select public.record_milestone_payment($1, $2, $3)', [inst.id, a, 'UTR99999']))).toBe('locked');
+    // The browser cannot write the row directly, and not even the server can reopen or alter a closed milestone.
+    expect(await refusal(call(w.tech.authId, "update public.work_order_milestones set status = 'payment_recorded' where work_order_id = $1", [inst.id]))).toMatch(/permission denied/);
+    expect(await refusal(asServer((c) => c.query("update public.work_order_milestones set status = 'payment_recorded' where work_order_id = $1 and milestone_id = $2", [inst.id, a])))).toMatch(/milestone_is_locked/);
+    expect(await refusal(asServer((c) => c.query("update public.work_order_milestones set payment_reference = 'CHANGED1' where work_order_id = $1 and milestone_id = $2", [inst.id, a])))).toMatch(/milestone_is_locked/);
+    // The server cannot close a milestone that was never paid or skip the confirmer.
+    expect(await refusal(asServer((c) => c.query("update public.work_order_milestones set status = 'closed', confirmed_by = $3, confirmed_at = now() where work_order_id = $1 and milestone_id = $2", [inst.id, b, w.tech.profileId])))).toMatch(/invalid_state/);
+    const ev = (await events(w.lead)).find((e) => e.event_type === 'milestone.payment_confirmed')!;
+    expect(ev.actor_profile_id).toBe(w.tech.profileId);
+    expect(ev.payload).toMatchObject({ milestoneId: a, reference: 'UTR12345', movedByPlatform: false });
+  });
+});

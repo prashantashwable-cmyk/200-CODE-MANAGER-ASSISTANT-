@@ -128,6 +128,8 @@ export function WorkOrdersScreen() {
                           <Button size="sm" disabled={busy} onClick={() => void run(() => repository.recordMilestonePayment(uid, w.id, m.id, text[k] ?? ''), 'workOrders.paymentOk')}>{t('workOrders.recordPayment')}</Button>
                         </div>
                       )}
+                      {m.status === 'payment_recorded' && w.can.confirmPayment && <Button size="sm" disabled={busy} onClick={() => void run(() => repository.confirmMilestonePayment(uid, w.id, m.id), 'workOrders.confirmedOk')}>{t('workOrders.confirmPayment')}</Button>}
+                      {m.status === 'payment_recorded' && !w.can.confirmPayment && <p className="text-sm text-muted" data-testid={`wo-await-${m.id}`}>{t('workOrders.awaitingConfirm')}</p>}
                     </div>
                   );
                 })}

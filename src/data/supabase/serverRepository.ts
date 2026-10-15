@@ -234,6 +234,7 @@ export function withServer(base: Repository): Repository {
     submitMilestoneEvidence: (userId, id, milestoneId, names) => actOnOrder(userId, 'submit_milestone_evidence', { p_wo: id, p_ms: milestoneId, p_evidence: names }, id),
     assignMilestoneInspector: (userId, id, milestoneId, inspectorId) => actOnOrder(userId, 'assign_milestone_inspector', { p_wo: id, p_ms: milestoneId, p_inspector: inspectorId }, id),
     verifyMilestone: (userId, id, milestoneId) => actOnOrder(userId, 'verify_milestone', { p_wo: id, p_ms: milestoneId }, id),
+    confirmMilestonePayment: (userId, id, milestoneId) => actOnOrder(userId, 'confirm_milestone_payment', { p_wo: id, p_ms: milestoneId }, id),
     recordMilestonePayment: (userId, id, milestoneId, reference) => actOnOrder(userId, 'record_milestone_payment', { p_wo: id, p_ms: milestoneId, p_reference: reference }, id),
 
     // Row-level security returns these only to a signed-in, active Admin (of the same world, real or demo).

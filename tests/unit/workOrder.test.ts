@@ -160,3 +160,12 @@ describe('QC inspector rules', () => {
     expect(mayVerify({ ...base, orderOpen: false })).toBe(false);
   });
 });
+
+import { confirmProblem } from '@/features/workorders/workOrder';
+describe('payment confirmation rule', () => {
+  it('only a recorded payment can be confirmed, once', () => {
+    expect(confirmProblem({ status: 'payment_recorded' })).toBeNull();
+    expect(confirmProblem({ status: 'closed' })).toBe('already_confirmed');
+    for (const status of ['waiting', 'evidence_submitted', 'verified'] as const) expect(confirmProblem({ status })).toBe('not_recorded');
+  });
+});

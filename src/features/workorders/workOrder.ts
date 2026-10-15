@@ -138,6 +138,10 @@ export function paymentProblem(m: Milestone): MilestoneProblem | null {
   return m.status === 'verified' ? null : 'not_payable';
 }
 
+export type ConfirmProblem = 'not_recorded' | 'already_confirmed';
+/** The partner can confirm receipt only of a milestone the customer recorded as paid, and only once. */
+export const confirmProblem = (m: Pick<Milestone, 'status'>): ConfirmProblem | null => m.status === 'closed' ? 'already_confirmed' : m.status === 'payment_recorded' ? null : 'not_recorded';
+
 export function statusOfMilestones(ms: Milestone[]): WorkOrderStatus {
   return ms.length > 0 && ms.every((m) => m.status === 'closed' || m.status === 'payment_recorded') ? 'completed' : 'in_progress';
 }
@@ -153,7 +157,7 @@ export function sideOf(callerId: string | undefined, o: { customerId: string; pa
   return callerId === o.customerId ? 'customer' : callerId === o.partnerAccountId ? 'partner' : 'staff';
 }
 
-export interface Permissions { accept: boolean; start: boolean; submitEvidence: boolean; verify: boolean; assignQc: boolean; recordPayment: boolean; }
+export interface Permissions { accept: boolean; start: boolean; submitEvidence: boolean; verify: boolean; assignQc: boolean; recordPayment: boolean; confirmPayment: boolean; }
 /** What each person may do next, the one definition the in-memory repository and the database mapping both use. The server still enforces every one. */
 export function permissionsOf(o: { side: Side; role: string | undefined; status: WorkOrderStatus; customerAcceptedAt?: string; partnerAcceptedAt?: string; startBlock: StartProblem | null }): Permissions {
   const open = o.status === 'in_progress';
@@ -164,5 +168,6 @@ export function permissionsOf(o: { side: Side; role: string | undefined; status:
     verify: open && o.role === 'owner', // verification outcomes are the Owner's (master prompt P1); a named QC inspector may verify only their own milestone (mayVerify)
     assignQc: open && o.role === 'owner',
     recordPayment: o.side === 'customer' && open,
+    confirmPayment: o.side === 'partner' && (open || o.status === 'completed'),
   };
 }
