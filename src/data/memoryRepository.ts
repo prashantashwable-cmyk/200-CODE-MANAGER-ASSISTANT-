@@ -1017,6 +1017,8 @@ import type { Candidate as BookingCandidate } from '@/features/service/booking';
 import { DRIVE_SKILL } from '@/features/training/skills';
 import { isEmail, isIndianMobile, isPincode } from '@/features/validation/india';
 import { randomCode, randomToken } from '@/features/ids/clientId';
+import { DEFAULT_TEMPLATES as WO_TEMPLATES, acceptanceLabel as woAcceptanceLabel, milestonesOf as woMilestonesOf, paymentProblem as woPaymentProblem, startProblem as woStartProblem, statusOfMilestones as woStatus, submitEvidenceProblem as woSubmitProblem, verifyProblem as woVerifyProblem } from '@/features/workorders/workOrder';
+import type { ProviderStatus, WorkOrder, WorkOrderView } from '@/features/workorders/types';
 import { DEFAULT_COST_RATES, DEFAULT_FEE_SETTINGS, alternatives as fqAlternatives, computeQuote as fqCompute, mayOffer as fqMayOffer, maxBundleDiscountInr as fqMaxDiscount, quoteProblems as fqProblems, settingsProblem as fqSettingsProblem, waterfall as fqWaterfall } from '@/features/quotes/facilitatorQuote';
 import type { CostRates as FqCostRates, FeeActor as FqActor, FeeSettings as FqSettings, QuoteLine as FqLine } from '@/features/quotes/facilitatorQuote';
 import type { CustomerQuoteView, FacilitatorQuote, FeeSettingsVersion, QuotePreview, SaveQuoteInput, SaveQuoteResult } from '@/features/quotes/types';
@@ -18935,6 +18937,53 @@ function fqPreview(userId: string, lines: FqLine[], bundleDiscountInr?: number):
 function fqCustomerView(q: FacilitatorQuote): CustomerQuoteView {
   return { quote: { id: q.id, code: q.code, siteName: q.siteName, status: q.status, ...(q.sentAt ? { sentAt: q.sentAt } : {}), components: q.components.map((c) => ({ ...c })), bundleDiscountInr: q.bundleDiscountInr, totals: { ...q.totals } }, tokenInr: q.totals.tokenInr };
 }
+/* ---- 208 work orders: one customer, one partner, milestones that are payable only after verification ---- */
+const workOrders: WorkOrder[] = [];
+let woCounter = 4000;
+/** No signing provider is connected in this build: acceptance is recorded in-app and labelled as such. */
+const WO_SIGNING = 'not_connected' as const;
+function woPartnerKeys(userId: string): string[] {
+  const u = byId(users, userId);
+  if (!u) return [];
+  return [u.id, ...suppliers.filter((x) => x.contactPhone && x.contactPhone === u.phone).map((x) => x.id)];
+}
+function woStanding(w: WorkOrder) {
+  const sup = suppliers.find((x) => x.id === w.partnerId);
+  const tech = byId(users, w.partnerId);
+  const suspended = sup ? sup.status === 'suspended' : tech ? tech.status !== 'active' : false;
+  // [GAP] no licence/insurance expiry registry exists yet: a supplier is gated on KYC, anyone on suspension.
+  return { licenceValid: sup ? sup.kycStatus === 'approved' : true, insuranceValid: true, suspended };
+}
+function woView(w: WorkOrder, userId: string): WorkOrderView {
+  const u = byId(users, userId);
+  const staff = isAdminRole(u?.role);
+  const side: WorkOrderView['side'] = u?.id === w.customerId ? 'customer' : woPartnerKeys(userId).includes(w.partnerId) ? 'partner' : 'staff';
+  const startBlock = woStartProblem(w, woStanding(w));
+  const open = w.status === 'in_progress';
+  const verifier = u?.role === 'owner' || u?.role === 'technician';
+  return {
+    ...w, milestones: w.milestones.map((m) => ({ ...m })), side, startBlock, acceptance: woAcceptanceLabel(WO_SIGNING),
+    can: {
+      accept: w.status === 'issued' && ((side === 'customer' && !w.customerAcceptedAt) || (side === 'partner' && !w.partnerAcceptedAt)),
+      start: side === 'partner' && startBlock === null,
+      submitEvidence: side === 'partner' && open,
+      verify: open && (u?.role === 'owner' || (verifier && side !== 'partner' && !staff)),
+      recordPayment: side === 'customer' && open,
+    },
+  };
+}
+function woFind(userId: string, id: string): WorkOrder {
+  const u = byId(users, userId);
+  const w = workOrders.find((x) => x.id === id);
+  if (!u || !w) throw new RepositoryError('not_found');
+  if (!isAdminRole(u.role) && u.id !== w.customerId && !woPartnerKeys(userId).includes(w.partnerId) && u.role !== 'technician') throw new RepositoryError('not_found');
+  return w;
+}
+function woMilestone(w: WorkOrder, id: string) {
+  const m = w.milestones.find((x) => x.id === id);
+  if (!m) throw new RepositoryError('not_found');
+  return m;
+}
 let fqSeeded = false;
 function fqSeed() {
   if (fqSeeded) return;
@@ -28642,6 +28691,93 @@ export const memoryRepository: Repository = {
     }
     q.status = q.components.every((c) => c.acceptedAt) ? 'accepted' : 'partly_accepted';
     return fqCustomerView(q);
+  }),
+  /* 208 — work orders */
+  listWorkOrders: (userId) => simulateRead(() => {
+    const u = byId(users, userId);
+    if (!u) throw new RepositoryError('not_found');
+    const keys = woPartnerKeys(userId);
+    return workOrders.filter((w) => isAdminRole(u.role) || u.role === 'technician' || w.customerId === userId || keys.includes(w.partnerId)).map((w) => woView(w, userId));
+  }),
+  createWorkOrdersFromQuote: (userId, quoteId) => simulateWrite(() => {
+    const u = byId(users, userId);
+    if (!u || u.role !== 'owner') throw new RepositoryError('forbidden'); // the Owner issues work orders; Admin only watches
+    fqSeed();
+    const q = byId(facilitatorQuotes, quoteId);
+    if (!q) throw new RepositoryError('not_found');
+    if (!q.customerId) throw new RepositoryError('no_customer');
+    const made: WorkOrder[] = [];
+    for (const c of q.components) {
+      if (!c.acceptedAt) continue;
+      if (workOrders.some((w) => w.quoteId === q.id && w.lineId === c.id)) continue;
+      woCounter += 1;
+      const now = new Date().toISOString();
+      const w: WorkOrder = { id: `wo-${woCounter}`, code: `AIEC-WO-${woCounter}`, quoteId: q.id, lineId: c.id, leadId: q.leadId, siteName: q.siteName, customerId: q.customerId, partnerId: c.partnerId, partnerName: c.partnerName, kind: c.kind, description: c.description, priceInr: c.partnerPriceInr, status: 'issued', milestones: woMilestonesOf(c.partnerPriceInr, WO_TEMPLATES[c.kind]), createdAt: now };
+      workOrders.push(w);
+      made.push(w);
+      eventLog.append(userId, { type: 'contract.work_order_created', subject: { kind: 'lead', id: q.leadId }, capturedAt: now, payload: { workOrderId: w.id, quoteId: q.id, partnerId: w.partnerId, priceInr: w.priceInr, kind: w.kind } });
+    }
+    return made.map((w) => woView(w, userId));
+  }),
+  acceptWorkOrder: (userId, id) => simulateWrite(() => {
+    const w = woFind(userId, id);
+    const v = woView(w, userId);
+    if (!v.can.accept) throw new RepositoryError(w.status !== 'issued' ? 'invalid_state' : 'forbidden');
+    const now = new Date().toISOString();
+    if (v.side === 'customer') w.customerAcceptedAt = now; else w.partnerAcceptedAt = now;
+    eventLog.append(userId, { type: 'contract.accepted_in_app', subject: { kind: 'lead', id: w.leadId }, capturedAt: now, payload: { workOrderId: w.id, side: v.side, method: woAcceptanceLabel(WO_SIGNING) } });
+    return woView(w, userId);
+  }),
+  startWorkOrder: (userId, id) => simulateWrite(() => {
+    const w = woFind(userId, id);
+    const v = woView(w, userId);
+    if (v.side !== 'partner') throw new RepositoryError('forbidden');
+    if (v.startBlock) throw new RepositoryError(v.startBlock);
+    w.status = 'in_progress'; w.startedAt = new Date().toISOString();
+    eventLog.append(userId, { type: 'milestone.opened', subject: { kind: 'lead', id: w.leadId }, capturedAt: w.startedAt, payload: { workOrderId: w.id, milestones: w.milestones.length } });
+    return woView(w, userId);
+  }),
+  submitMilestoneEvidence: (userId, id, milestoneId, evidenceNames) => simulateWrite(() => {
+    const w = woFind(userId, id);
+    if (woView(w, userId).side !== 'partner') throw new RepositoryError('forbidden');
+    if (w.status !== 'in_progress') throw new RepositoryError('invalid_state');
+    const m = woMilestone(w, milestoneId);
+    const names = evidenceNames.map((n) => n.trim()).filter(Boolean);
+    const bad = woSubmitProblem(m, names.length);
+    if (bad) throw new RepositoryError(bad);
+    m.status = 'evidence_submitted'; m.evidenceCount = names.length;
+    eventLog.append(userId, { type: 'milestone.evidence_submitted', subject: { kind: 'lead', id: w.leadId }, capturedAt: new Date().toISOString(), payload: { workOrderId: w.id, milestoneId, evidence: names, submitterId: userId } });
+    return woView(w, userId);
+  }),
+  verifyMilestone: (userId, id, milestoneId) => simulateWrite(() => {
+    const w = woFind(userId, id);
+    const v = woView(w, userId);
+    if (!v.can.verify) throw new RepositoryError('forbidden');
+    const m = woMilestone(w, milestoneId);
+    // The partner who submitted evidence is the order's partner, so the verifier is always a different person; the rule still checks it.
+    const bad = woVerifyProblem(m, { verifierId: userId, submitterId: w.partnerId, qcPassed: true });
+    if (bad) throw new RepositoryError(bad);
+    m.status = 'verified';
+    eventLog.append(userId, { type: 'milestone.verified', subject: { kind: 'lead', id: w.leadId }, capturedAt: new Date().toISOString(), payload: { workOrderId: w.id, milestoneId, amountInr: m.amountInr, verifierId: userId } });
+    return woView(w, userId);
+  }),
+  recordMilestonePayment: (userId, id, milestoneId, reference) => simulateWrite(() => {
+    const w = woFind(userId, id);
+    if (woView(w, userId).side !== 'customer') throw new RepositoryError('forbidden');
+    const m = woMilestone(w, milestoneId);
+    const ref = reference.trim();
+    if (ref.length < 4) throw new RepositoryError('reference_short');
+    const bad = woPaymentProblem(m);
+    if (bad) throw new RepositoryError(bad);
+    m.status = 'payment_recorded';
+    w.status = woStatus(w.milestones);
+    eventLog.append(userId, { type: 'milestone.payment_recorded', subject: { kind: 'lead', id: w.leadId }, capturedAt: new Date().toISOString(), payload: { workOrderId: w.id, milestoneId, amountInr: m.amountInr, reference: ref, movedByPlatform: false } });
+    return woView(w, userId);
+  }),
+  getProviderStatus: (userId) => simulateRead((): ProviderStatus[] => {
+    if (!byId(users, userId)) throw new RepositoryError('not_found');
+    const off = (id: ProviderStatus['id'], note: string): ProviderStatus => ({ id, connected: false, note });
+    return [off('esign', 'No signing provider is connected. Acceptance is recorded in the app and is not an electronic signature.'), off('payments', 'No payment provider is connected. Payments between customer and partner are recorded with a reference, never moved by the platform.'), off('whatsapp', 'WhatsApp Business is not connected.'), off('sms', 'SMS is not connected.'), off('maps', 'No production map or geocoding provider is connected.'), off('nbfc', 'No lender is connected.'), off('storage', 'File storage is not connected; evidence is recorded by name.')];
   }),
   /* 193 — single-person monitor */
   appendEvent: (userId, input) => simulateWrite(() => eventCall(() => eventLog.append(userId, input))),

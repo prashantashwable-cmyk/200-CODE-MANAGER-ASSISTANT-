@@ -6,7 +6,7 @@ export const EVENT_FAMILIES = {
   lead: ['captured', 'photo_added', 'contact_added', 'shaft_readiness_set', 'duplicate_detected', 'ownership_claimed', 'ownership_disputed', 'handed_to_sales', 'marked_lost', 'reopened'],
   outreach: ['message_sent', 'reply_received', 'call_logged', 'consent_recorded', 'opted_out'],
   quote: ['requirement_captured', 'rfq_sent', 'partner_offer_received', 'drafted', 'itemised', 'sent', 'component_accepted', 'rejected', 'expired'],
-  contract: ['pack_generated', 'work_order_created', 'signed', 'signature_declined', 'amended'],
+  contract: ['pack_generated', 'work_order_created', 'signed', 'accepted_in_app', 'signature_declined', 'amended'],
   milestone: ['opened', 'evidence_submitted', 'verified', 'closed', 'payment_recorded', 'payment_confirmed'],
   delivery: ['dispatched', 'in_transit', 'arrived', 'proof_captured', 'material_handover_signed'],
   installation: ['started', 'step_completed', 'blocked', 'resumed', 'completed'],

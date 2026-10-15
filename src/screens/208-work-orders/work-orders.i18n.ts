@@ -1,0 +1,259 @@
+import type { ScreenTranslations } from '@/i18n/types';
+
+/** Screen 208. Work orders and milestone gates, in three languages. */
+const translations: ScreenTranslations = {
+  en: { workOrders: {
+  "title": "Work orders",
+  "subtitle": "One customer, one partner, payments only after verification",
+  "disclosure": "Each work order is a contract between the customer and the named partner. The platform facilitates, records and verifies. It does not hold or move partner money.",
+  "loading": "Loading work orders…",
+  "retry": "Try again",
+  "error": {
+    "title": "Work orders did not load",
+    "body": "Check your connection and try again.",
+    "action": "That did not work. Please try again."
+  },
+  "empty": {
+    "title": "No work orders yet",
+    "body": "When a quote is accepted, its work orders appear here."
+  },
+  "notConnected": "Not connected",
+  "provider": {
+    "esign": "No electronic-signature provider is connected. Accepting here is recorded in the app and is not an electronic signature.",
+    "payments": "No payment provider is connected. Payments are recorded with a reference. The platform does not move this money."
+  },
+  "fromQuotes": "Accepted quotes",
+  "create": "Create work orders",
+  "created": "Work orders created.",
+  "price": "Partner price",
+  "accept": "Accept this work order",
+  "acceptedOk": "Accepted.",
+  "start": "Start work",
+  "started": "Work started.",
+  "customerAccepted": "Customer accepted {{date}}",
+  "partnerAccepted": "Partner accepted {{date}}",
+  "evidence": "Evidence (file names, separated by commas)",
+  "evidenceHint": "for example rails.jpg, level.mp4",
+  "submit": "Send evidence",
+  "evidenceOk": "Evidence recorded. Files are recorded by name because file storage is not connected.",
+  "verify": "Verify",
+  "verifiedOk": "Verified.",
+  "reference": "Payment reference",
+  "recordPayment": "Record payment",
+  "paymentOk": "Payment recorded.",
+  "kinds": {
+    "material": "Material",
+    "installation": "Installation",
+    "logistics": "Logistics",
+    "amc": "AMC",
+    "statutory": "Statutory fees"
+  },
+  "status": {
+    "issued": "Issued",
+    "in_progress": "In progress",
+    "completed": "Completed",
+    "declined": "Declined",
+    "cancelled": "Cancelled"
+  },
+  "gate": {
+    "on_acceptance": "On acceptance",
+    "on_delivery": "On verified delivery",
+    "on_progress": "On verified progress",
+    "on_handover": "On handover"
+  },
+  "milestone": {
+    "waiting": "Waiting",
+    "evidence_submitted": "Evidence sent",
+    "verified": "Verified",
+    "payment_recorded": "Payment recorded",
+    "closed": "Closed"
+  },
+  "problem": {
+    "not_accepted_by_customer": "Waiting for the customer to accept.",
+    "not_accepted_by_partner": "Waiting for the partner to accept.",
+    "partner_licence_lapsed": "The partner's approval has lapsed.",
+    "partner_insurance_lapsed": "The partner's insurance has lapsed.",
+    "partner_suspended": "The partner is suspended.",
+    "wrong_state": "This order is not in a state that allows that.",
+    "evidence_missing": "Add at least one piece of evidence.",
+    "not_payable": "A payment can be recorded only after the milestone is verified.",
+    "locked": "This milestone is closed and cannot change.",
+    "reference_short": "Enter the payment reference.",
+    "forbidden": "You cannot do that on this order.",
+    "invalid_state": "This order is not in a state that allows that.",
+    "not_submitted": "Evidence has not been sent yet.",
+    "qc_required": "This milestone needs an independent quality check first.",
+    "self_verify": "You cannot verify your own work."
+  }
+} },
+  hi: { workOrders: {
+  "title": "वर्क ऑर्डर",
+  "subtitle": "एक ग्राहक, एक पार्टनर, सत्यापन के बाद ही भुगतान",
+  "disclosure": "हर वर्क ऑर्डर ग्राहक और नामित पार्टनर के बीच का अनुबंध है। प्लेटफ़ॉर्म सुविधा देता है, रिकॉर्ड करता है और सत्यापित करता है। यह पार्टनर का पैसा न रखता है, न भेजता है।",
+  "loading": "वर्क ऑर्डर लोड हो रहे हैं…",
+  "retry": "फिर कोशिश करें",
+  "error": {
+    "title": "वर्क ऑर्डर लोड नहीं हुए",
+    "body": "अपना कनेक्शन जाँचें और फिर कोशिश करें।",
+    "action": "यह नहीं हो सका। कृपया फिर कोशिश करें।"
+  },
+  "empty": {
+    "title": "अभी कोई वर्क ऑर्डर नहीं",
+    "body": "कोटेशन स्वीकार होने पर उसके वर्क ऑर्डर यहाँ दिखेंगे।"
+  },
+  "notConnected": "जुड़ा नहीं है",
+  "provider": {
+    "esign": "कोई इलेक्ट्रॉनिक हस्ताक्षर सेवा जुड़ी नहीं है। यहाँ स्वीकार करना ऐप में दर्ज होता है और यह इलेक्ट्रॉनिक हस्ताक्षर नहीं है।",
+    "payments": "कोई भुगतान सेवा जुड़ी नहीं है। भुगतान संदर्भ के साथ दर्ज होते हैं। प्लेटफ़ॉर्म यह पैसा नहीं भेजता।"
+  },
+  "fromQuotes": "स्वीकृत कोटेशन",
+  "create": "वर्क ऑर्डर बनाएँ",
+  "created": "वर्क ऑर्डर बन गए।",
+  "price": "पार्टनर की कीमत",
+  "accept": "यह वर्क ऑर्डर स्वीकार करें",
+  "acceptedOk": "स्वीकार किया गया।",
+  "start": "काम शुरू करें",
+  "started": "काम शुरू हुआ।",
+  "customerAccepted": "ग्राहक ने {{date}} को स्वीकार किया",
+  "partnerAccepted": "पार्टनर ने {{date}} को स्वीकार किया",
+  "evidence": "सबूत (फ़ाइल के नाम, कॉमा से अलग)",
+  "evidenceHint": "जैसे rails.jpg, level.mp4",
+  "submit": "सबूत भेजें",
+  "evidenceOk": "सबूत दर्ज हुआ। फ़ाइल स्टोरेज जुड़ा नहीं है, इसलिए फ़ाइलें नाम से दर्ज होती हैं।",
+  "verify": "सत्यापित करें",
+  "verifiedOk": "सत्यापित हुआ।",
+  "reference": "भुगतान संदर्भ",
+  "recordPayment": "भुगतान दर्ज करें",
+  "paymentOk": "भुगतान दर्ज हुआ।",
+  "kinds": {
+    "material": "सामग्री",
+    "installation": "इंस्टॉलेशन",
+    "logistics": "लॉजिस्टिक्स",
+    "amc": "एएमसी",
+    "statutory": "सरकारी शुल्क"
+  },
+  "status": {
+    "issued": "जारी",
+    "in_progress": "जारी काम",
+    "completed": "पूरा",
+    "declined": "अस्वीकृत",
+    "cancelled": "रद्द"
+  },
+  "gate": {
+    "on_acceptance": "स्वीकृति पर",
+    "on_delivery": "सत्यापित डिलीवरी पर",
+    "on_progress": "सत्यापित प्रगति पर",
+    "on_handover": "हैंडओवर पर"
+  },
+  "milestone": {
+    "waiting": "प्रतीक्षा में",
+    "evidence_submitted": "सबूत भेजा गया",
+    "verified": "सत्यापित",
+    "payment_recorded": "भुगतान दर्ज",
+    "closed": "बंद"
+  },
+  "problem": {
+    "not_accepted_by_customer": "ग्राहक की स्वीकृति की प्रतीक्षा है।",
+    "not_accepted_by_partner": "पार्टनर की स्वीकृति की प्रतीक्षा है।",
+    "partner_licence_lapsed": "पार्टनर की मंज़ूरी समाप्त हो गई है।",
+    "partner_insurance_lapsed": "पार्टनर का बीमा समाप्त हो गया है।",
+    "partner_suspended": "पार्टनर निलंबित है।",
+    "wrong_state": "यह ऑर्डर इस कार्य की अनुमति वाली स्थिति में नहीं है।",
+    "evidence_missing": "कम से कम एक सबूत जोड़ें।",
+    "not_payable": "भुगतान तभी दर्ज हो सकता है जब माइलस्टोन सत्यापित हो।",
+    "locked": "यह माइलस्टोन बंद है और बदला नहीं जा सकता।",
+    "reference_short": "भुगतान संदर्भ लिखें।",
+    "forbidden": "आप इस ऑर्डर पर यह नहीं कर सकते।",
+    "invalid_state": "यह ऑर्डर इस कार्य की अनुमति वाली स्थिति में नहीं है।",
+    "not_submitted": "सबूत अभी भेजा नहीं गया है।",
+    "qc_required": "इस माइलस्टोन के लिए पहले स्वतंत्र गुणवत्ता जाँच ज़रूरी है।",
+    "self_verify": "आप अपना काम खुद सत्यापित नहीं कर सकते।"
+  }
+} },
+  mr: { workOrders: {
+  "title": "वर्क ऑर्डर",
+  "subtitle": "एक ग्राहक, एक पार्टनर, पडताळणीनंतरच पेमेंट",
+  "disclosure": "प्रत्येक वर्क ऑर्डर हा ग्राहक आणि नाव दिलेल्या पार्टनरमधील करार आहे. प्लॅटफॉर्म सुविधा देतो, नोंद करतो आणि पडताळणी करतो. तो पार्टनरचे पैसे ठेवत नाही किंवा पाठवत नाही.",
+  "loading": "वर्क ऑर्डर लोड होत आहेत…",
+  "retry": "पुन्हा प्रयत्न करा",
+  "error": {
+    "title": "वर्क ऑर्डर लोड झाले नाहीत",
+    "body": "कनेक्शन तपासा आणि पुन्हा प्रयत्न करा.",
+    "action": "हे झाले नाही. कृपया पुन्हा प्रयत्न करा."
+  },
+  "empty": {
+    "title": "अजून वर्क ऑर्डर नाहीत",
+    "body": "कोटेशन स्वीकारल्यावर त्याचे वर्क ऑर्डर येथे दिसतील."
+  },
+  "notConnected": "जोडलेले नाही",
+  "provider": {
+    "esign": "कोणतीही इलेक्ट्रॉनिक स्वाक्षरी सेवा जोडलेली नाही. येथे स्वीकारणे अॅपमध्ये नोंदवले जाते आणि ती इलेक्ट्रॉनिक स्वाक्षरी नाही.",
+    "payments": "कोणतीही पेमेंट सेवा जोडलेली नाही. पेमेंट संदर्भासह नोंदवले जाते. प्लॅटफॉर्म हे पैसे हलवत नाही."
+  },
+  "fromQuotes": "स्वीकारलेली कोटेशन",
+  "create": "वर्क ऑर्डर तयार करा",
+  "created": "वर्क ऑर्डर तयार झाले.",
+  "price": "पार्टनरची किंमत",
+  "accept": "हा वर्क ऑर्डर स्वीकारा",
+  "acceptedOk": "स्वीकारले.",
+  "start": "काम सुरू करा",
+  "started": "काम सुरू झाले.",
+  "customerAccepted": "ग्राहकाने {{date}} रोजी स्वीकारले",
+  "partnerAccepted": "पार्टनरने {{date}} रोजी स्वीकारले",
+  "evidence": "पुरावा (फाइलची नावे, स्वल्पविरामाने वेगळी)",
+  "evidenceHint": "उदा. rails.jpg, level.mp4",
+  "submit": "पुरावा पाठवा",
+  "evidenceOk": "पुरावा नोंदवला. फाइल स्टोरेज जोडलेले नाही, म्हणून फाइल नावाने नोंदवल्या जातात.",
+  "verify": "पडताळा",
+  "verifiedOk": "पडताळणी झाली.",
+  "reference": "पेमेंट संदर्भ",
+  "recordPayment": "पेमेंट नोंदवा",
+  "paymentOk": "पेमेंट नोंदवले.",
+  "kinds": {
+    "material": "साहित्य",
+    "installation": "इन्स्टॉलेशन",
+    "logistics": "लॉजिस्टिक्स",
+    "amc": "एएमसी",
+    "statutory": "सरकारी शुल्क"
+  },
+  "status": {
+    "issued": "जारी",
+    "in_progress": "काम सुरू",
+    "completed": "पूर्ण",
+    "declined": "नाकारले",
+    "cancelled": "रद्द"
+  },
+  "gate": {
+    "on_acceptance": "स्वीकृतीवर",
+    "on_delivery": "पडताळलेल्या डिलिव्हरीवर",
+    "on_progress": "पडताळलेल्या प्रगतीवर",
+    "on_handover": "हँडओव्हरवर"
+  },
+  "milestone": {
+    "waiting": "प्रतीक्षेत",
+    "evidence_submitted": "पुरावा पाठवला",
+    "verified": "पडताळले",
+    "payment_recorded": "पेमेंट नोंदवले",
+    "closed": "बंद"
+  },
+  "problem": {
+    "not_accepted_by_customer": "ग्राहकाच्या स्वीकृतीची वाट पाहत आहे.",
+    "not_accepted_by_partner": "पार्टनरच्या स्वीकृतीची वाट पाहत आहे.",
+    "partner_licence_lapsed": "पार्टनरची मान्यता संपली आहे.",
+    "partner_insurance_lapsed": "पार्टनरचा विमा संपला आहे.",
+    "partner_suspended": "पार्टनर निलंबित आहे.",
+    "wrong_state": "हा ऑर्डर या कृतीला परवानगी देणाऱ्या स्थितीत नाही.",
+    "evidence_missing": "किमान एक पुरावा जोडा.",
+    "not_payable": "माइलस्टोन पडताळल्यानंतरच पेमेंट नोंदवता येते.",
+    "locked": "हा माइलस्टोन बंद आहे आणि बदलता येत नाही.",
+    "reference_short": "पेमेंट संदर्भ लिहा.",
+    "forbidden": "तुम्ही या ऑर्डरवर हे करू शकत नाही.",
+    "invalid_state": "हा ऑर्डर या कृतीला परवानगी देणाऱ्या स्थितीत नाही.",
+    "not_submitted": "पुरावा अजून पाठवलेला नाही.",
+    "qc_required": "या माइलस्टोनसाठी आधी स्वतंत्र गुणवत्ता तपासणी हवी.",
+    "self_verify": "तुम्ही स्वतःचे काम स्वतः पडताळू शकत नाही."
+  }
+} },
+};
+
+export default translations;

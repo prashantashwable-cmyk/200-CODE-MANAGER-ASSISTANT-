@@ -1,3 +1,4 @@
+import type { ProviderStatus, WorkOrderView } from '@/features/workorders/types';
 import type { FeeSettings, CostRates, QuoteLine } from '@/features/quotes/facilitatorQuote';
 import type { FeeSettingsVersion, QuotePreview, SaveQuoteInput, SaveQuoteResult, FacilitatorQuote, CustomerQuoteView } from '@/features/quotes/types';
 import type { VaultKind } from '@/features/documents/vault';
@@ -10179,6 +10180,15 @@ export interface Repository {
   saveFacilitatorQuote(userId: string, input: SaveQuoteInput): Promise<SaveQuoteResult>;
   listFacilitatorQuotes(userId: string): Promise<FacilitatorQuote[]>;
   sendFacilitatorQuote(userId: string, quoteId: string): Promise<FacilitatorQuote>;
+  /* 208 — customer–partner work orders and milestone gates */
+  listWorkOrders(userId: string): Promise<WorkOrderView[]>;
+  createWorkOrdersFromQuote(userId: string, quoteId: string): Promise<WorkOrderView[]>;
+  acceptWorkOrder(userId: string, workOrderId: string): Promise<WorkOrderView>;
+  startWorkOrder(userId: string, workOrderId: string): Promise<WorkOrderView>;
+  submitMilestoneEvidence(userId: string, workOrderId: string, milestoneId: string, evidenceNames: string[]): Promise<WorkOrderView>;
+  verifyMilestone(userId: string, workOrderId: string, milestoneId: string): Promise<WorkOrderView>;
+  recordMilestonePayment(userId: string, workOrderId: string, milestoneId: string, reference: string): Promise<WorkOrderView>;
+  getProviderStatus(userId: string): Promise<ProviderStatus[]>;
   /* 207 — the customer's own quote: accept component by component */
   getMyQuote(userId: string): Promise<CustomerQuoteView | null>;
   acceptQuoteComponents(userId: string, quoteId: string, lineIds: string[]): Promise<CustomerQuoteView>;
