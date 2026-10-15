@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { Badge, Button, Card, EmptyState, ErrorState, ListRow, LoadingState, ProgressBar, Screen, ScreenHeader, formatINR, useToast } from '@/design-system';
 import { useData } from '@/data/DataProvider';
 import { useSession } from '@/session/SessionProvider';
@@ -31,6 +32,7 @@ export function ProjectsScreen() {
   return (
     <Screen width="default">
       <ScreenHeader title={t('projects.title')} subtitle={t('projects.subtitle')} />
+      <p className="text-sm"><Link to="/complaints" data-testid="pj-open-complaints">{t('projects.openComplaints')}</Link></p>
       {state === 'loading' && <LoadingState label={t('projects.loading')} rows={3} />}
       {state === 'error' && <ErrorState title={t('projects.error.title')} body={t('projects.error.body')} retryLabel={t('projects.retry')} onRetry={() => void load()} />}
       {state === 'ready' && projects.length === 0 && <EmptyState title={t('projects.empty.title')} body={t('projects.empty.body')} />}

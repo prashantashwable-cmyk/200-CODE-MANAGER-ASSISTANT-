@@ -4,6 +4,7 @@ import type { ScreenTranslations } from '@/i18n/types';
 const translations: ScreenTranslations = {
   en: { projects: {
   "title": "Projects", "subtitle": "How far each project has come, and the handover record",
+  "openComplaints": "Complaints and service",
   "loading": "Loading projects", "retry": "Try again",
   "error": { "title": "Projects could not load", "body": "Check your connection and try again.", "action": "That could not be done." },
   "empty": { "title": "No projects yet", "body": "A project appears here once work orders are issued for an accepted quote." },
@@ -30,6 +31,7 @@ const translations: ScreenTranslations = {
 } },
   hi: { projects: {
   "title": "प्रोजेक्ट", "subtitle": "हर प्रोजेक्ट कितना आगे बढ़ा, और हैंडओवर रिकॉर्ड",
+  "openComplaints": "शिकायतें और सेवा",
   "loading": "प्रोजेक्ट लोड हो रहे हैं", "retry": "फिर कोशिश करें",
   "error": { "title": "प्रोजेक्ट लोड नहीं हो सके", "body": "कनेक्शन जाँचें और फिर कोशिश करें।", "action": "यह नहीं हो सका।" },
   "empty": { "title": "अभी कोई प्रोजेक्ट नहीं", "body": "स्वीकृत कोट के लिए वर्क ऑर्डर जारी होने पर प्रोजेक्ट यहाँ दिखेगा।" },
@@ -56,6 +58,7 @@ const translations: ScreenTranslations = {
 } },
   mr: { projects: {
   "title": "प्रकल्प", "subtitle": "प्रत्येक प्रकल्प किती पुढे गेला आणि हँडओव्हर नोंद",
+  "openComplaints": "तक्रारी आणि सेवा",
   "loading": "प्रकल्प लोड होत आहेत", "retry": "पुन्हा प्रयत्न करा",
   "error": { "title": "प्रकल्प लोड होऊ शकले नाहीत", "body": "कनेक्शन तपासा आणि पुन्हा प्रयत्न करा.", "action": "ते करता आले नाही." },
   "empty": { "title": "अजून प्रकल्प नाही", "body": "मंजूर कोटसाठी वर्क ऑर्डर दिल्यावर प्रकल्प येथे दिसेल." },

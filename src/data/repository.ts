@@ -1,4 +1,6 @@
 import type { PartnerAccount, ProviderStatus, TemplateHistory, TemplateVersion, WorkOrderView } from '@/features/workorders/types';
+import type { ComplaintOutcome, TrustSummary } from '@/features/complaints/complaint';
+import type { ComplaintView, RaiseComplaintInput } from '@/features/complaints/types';
 import type { ProjectView } from '@/features/projects/types';
 import type { TemplateSet } from '@/features/workorders/workOrder';
 import type { FeeSettings, CostRates, QuoteLine } from '@/features/quotes/facilitatorQuote';
@@ -10204,6 +10206,16 @@ export interface Repository {
   listProjects(userId: string): Promise<ProjectView[]>;
   /** A party to the handover (customer, installer, the named QC inspector) acknowledges it in the app. Not a statutory NOC and not an e-signature. */
   acknowledgeHandover(userId: string, quoteId: string): Promise<ProjectView>;
+  /** Complaints the caller may see: the customer's own, those naming a partner's order, and all of them for the Owner and Admin. */
+  listComplaints(userId: string): Promise<ComplaintView[]>;
+  /** The project's customer raises a complaint; the same client id sent twice is one complaint. */
+  raiseComplaint(userId: string, input: RaiseComplaintInput): Promise<ComplaintView>;
+  /** Owner only. */
+  acknowledgeComplaint(userId: string, complaintId: string): Promise<ComplaintView>;
+  /** Owner only: an outcome and a note the customer can read. A resolved complaint is locked. */
+  resolveComplaint(userId: string, complaintId: string, outcome: ComplaintOutcome, note: string): Promise<ComplaintView>;
+  /** Plain counts about a partner account. Staff and the partner themself only. */
+  getPartnerTrust(userId: string, accountId: string): Promise<TrustSummary>;
   getProviderStatus(userId: string): Promise<ProviderStatus[]>;
   /* 207 — the customer's own quote: accept component by component */
   getMyQuote(userId: string): Promise<CustomerQuoteView | null>;

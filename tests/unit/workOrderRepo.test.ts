@@ -199,6 +199,44 @@ describe('work orders from an accepted quote', () => {
     expect(log.some((e) => e.type === 'installation.completed')).toBe(true);
   });
 
+  it('complaints: only the project\'s customer raises one, a retry is the same one, the Owner handles it in order, the partner named can read it', async () => {
+    const w = (await repo.listWorkOrders(TECH))[0];
+    const base = { quoteId: w.quoteId, category: 'defect' as const, text: 'The door sensor keeps failing after rain', clientId: 'cl-1' };
+    for (const who of [OTHER, TECH, OWNER, ADMIN]) expect(await refusal(repo.raiseComplaint(who, base))).toBe('not_found');
+    expect(await refusal(repo.raiseComplaint(CUST, { ...base, category: 'lunch' as never }))).toBe('category_invalid');
+    expect(await refusal(repo.raiseComplaint(CUST, { ...base, text: 'short' }))).toBe('text_short');
+    expect(await refusal(repo.raiseComplaint(CUST, { ...base, workOrderId: 'nope' }))).toBe('not_found');
+    const a = await repo.raiseComplaint(CUST, { ...base, workOrderId: w.id });
+    expect(a.status).toBe('open');
+    expect(a.partnerName).toBeUndefined(); // the customer is not shown the partner's account details
+    expect((await repo.raiseComplaint(CUST, { ...base, workOrderId: w.id })).id).toBe(a.id); // same client id, same complaint
+    const safety = await repo.raiseComplaint(CUST, { ...base, category: 'safety', text: 'The car stopped between floors twice', clientId: 'cl-2' });
+    expect(Date.parse(safety.ackDueAt) - Date.parse(safety.createdAt)).toBeLessThan(Date.parse(a.ackDueAt) - Date.parse(a.createdAt));
+    expect((await repo.listComplaints(CUST)).length).toBe(2);
+    expect((await repo.listComplaints(TECH)).map((c) => c.id)).toEqual([a.id]); // only the one naming their order
+    expect(await repo.listComplaints(OTHER)).toHaveLength(0);
+    expect(await repo.listComplaints(OTHER_TECH)).toHaveLength(0);
+    const staff = (await repo.listComplaints(ADMIN)).find((c) => c.id === a.id)!;
+    expect(staff.partnerName).toBeTruthy();
+    expect(staff.can).toEqual({ acknowledge: false, resolve: false }); // Admin only watches
+    for (const who of [CUST, TECH, ADMIN]) expect(await refusal(repo.acknowledgeComplaint(who, a.id))).toBe('forbidden');
+    expect(await refusal(repo.resolveComplaint(OWNER, a.id, 'upheld', 'The partner will replace the sensor'))).toBe('not_acknowledged');
+    expect((await repo.acknowledgeComplaint(OWNER, a.id)).status).toBe('acknowledged');
+    expect(await refusal(repo.acknowledgeComplaint(OWNER, a.id))).toBe('not_open');
+    expect(await refusal(repo.resolveComplaint(OWNER, a.id, 'upheld', 'short'))).toBe('note_short');
+    expect(await refusal(repo.resolveComplaint(OWNER, a.id, 'maybe' as never, 'The partner will replace the sensor'))).toBe('outcome_invalid');
+    const done = await repo.resolveComplaint(OWNER, a.id, 'upheld', 'The partner will replace the sensor');
+    expect(done).toMatchObject({ status: 'resolved', outcome: 'upheld' });
+    expect(await refusal(repo.resolveComplaint(OWNER, a.id, 'settled', 'Changed my mind about this one'))).toBe('locked');
+    expect((await repo.listComplaints(CUST)).find((c) => c.id === a.id)?.resolutionNote).toContain('replace the sensor'); // the customer reads the outcome
+    const trust = await repo.getPartnerTrust(OWNER, TECH);
+    expect(trust).toMatchObject({ complaintsRaised: 1, complaintsUpheld: 1 });
+    expect((await repo.getPartnerTrust(TECH, TECH)).complaintsUpheld).toBe(1);
+    for (const who of [CUST, OTHER_TECH]) expect(await refusal(repo.getPartnerTrust(who, TECH))).toBe('forbidden');
+    const types = (await repo.listEvents(OWNER, {})).map((e) => e.type);
+    for (const t of ['complaint.raised', 'complaint.acknowledged', 'complaint.resolved']) expect(types).toContain(t);
+  });
+
   it('emits the events and says which providers are not connected', async () => {
     const log = await repo.listEvents(OWNER, {});
     const types = new Set(log.map((e) => e.type));

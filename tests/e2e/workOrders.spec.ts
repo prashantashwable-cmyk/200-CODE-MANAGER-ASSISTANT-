@@ -145,3 +145,37 @@ test('Owner: the Projects screen shows a % progress bar and the handover record,
   await expect(page.getByTestId(`pj-handover-${quoteId}`)).toContainText('not a statutory approval');
   expect(errors).toEqual([]);
 });
+
+test('Owner: a customer\'s complaint is acknowledged and resolved in order, and the customer can read the outcome', async ({ page }) => {
+  const errors = watchErrors(page);
+  await signIn(page, '9822011009', true);
+  const id = await page.evaluate(async () => {
+    const repo = (window as unknown as { __aiecRepo: Record<string, (...a: unknown[]) => Promise<any>> }).__aiecRepo;
+    const quote = (await repo.listFacilitatorQuotes('u-owner-1'))[0];
+    await repo.sendFacilitatorQuote('u-owner-1', quote.id).catch(() => undefined);
+    const mine = await repo.getMyQuote('u-cust-3');
+    const install = mine.quote.components.find((c: { kind: string }) => c.kind === 'installation');
+    await repo.acceptQuoteComponents('u-cust-3', quote.id, [install.id]);
+    const [wo] = await repo.createWorkOrdersFromQuote('u-owner-1', quote.id, { [install.id]: 'u-tech-1' });
+    const c = await repo.raiseComplaint('u-cust-3', { quoteId: quote.id, workOrderId: wo.id, category: 'delay', text: 'The team has not come for ten days', clientId: 'e2e-1' });
+    return c.id as string;
+  });
+  await go(page, '/complaints');
+  const card = page.getByTestId(`cp-${id}`);
+  await expect(card).toBeVisible();
+  await card.getByRole('button', { name: 'Acknowledge' }).click();
+  await expect(card.getByText('Being looked at')).toBeVisible();
+  const resolve = card.getByRole('button', { name: 'Resolve' });
+  await expect(resolve).toBeDisabled(); // a note is needed first
+  await card.getByLabel(/What was decided/).fill('We will send the team on Monday');
+  await expect(resolve).toBeEnabled();
+  await resolve.click();
+  await expect(page.getByTestId(`cp-outcome-${id}`)).toContainText('We will send the team on Monday');
+  await expect(card.getByRole('button', { name: 'Resolve' })).toHaveCount(0); // locked once resolved
+  const outcome = await page.evaluate(async () => {
+    const repo = (window as unknown as { __aiecRepo: Record<string, (...a: unknown[]) => Promise<any>> }).__aiecRepo;
+    return (await repo.listComplaints('u-cust-3'))[0].resolutionNote as string;
+  });
+  expect(outcome).toContain('Monday');
+  expect(errors).toEqual([]);
+});

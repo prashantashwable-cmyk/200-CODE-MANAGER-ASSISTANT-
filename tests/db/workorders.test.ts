@@ -523,3 +523,95 @@ describe('project view', () => {
     expect(v.parties.map((p) => p.role)).toEqual(['customer', 'installer']);
   });
 });
+
+describe('complaints and partner trust', () => {
+  const raise = (who: P, quote: string, wo: string | null, category: string, text: string, client: string | null = null) =>
+    call(who.authId, 'select public.raise_complaint($1, $2, $3, $4, $5) as id', [quote, wo, category, text, client]);
+  const idOf = async (p: Promise<{ rows: { id: string }[] }>) => (await p).rows[0].id;
+  const complaintsOf = (who: P, quote: string) => as(who.authId, async (c) => (await c.query<{ id: string; status: string; category: string; outcome: string | null }>('select id, status, category, outcome from public.complaints where quote_id = $1', [quote])).rows);
+  const TEXT = 'The door sensor keeps failing after rain';
+
+  it('only the project\'s customer can raise one; the checks are the database\'s; a retry is the same complaint', async () => {
+    const w = await world();
+    await issue(w);
+    const inst = (await ordersOf(w, w.tech))[0];
+    expect(await refusal(raise(w.otherCustomer, w.quoteId, null, 'defect', TEXT))).toBe('not_found');
+    expect(await refusal(raise(w.tech, w.quoteId, null, 'defect', TEXT))).toBe('not_found');
+    expect(await refusal(raise(w.customer, w.quoteId, null, 'lunch', TEXT))).toBe('category_invalid');
+    expect(await refusal(raise(w.customer, w.quoteId, null, 'defect', 'too short'))).toBe('text_short');
+    expect(await refusal(raise(w.customer, w.quoteId, null, 'defect', 'x'.repeat(1001)))).toBe('text_long');
+    expect(await refusal(raise(w.customer, w.quoteId, inst.id.replace(/.$/, '0'), 'defect', TEXT))).toBe('not_found'); // an order that is not this project's
+    expect(await refusal(as(null, (c) => c.query('select public.raise_complaint($1, null, $2, $3, null)', [w.quoteId, 'defect', TEXT])))).toMatch(/permission denied/);
+    const client = '11111111-1111-4111-8111-111111111111';
+    const a = await idOf(raise(w.customer, w.quoteId, inst.id, 'defect', TEXT, client));
+    const b = await idOf(raise(w.customer, w.quoteId, inst.id, 'defect', TEXT, client));
+    expect(b).toBe(a);
+    expect((await complaintsOf(w.owner, w.quoteId))).toHaveLength(1);
+    const row = (await pool.query<{ code: string; ack_due_at: Date; created_at: Date }>('select code, ack_due_at, created_at from public.complaints where id = $1', [a])).rows[0];
+    expect(row.code).toMatch(/^AIEC-CP-\d+$/);
+    expect(Math.round((row.ack_due_at.getTime() - row.created_at.getTime()) / 3_600_000)).toBe(24);
+    const safety = await idOf(raise(w.customer, w.quoteId, null, 'safety', 'The car stopped between floors twice today'));
+    const s = (await pool.query<{ ack_due_at: Date; created_at: Date }>('select ack_due_at, created_at from public.complaints where id = $1', [safety])).rows[0];
+    expect(Math.round((s.ack_due_at.getTime() - s.created_at.getTime()) / 3_600_000)).toBe(4);
+  });
+
+  it('is read by the customer, the Owner and Admin, and by the partner only when it names their order', async () => {
+    const w = await world();
+    await issue(w);
+    const inst = (await ordersOf(w, w.tech))[0];
+    await raise(w.customer, w.quoteId, inst.id, 'defect', TEXT);
+    await raise(w.customer, w.quoteId, null, 'payment', 'I was asked to pay twice for one stage');
+    expect(await complaintsOf(w.customer, w.quoteId)).toHaveLength(2);
+    expect(await complaintsOf(w.owner, w.quoteId)).toHaveLength(2);
+    expect(await complaintsOf(w.admin, w.quoteId)).toHaveLength(2);
+    expect((await complaintsOf(w.tech, w.quoteId)).map((c) => c.category)).toEqual(['defect']); // the one that names their order
+    expect(await complaintsOf(w.supplier, w.quoteId)).toHaveLength(0);
+    expect(await complaintsOf(w.otherCustomer, w.quoteId)).toHaveLength(0);
+    const demoAdmin = await person('admin', { demo: true });
+    expect(await complaintsOf(demoAdmin, w.quoteId)).toHaveLength(0);
+  });
+
+  it('only the Owner acknowledges and resolves, in order, with an outcome and a note; a resolved complaint never changes', async () => {
+    const w = await world();
+    await issue(w);
+    const id = await idOf(raise(w.customer, w.quoteId, null, 'delay', 'The team has not come for ten days'));
+    const ack = (who: P) => call(who.authId, 'select public.acknowledge_complaint($1)', [id]);
+    const resolve = (who: P, outcome: string, note: string) => call(who.authId, 'select public.resolve_complaint($1, $2, $3)', [id, outcome, note]);
+    for (const who of [w.admin, w.customer, w.tech]) expect(await refusal(ack(who))).toBe('forbidden');
+    expect(await refusal(resolve(w.owner, 'upheld', 'We will send the team on Monday'))).toBe('not_acknowledged');
+    expect(await refusal(ack(w.owner))).toBe('ok');
+    expect(await refusal(ack(w.owner))).toBe('not_open');
+    expect(await refusal(resolve(w.admin, 'upheld', 'We will send the team on Monday'))).toBe('forbidden');
+    expect(await refusal(resolve(w.owner, 'maybe', 'We will send the team on Monday'))).toBe('outcome_invalid');
+    expect(await refusal(resolve(w.owner, 'upheld', 'soon'))).toBe('note_short');
+    expect(await refusal(resolve(w.owner, 'upheld', 'We will send the team on Monday'))).toBe('ok');
+    expect(await refusal(resolve(w.owner, 'settled', 'Changed my mind about this one'))).toBe('locked');
+    expect(await refusal(ack(w.owner))).toBe('locked');
+    expect(await refusal(asServer((c) => c.query("update public.complaints set resolution_note = 'rewritten after the fact' where id = $1", [id])))).toMatch(/complaint_is_locked/);
+    expect(await refusal(asServer((c) => c.query('delete from public.complaints where id = $1', [id])))).toMatch(/complaints_are_kept/);
+    expect(await refusal(call(w.owner.authId, "update public.complaints set status = 'resolved' where id = $1", [id]))).toMatch(/permission denied/); // no direct writes
+    const ev = (await events(w.lead)).filter((e) => e.event_type.startsWith('complaint.'));
+    expect(ev.map((e) => e.event_type)).toEqual(['complaint.raised', 'complaint.acknowledged', 'complaint.resolved']);
+    expect(ev[0].actor_profile_id).toBe(w.customer.profileId);
+    expect(ev[2].actor_profile_id).toBe(w.owner.profileId);
+  });
+
+  it('gives plain trust counts to staff and to the partner only', async () => {
+    const w = await world();
+    await issue(w);
+    const inst = (await ordersOf(w, w.tech))[0];
+    await call(w.customer.authId, 'select public.accept_work_order($1)', [inst.id]);
+    await call(w.tech.authId, 'select public.accept_work_order($1)', [inst.id]);
+    await call(w.tech.authId, 'select public.start_work_order($1)', [inst.id]);
+    await call(w.tech.authId, 'select public.submit_milestone_evidence($1, $2, $3::text[])', [inst.id, 'progress', ['a.jpg']]);
+    await call(w.owner.authId, 'select public.verify_milestone($1, $2)', [inst.id, 'progress']);
+    const id = await idOf(raise(w.customer, w.quoteId, inst.id, 'defect', TEXT));
+    await call(w.owner.authId, 'select public.acknowledge_complaint($1)', [id]);
+    await call(w.owner.authId, 'select public.resolve_complaint($1, $2, $3)', [id, 'upheld', 'The partner agreed to fix it']);
+    const trust = async (who: P) => (await call(who.authId, 'select public.partner_trust($1) as t', [w.tech.profileId])).rows[0].t as { verifiedMilestones: number; closedMilestones: number; complaintsRaised: number; complaintsUpheld: number };
+    expect(await trust(w.owner)).toEqual({ verifiedMilestones: 1, closedMilestones: 0, complaintsRaised: 1, complaintsUpheld: 1 });
+    expect((await trust(w.tech)).complaintsUpheld).toBe(1);
+    expect(await refusal(trust(w.customer))).toBe('forbidden');
+    expect(await refusal(trust(w.otherTech))).toBe('forbidden');
+  });
+});

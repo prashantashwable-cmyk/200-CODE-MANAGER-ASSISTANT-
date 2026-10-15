@@ -1017,6 +1017,9 @@ import type { Candidate as BookingCandidate } from '@/features/service/booking';
 import { DRIVE_SKILL } from '@/features/training/skills';
 import { isEmail, isIndianMobile, isPincode } from '@/features/validation/india';
 import { randomCode, randomToken } from '@/features/ids/clientId';
+import { ackDueAt as cpAckDueAt, acknowledgeProblem as cpAckProblem, isAckOverdue as cpOverdue, raiseProblem as cpRaiseProblem, resolveProblem as cpResolveProblem } from '@/features/complaints/complaint';
+import type { ComplaintOutcome as CpOutcome, TrustSummary as CpTrust } from '@/features/complaints/complaint';
+import type { ComplaintView as CpView, RaiseComplaintInput as CpInput } from '@/features/complaints/types';
 import { acknowledgeProblem as pjAcknowledgeProblem, handoverGateProblem as pjGateProblem, handoverState as pjHandoverState, projectProgress as pjProgress } from '@/features/projects/project';
 import type { HandoverParty as PjParty, ProjectOrder as PjOrder } from '@/features/projects/project';
 import type { ProjectView } from '@/features/projects/types';
@@ -18947,6 +18950,35 @@ const workOrders: WorkOrder[] = [];
 let woCounter = 4000;
 /** Append-only versions of the payment-milestone templates; version 1 is the starting default for the Owner to replace. */
 const woTemplateVersions: TemplateVersion[] = [{ version: 1, templates: structuredClone(WO_TEMPLATES), setByName: 'Initial default [ASSUMPTION]', reason: 'Starting values for the Owner to replace; material 90/10 is from the original brief', at: new Date(0).toISOString() }];
+/** Customer complaints; kept, never deleted. A resolved one is locked. */
+interface CpRecord { id: string; code: string; quoteId: string; workOrderId?: string; customerId: string; leadId: string; category: CpView['category']; description: string; status: CpView['status']; createdAt: string; ackDueAt: string; clientId: string; acknowledgedAt?: string; resolvedAt?: string; outcome?: CpOutcome; resolutionNote?: string; }
+const complaints: CpRecord[] = [];
+let cpCounter = 1000;
+function cmpVisibleTo(c: CpRecord, userId: string): boolean {
+  const u = byId(users, userId);
+  if (!u) return false;
+  if (isAdminRole(u.role) || c.customerId === userId) return true;
+  const w = c.workOrderId ? workOrders.find((x) => x.id === c.workOrderId) : undefined;
+  return !!w && w.partnerAccountId === userId;
+}
+function cmpView(c: CpRecord, userId: string): CpView {
+  const u = byId(users, userId);
+  const staff = !!u && isAdminRole(u.role);
+  const w = c.workOrderId ? workOrders.find((x) => x.id === c.workOrderId) : undefined;
+  return {
+    id: c.id, code: c.code, quoteId: c.quoteId, siteName: workOrders.find((x) => x.quoteId === c.quoteId)?.siteName ?? '', category: c.category, description: c.description, status: c.status,
+    createdAt: c.createdAt, ackDueAt: c.ackDueAt, overdue: cpOverdue({ status: c.status, ackDueAt: c.ackDueAt }, Date.now()),
+    ...(w ? { workOrderId: w.id, workOrderCode: w.code, ...(staff ? { partnerName: w.partnerName, partnerAccountId: w.partnerAccountId } : {}) } : {}),
+    ...(c.acknowledgedAt ? { acknowledgedAt: c.acknowledgedAt } : {}), ...(c.resolvedAt ? { resolvedAt: c.resolvedAt } : {}),
+    ...(c.outcome ? { outcome: c.outcome } : {}), ...(c.resolutionNote ? { resolutionNote: c.resolutionNote } : {}),
+    can: { acknowledge: u?.role === 'owner' && c.status === 'open', resolve: u?.role === 'owner' && c.status === 'acknowledged' },
+  };
+}
+function cmpFind(userId: string, id: string): CpRecord {
+  const c = complaints.find((x) => x.id === id);
+  if (!c || !cmpVisibleTo(c, userId)) throw new RepositoryError('not_found');
+  return c;
+}
 /** Acknowledgements of the handover record; append-only. */
 const handoverAcks: { quoteId: string; role: PjParty['role']; accountId: string; at: string }[] = [];
 const pjOrdersOf = (quoteId: string): PjOrder[] => workOrders.filter((w) => w.quoteId === quoteId).map((w) => ({ kind: w.kind, customerId: w.customerId, partnerAccountId: w.partnerAccountId, priceInr: w.priceInr, milestones: w.milestones.map((m) => ({ gate: m.gate, amountInr: m.amountInr, status: m.status, ...(m.qcInspectorId ? { qcInspectorId: m.qcInspectorId } : {}) })) }));
@@ -28861,6 +28893,51 @@ export const memoryRepository: Repository = {
     }
     if (pjHandoverState(orders, pjAcksOf(quoteId)).complete) eventLog.append(userId, { type: 'installation.completed', subject: { kind: 'lead', id: first.leadId }, capturedAt: now, payload: { quoteId, record: 'handover_and_completion', statutoryNoc: false } });
     return pjView(quoteId, userId)!;
+  }),
+  listComplaints: (userId) => simulateRead((): CpView[] => {
+    if (!byId(users, userId)) throw new RepositoryError('not_found');
+    return complaints.filter((c) => cmpVisibleTo(c, userId)).map((c) => cmpView(c, userId)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }),
+  raiseComplaint: (userId, input: CpInput) => simulateWrite((): CpView => {
+    const mine = workOrders.filter((w) => w.quoteId === input.quoteId && w.customerId === userId);
+    if (mine.length === 0) throw new RepositoryError('not_found'); // only the project's customer
+    const bad = cpRaiseProblem({ category: input.category, text: input.text });
+    if (bad) throw new RepositoryError(bad);
+    if (input.workOrderId && !workOrders.some((w) => w.id === input.workOrderId && w.quoteId === input.quoteId)) throw new RepositoryError('not_found');
+    const again = complaints.find((c) => c.customerId === userId && c.clientId === input.clientId);
+    if (again) return cmpView(again, userId); // a retry is the same complaint
+    cpCounter += 1;
+    const now = new Date().toISOString();
+    const c: CpRecord = { id: `cp-${cpCounter}`, code: `AIEC-CP-${cpCounter}`, quoteId: input.quoteId, ...(input.workOrderId ? { workOrderId: input.workOrderId } : {}), customerId: userId, leadId: mine[0].leadId, category: input.category, description: input.text.trim(), status: 'open', createdAt: now, ackDueAt: cpAckDueAt(input.category, now), clientId: input.clientId };
+    complaints.push(c);
+    eventLog.append(userId, { type: 'complaint.raised', subject: { kind: 'lead', id: c.leadId }, capturedAt: now, payload: { complaintId: c.id, quoteId: c.quoteId, workOrderId: c.workOrderId ?? null, category: c.category } });
+    return cmpView(c, userId);
+  }),
+  acknowledgeComplaint: (userId, id) => simulateWrite((): CpView => {
+    const c = cmpFind(userId, id);
+    if (byId(users, userId)?.role !== 'owner') throw new RepositoryError('forbidden');
+    const bad = cpAckProblem(c);
+    if (bad) throw new RepositoryError(bad);
+    c.status = 'acknowledged'; c.acknowledgedAt = new Date().toISOString();
+    eventLog.append(userId, { type: 'complaint.acknowledged', subject: { kind: 'lead', id: c.leadId }, capturedAt: c.acknowledgedAt, payload: { complaintId: c.id, overdue: Date.parse(c.acknowledgedAt) > Date.parse(c.ackDueAt) } });
+    return cmpView(c, userId);
+  }),
+  resolveComplaint: (userId, id, outcome, note) => simulateWrite((): CpView => {
+    const c = cmpFind(userId, id);
+    if (byId(users, userId)?.role !== 'owner') throw new RepositoryError('forbidden');
+    const bad = cpResolveProblem(c, { outcome, note });
+    if (bad) throw new RepositoryError(bad);
+    c.status = 'resolved'; c.outcome = outcome; c.resolutionNote = note.trim(); c.resolvedAt = new Date().toISOString();
+    eventLog.append(userId, { type: 'complaint.resolved', subject: { kind: 'lead', id: c.leadId }, capturedAt: c.resolvedAt, payload: { complaintId: c.id, outcome } });
+    return cmpView(c, userId);
+  }),
+  getPartnerTrust: (userId, accountId) => simulateRead((): CpTrust => {
+    const u = byId(users, userId);
+    if (!u || !(isAdminRole(u.role) || userId === accountId)) throw new RepositoryError('forbidden');
+    const theirs = workOrders.filter((w) => w.partnerAccountId === accountId);
+    const ms = theirs.flatMap((w) => w.milestones);
+    const about = complaints.filter((c) => c.workOrderId && theirs.some((w) => w.id === c.workOrderId));
+    return { verifiedMilestones: ms.filter((m) => ['verified', 'payment_recorded', 'closed'].includes(m.status)).length, closedMilestones: ms.filter((m) => m.status === 'closed').length, complaintsRaised: about.length, complaintsUpheld: about.filter((c) => c.outcome === 'upheld').length };
   }),
   getProviderStatus: (userId) => simulateRead((): ProviderStatus[] => {
     if (!byId(users, userId)) throw new RepositoryError('not_found');

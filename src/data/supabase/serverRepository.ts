@@ -14,6 +14,8 @@ import type { CardRow, RecordRow, StatusRow } from './decisionMapping';
 import { captureErrorCode, captureResultOf } from './leadMapping';
 import type { CaptureRpc } from './leadMapping';
 import { customerViewOf, errorCode, feeFromRow, quoteFromRow } from './quoteMapping';
+import { complaintFromRow, trustFromJson } from './complaintMapping';
+import type { ComplaintRow, OrderBrief } from './complaintMapping';
 import { projectFromJson } from './projectMapping';
 import type { ProjectJson } from './projectMapping';
 import { templateVersionFromRow, workOrderErrorCode, workOrderFromRows } from './workOrderMapping';
@@ -102,6 +104,17 @@ export function withServer(base: Repository): Repository {
       out.push(projectFromJson(data as ProjectJson, orders, codeOf.get(id), userId));
     }
     return out;
+  };
+  const loadComplaints = async (userId: string, onlyId?: string) => {
+    const base = supabase().from('complaints').select('*').order('created_at', { ascending: false });
+    const { data, error } = await (onlyId ? base.eq('id', onlyId) : base).returns<ComplaintRow[]>();
+    if (error) throw new RepositoryError(workOrderErrorCode(error.message));
+    const rows = data ?? [];
+    const ids = [...new Set(rows.map((r) => r.work_order_id).filter((x): x is string => !!x))];
+    // Names and codes come from the orders the caller may read; a refusal just leaves them out.
+    const orders = ids.length ? await supabase().from('work_orders').select('id, code, site_name, partner_name, partner_profile_id, quote_id').in('id', ids).returns<OrderBrief[]>() : { data: [] as OrderBrief[] };
+    const role = await roleOf(userId);
+    return rows.map((r) => complaintFromRow(r, (orders.data ?? []).find((o) => o.id === r.work_order_id), { role }, Date.now()));
   };
   const repo: Repository = {
     ...base,
@@ -262,6 +275,33 @@ export function withServer(base: Repository): Repository {
       const p = (await loadProjects(userId)).find((x) => x.quoteId === quoteId);
       if (!p) throw new RepositoryError('not_found');
       return p;
+    },
+    listComplaints: (userId) => loadComplaints(userId),
+    raiseComplaint: async (userId, input) => {
+      const { data, error } = await supabase().rpc('raise_complaint', { p_quote: input.quoteId, p_wo: input.workOrderId ?? null, p_category: input.category, p_text: input.text, p_client: input.clientId });
+      if (error) throw new RepositoryError(workOrderErrorCode(error.message));
+      const [v] = await loadComplaints(userId, data as string);
+      if (!v) throw new RepositoryError('not_found');
+      return v;
+    },
+    acknowledgeComplaint: async (userId, id) => {
+      const { error } = await supabase().rpc('acknowledge_complaint', { p_id: id });
+      if (error) throw new RepositoryError(workOrderErrorCode(error.message));
+      const [v] = await loadComplaints(userId, id);
+      if (!v) throw new RepositoryError('not_found');
+      return v;
+    },
+    resolveComplaint: async (userId, id, outcome, note) => {
+      const { error } = await supabase().rpc('resolve_complaint', { p_id: id, p_outcome: outcome, p_note: note });
+      if (error) throw new RepositoryError(workOrderErrorCode(error.message));
+      const [v] = await loadComplaints(userId, id);
+      if (!v) throw new RepositoryError('not_found');
+      return v;
+    },
+    getPartnerTrust: async (_userId, accountId) => {
+      const { data, error } = await supabase().rpc('partner_trust', { p_profile: accountId });
+      if (error) throw new RepositoryError(workOrderErrorCode(error.message));
+      return trustFromJson(data as Parameters<typeof trustFromJson>[0]);
     },
     getMilestoneTemplates: async (userId) => {
       const role = await roleOf(userId);
