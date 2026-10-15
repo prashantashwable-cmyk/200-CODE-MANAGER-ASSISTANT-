@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "ALL INDIA ELEVATORS COMPANY (AIEC) — mobile-first, multi-role elevator business platform",
+  "description": "ALL INDIA ELEVATORS COMPANY (AIEC) \u2014 mobile-first, multi-role elevator business platform",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -15,7 +15,8 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:server": "playwright test --config playwright.server.config.ts",
-    "test:db": "vitest run --config vitest.db.config.ts"
+    "test:db": "vitest run --config vitest.db.config.ts",
+    "budget": "node scripts/bundle-budget.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.7",
