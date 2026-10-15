@@ -51,9 +51,10 @@ function watchErrors(page: Page): string[] {
 
 
 const SCREENS = ['/work-orders', '/projects', '/complaints'];
-const PEOPLE: { who: string; phone: string; second?: boolean }[] = [
-  { who: 'owner', phone: '9822011009', second: true },
-  { who: 'customer', phone: '9822044003' },
+// The earlier facilitator-model screens (201-207) get the same checks, each for the roles that can open it.
+const PEOPLE: { who: string; phone: string; second?: boolean; more?: string[] }[] = [
+  { who: 'owner', phone: '9822011009', second: true, more: ['/owner', '/owner/decisions', '/log', '/map', '/quotes'] },
+  { who: 'customer', phone: '9822044003', more: ['/my-quote'] },
   { who: 'supplier', phone: '9822055001' },
 ];
 
@@ -71,7 +72,7 @@ async function audit(page: Page) {
     return {
       overflow: document.documentElement.scrollWidth - window.innerWidth,
       unnamed: controls.filter((c) => nameOf(c) === '').map((c) => c.outerHTML.slice(0, 120)),
-      small: controls.filter((c) => { const r = (c as HTMLElement).getBoundingClientRect(); return (c.tagName === 'BUTTON' || c.tagName === 'SELECT' || (c.tagName === 'INPUT' && (c as HTMLInputElement).type !== 'checkbox' && (c as HTMLInputElement).type !== 'radio')) && r.height < 36; }).map((c) => `${c.tagName} ${Math.round((c as HTMLElement).getBoundingClientRect().height)}px ${nameOf(c).slice(0, 30)}`),
+      small: controls.filter((c) => { const box = c.getAttribute('role') === 'checkbox' ? (c.closest('label') ?? c) : c; const r = (box as HTMLElement).getBoundingClientRect(); return (c.tagName === 'BUTTON' || c.tagName === 'SELECT' || (c.tagName === 'INPUT' && (c as HTMLInputElement).type !== 'checkbox' && (c as HTMLInputElement).type !== 'radio')) && r.height < 36; }).map((c) => `${c.tagName} ${Math.round((c as HTMLElement).getBoundingClientRect().height)}px ${nameOf(c).slice(0, 30)}`),
       headings: document.querySelectorAll('h1').length, headingTexts: Array.from(document.querySelectorAll('h1')).map((h) => (h.textContent || '').slice(0, 40)),
     };
   });
@@ -85,7 +86,7 @@ for (const p of PEOPLE) {
     await page.waitForTimeout(500);
     for (const size of [{ width: 390, height: 844 }, { width: 820, height: 1180 }]) {
       await page.setViewportSize(size);
-      for (const path of SCREENS) {
+      for (const path of [...SCREENS, ...(p.more ?? [])]) {
         await go(page, path);
         await page.waitForTimeout(400);
         const r = await audit(page);

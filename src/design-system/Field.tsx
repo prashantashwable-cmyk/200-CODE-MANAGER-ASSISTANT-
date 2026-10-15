@@ -126,7 +126,7 @@ interface CheckboxProps {
 
 export function Checkbox({ checked, onChange, label, disabled }: CheckboxProps) {
   return (
-    <label className="row-top gap-3" style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}>
+    <label className="row-top gap-3" style={{ cursor: disabled ? 'not-allowed' : 'pointer', minHeight: 44, paddingBlock: 10, boxSizing: 'border-box' }}>
       <button
         type="button"
         role="checkbox"
