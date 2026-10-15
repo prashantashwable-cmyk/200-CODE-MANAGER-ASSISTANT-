@@ -137,3 +137,26 @@ describe('who can do what on an order', () => {
     expect(permissionsOf({ ...base, side: 'staff', role: 'owner' }).verify).toBe(false); // not started yet
   });
 });
+
+import { mayVerify, qcAssignProblem } from '@/features/workorders/workOrder';
+describe('QC inspector rules', () => {
+  const ok = { inspectorId: 'i', partnerAccountId: 'p', inspectorEligible: true };
+  it('names an inspector only before verification, never the partner, only an eligible technician', () => {
+    expect(qcAssignProblem({ status: 'waiting' }, ok)).toBeNull();
+    expect(qcAssignProblem({ status: 'evidence_submitted' }, ok)).toBeNull();
+    expect(qcAssignProblem({ status: 'verified' }, ok)).toBe('invalid_state');
+    expect(qcAssignProblem({ status: 'payment_recorded' }, ok)).toBe('locked');
+    expect(qcAssignProblem({ status: 'waiting' }, { ...ok, inspectorId: '' })).toBe('qc_inspector_required');
+    expect(qcAssignProblem({ status: 'waiting' }, { ...ok, inspectorId: 'p' })).toBe('inspector_is_partner');
+    expect(qcAssignProblem({ status: 'waiting' }, { ...ok, inspectorEligible: false })).toBe('inspector_not_eligible');
+  });
+  it('lets the Owner or the named inspector verify, never the partner, and nobody when the order is not open', () => {
+    const base = { role: 'technician', callerId: 'i', partnerAccountId: 'p', inspectorId: 'i', orderOpen: true };
+    expect(mayVerify(base)).toBe(true);
+    expect(mayVerify({ ...base, role: 'owner', callerId: 'o', inspectorId: undefined })).toBe(true);
+    expect(mayVerify({ ...base, callerId: 'x' })).toBe(false);
+    expect(mayVerify({ ...base, role: 'admin', callerId: 'a', inspectorId: undefined })).toBe(false);
+    expect(mayVerify({ ...base, callerId: 'p', inspectorId: 'p' })).toBe(false);
+    expect(mayVerify({ ...base, orderOpen: false })).toBe(false);
+  });
+});

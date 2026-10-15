@@ -70,7 +70,7 @@ export function evidenceNamesProblem(names: string[]): EvidenceProblem | null {
   return clean.some((n) => n.length > MAX_EVIDENCE_NAME) ? 'evidence_name_long' : null;
 }
 
-export interface Milestone { id: string; label: string; gate: MilestoneGate; pct: number; amountInr: number; status: MilestoneStatus; evidence: string[]; }
+export interface Milestone { id: string; label: string; gate: MilestoneGate; pct: number; amountInr: number; status: MilestoneStatus; evidence: string[]; /** The technician the Owner named to check this milestone (QC). */ qcInspectorId?: string; qcInspectorName?: string; }
 
 export function milestonesOf(priceInr: number, t: MilestoneTemplate[]): Milestone[] {
   const amounts = amountsFor(priceInr, t);
@@ -111,6 +111,19 @@ export function verifyProblem(m: Milestone, o: { verifierId: string; submitterId
   return null;
 }
 
+export type QcAssignProblem = 'locked' | 'invalid_state' | 'qc_inspector_required' | 'inspector_is_partner' | 'inspector_not_eligible';
+/** The Owner may name an inspector until a milestone is verified. The inspector must be an active technician who is not the partner's own account. */
+export function qcAssignProblem(m: Pick<Milestone, 'status'>, o: { inspectorId: string; partnerAccountId: string; inspectorEligible: boolean }): QcAssignProblem | null {
+  if (m.status === 'closed' || m.status === 'payment_recorded') return 'locked';
+  if (m.status === 'verified') return 'invalid_state';
+  if (!o.inspectorId) return 'qc_inspector_required';
+  if (o.inspectorId === o.partnerAccountId) return 'inspector_is_partner';
+  return o.inspectorEligible ? null : 'inspector_not_eligible';
+}
+/** Who may verify one milestone: the Owner, or the technician the Owner named for it. Never the partner. */
+export const mayVerify = (o: { role: string | undefined; callerId: string; partnerAccountId: string; inspectorId: string | undefined; orderOpen: boolean }): boolean =>
+  o.orderOpen && o.callerId !== o.partnerAccountId && (o.role === 'owner' || (!!o.inspectorId && o.inspectorId === o.callerId));
+
 export const REFERENCE_MIN = 4;
 export const REFERENCE_MAX = 60;
 /** The payment reference the customer types (UTR, cheque number…): present and bounded. */
@@ -140,7 +153,7 @@ export function sideOf(callerId: string | undefined, o: { customerId: string; pa
   return callerId === o.customerId ? 'customer' : callerId === o.partnerAccountId ? 'partner' : 'staff';
 }
 
-export interface Permissions { accept: boolean; start: boolean; submitEvidence: boolean; verify: boolean; recordPayment: boolean; }
+export interface Permissions { accept: boolean; start: boolean; submitEvidence: boolean; verify: boolean; assignQc: boolean; recordPayment: boolean; }
 /** What each person may do next, the one definition the in-memory repository and the database mapping both use. The server still enforces every one. */
 export function permissionsOf(o: { side: Side; role: string | undefined; status: WorkOrderStatus; customerAcceptedAt?: string; partnerAcceptedAt?: string; startBlock: StartProblem | null }): Permissions {
   const open = o.status === 'in_progress';
@@ -148,7 +161,8 @@ export function permissionsOf(o: { side: Side; role: string | undefined; status:
     accept: o.status === 'issued' && ((o.side === 'customer' && !o.customerAcceptedAt) || (o.side === 'partner' && !o.partnerAcceptedAt)),
     start: o.side === 'partner' && o.startBlock === null,
     submitEvidence: o.side === 'partner' && open,
-    verify: open && o.role === 'owner', // verification outcomes are the Owner's (master prompt P1); a QC inspector arrives with QC tasks
+    verify: open && o.role === 'owner', // verification outcomes are the Owner's (master prompt P1); a named QC inspector may verify only their own milestone (mayVerify)
+    assignQc: open && o.role === 'owner',
     recordPayment: o.side === 'customer' && open,
   };
 }

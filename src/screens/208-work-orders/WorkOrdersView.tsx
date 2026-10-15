@@ -4,7 +4,7 @@ import { Badge, Button, Card, EmptyState, ErrorState, Field, Input, ListRow, Loa
 import { useData } from '@/data/DataProvider';
 import { useSession } from '@/session/SessionProvider';
 import type { FacilitatorQuote } from '@/features/quotes/types';
-import { skipsWorkOrder } from '@/features/workorders/workOrder';
+import { mayVerify, skipsWorkOrder } from '@/features/workorders/workOrder';
 import type { PartnerAccount, ProviderStatus, WorkOrderView } from '@/features/workorders/types';
 
 const MILESTONE_TONE = { waiting: 'neutral', evidence_submitted: 'warning', verified: 'accent', payment_recorded: 'success', closed: 'success' } as const;
@@ -109,7 +109,19 @@ export function WorkOrdersScreen() {
                           <Button size="sm" disabled={busy} onClick={() => void run(() => repository.submitMilestoneEvidence(uid, w.id, m.id, (text[k] ?? '').split(',')), 'workOrders.evidenceOk')}>{t('workOrders.submit')}</Button>
                         </div>
                       )}
-                      {m.status === 'evidence_submitted' && w.can.verify && <Button size="sm" disabled={busy} onClick={() => void run(() => repository.verifyMilestone(uid, w.id, m.id), 'workOrders.verifiedOk')}>{t('workOrders.verify')}</Button>}
+                      {w.status === 'in_progress' && m.qcInspectorId && <p className="text-sm text-muted" data-testid={`wo-qc-${m.id}`}>{m.qcInspectorName ? t('workOrders.qcCheckedBy', { name: m.qcInspectorName }) : t('workOrders.qcCheckedByNamed')}</p>}
+                      {w.can.assignQc && m.status !== 'verified' && m.status !== 'payment_recorded' && m.status !== 'closed' && (
+                        <div className="row gap-2">
+                          <Field label={t('workOrders.qcPick')}>{({ id }) => (
+                            <Select id={id} value={picks[`qc:${k}`] ?? ''} onChange={(e) => setPicks({ ...picks, [`qc:${k}`]: e.target.value })}>
+                              <option value="">{t('workOrders.qcChoose')}</option>
+                              {accounts.filter((a) => a.role === 'technician' && a.id !== w.partnerAccountId).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                            </Select>
+                          )}</Field>
+                          <Button size="sm" disabled={busy} onClick={() => void run(() => repository.assignMilestoneInspector(uid, w.id, m.id, picks[`qc:${k}`] ?? ''), 'workOrders.qcAssignedOk')}>{t('workOrders.qcAssign')}</Button>
+                        </div>
+                      )}
+                      {m.status === 'evidence_submitted' && mayVerify({ role: user?.role, callerId: uid, partnerAccountId: w.partnerAccountId, inspectorId: m.qcInspectorId, orderOpen: w.status === 'in_progress' }) && <Button size="sm" disabled={busy} onClick={() => void run(() => repository.verifyMilestone(uid, w.id, m.id), 'workOrders.verifiedOk')}>{t('workOrders.verify')}</Button>}
                       {m.status === 'verified' && w.can.recordPayment && (
                         <div className="row gap-2">
                           <Field label={t('workOrders.reference')}>{({ id }) => <Input id={id} value={text[k] ?? ''} onChange={(e) => setText({ ...text, [k]: e.target.value })} />}</Field>

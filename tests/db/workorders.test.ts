@@ -275,3 +275,76 @@ describe('the database and the app split a price identically', () => {
     }
   });
 });
+
+describe('QC inspectors for a milestone', () => {
+  async function running() {
+    const w = await world();
+    await issue(w);
+    const inst = (await ordersOf(w, w.tech))[0];
+    await call(w.customer.authId, 'select public.accept_work_order($1)', [inst.id]);
+    await call(w.tech.authId, 'select public.accept_work_order($1)', [inst.id]);
+    await call(w.tech.authId, 'select public.start_work_order($1)', [inst.id]);
+    return { w, inst };
+  }
+  const assign = (who: P, wo: string, ms: string, inspector: string | null) => call(who.authId, 'select public.assign_milestone_inspector($1, $2, $3)', [wo, ms, inspector]);
+  const verify = (who: P, wo: string, ms: string) => call(who.authId, 'select public.verify_milestone($1, $2)', [wo, ms]);
+  const submit = (who: P, wo: string, ms: string) => call(who.authId, 'select public.submit_milestone_evidence($1, $2, $3::text[])', [wo, ms, ['a.jpg']]);
+
+  it('only the Owner names an inspector, who must be an eligible technician and not the partner', async () => {
+    const { w, inst } = await running();
+    const insp = w.otherTech;
+    for (const who of [w.admin, w.customer, w.tech, w.otherTech]) expect(await refusal(assign(who, inst.id, 'progress', insp.profileId))).toBe('forbidden');
+    expect(await refusal(assign(w.owner, inst.id, 'progress', null))).toBe('qc_inspector_required');
+    expect(await refusal(assign(w.owner, inst.id, 'progress', w.tech.profileId))).toBe('inspector_is_partner');
+    expect(await refusal(assign(w.owner, inst.id, 'progress', w.customer.profileId))).toBe('inspector_not_eligible');
+    expect(await refusal(assign(w.owner, inst.id, 'progress', w.supplier.profileId))).toBe('inspector_not_eligible');
+    const demoTech = await person('technician', { demo: true });
+    expect(await refusal(assign(w.owner, inst.id, 'progress', demoTech.profileId))).toBe('inspector_not_eligible'); // demo and real never mix
+    expect(await refusal(assign(w.owner, inst.id, 'nope', insp.profileId))).toBe('not_found');
+    expect(await refusal(call(w.owner.authId, 'insert into public.work_order_qc_assignments (work_order_id, milestone_id, inspector_id, assigned_by) values ($1, $2, $3, $3)', [inst.id, 'progress', insp.profileId]))).toMatch(/permission denied/); // no direct writes
+    expect(await refusal(assign(w.owner, inst.id, 'progress', insp.profileId))).toBe('ok');
+    expect(await refusal(assign(w.owner, inst.id, 'progress', w.otherTech.profileId))).toBe('ok'); // renaming before verification is allowed
+  });
+
+  it('the named inspector sees the order and verifies only that milestone; nobody else can', async () => {
+    const { w, inst } = await running();
+    const ms = (await milestones(w.owner.authId, inst.id)).map((m) => m.milestone_id);
+    const [a, b] = ms;
+    expect(await ordersOf(w, w.otherTech)).toHaveLength(0);
+    await assign(w.owner, inst.id, a, w.otherTech.profileId);
+    expect((await ordersOf(w, w.otherTech)).map((o) => o.id)).toEqual([inst.id]);
+    expect(await milestones(w.otherTech.authId, inst.id)).toHaveLength(ms.length);
+    expect(await ordersOf(w, w.supplier)).toHaveLength(1); // unrelated people still see only their own order
+    const stranger = await person('technician');
+    expect(await milestones(stranger.authId, inst.id)).toHaveLength(0);
+    await submit(w.tech, inst.id, a); await submit(w.tech, inst.id, b);
+    expect(await refusal(verify(stranger, inst.id, a))).toBe('not_found');
+    expect(await refusal(verify(w.tech, inst.id, a))).toBe('forbidden');
+    expect(await refusal(verify(w.customer, inst.id, a))).toBe('forbidden');
+    expect(await refusal(verify(w.admin, inst.id, a))).toBe('forbidden');
+    expect(await refusal(verify(w.otherTech, inst.id, b))).toBe('forbidden'); // named for the other milestone, not this one
+    expect(await refusal(call(w.otherTech.authId, 'select public.record_milestone_payment($1, $2, $3)', [inst.id, a, 'UTR12345']))).toMatch(/forbidden|not_found/); // an inspector never records a payment
+    expect(await refusal(verify(w.otherTech, inst.id, a))).toBe('ok');
+    expect((await milestones(w.owner.authId, inst.id)).find((m) => m.milestone_id === a)!.status).toBe('verified');
+    expect(await refusal(assign(w.owner, inst.id, a, w.otherTech.profileId))).toBe('invalid_state'); // too late once verified
+    expect(await refusal(verify(w.owner, inst.id, b))).toBe('ok'); // the Owner can still verify any milestone
+    const log = await events(w.lead);
+    const qc = log.find((e) => e.event_type === 'qc.assigned')!;
+    expect(qc.actor_profile_id).toBe(w.owner.profileId);
+    expect(qc.payload).toMatchObject({ workOrderId: inst.id, milestoneId: a, inspectorId: w.otherTech.profileId });
+    const v = log.filter((e) => e.event_type === 'milestone.verified');
+    expect(v[0].actor_profile_id).toBe(w.otherTech.profileId);
+  });
+
+  it('assignments are readable by the parties and the Owner, not by strangers', async () => {
+    const { w, inst } = await running();
+    await assign(w.owner, inst.id, 'progress', w.otherTech.profileId);
+    const read = (who: P) => as(who.authId, async (c) => (await c.query('select inspector_id from public.work_order_qc_assignments where work_order_id = $1', [inst.id])).rows.length);
+    expect(await read(w.owner)).toBe(1);
+    expect(await read(w.customer)).toBe(1);
+    expect(await read(w.tech)).toBe(1);
+    expect(await read(w.otherTech)).toBe(1);
+    expect(await read(w.otherCustomer)).toBe(0);
+    expect(await read(w.supplier)).toBe(0);
+  });
+});

@@ -29,7 +29,7 @@ Status uses only: **Done** (persisted as designed, tested), **Partial**, **Plann
 | P7 | Other new roles (Sales, QC, NBFC, Logistics, Mentor, Applicant) | Not started | |
 | P8 | Map-first home, fuzzing, presence | Not started | |
 | P0.5 | Facilitator quote: partner prices + disclosed fee, fee band, human floors, Owner-set fee | Partial | `features/quotes/`, screens 206/207, migration `20261014000001` (local Postgres verified); Mode P switch, alternatives UI and a booked P&L are not built |
-| P0.3, A6 steps 7–14 | One work order per customer–partner part, accepted by both sides | Partial | `features/workorders/`, screen 208, migration `20261015000001` (local Postgres verified); acceptance is in-app only (no signing provider); Contract Pack not generated |
+| P0.3, A6 steps 7–14 | One work order per customer–partner part, accepted by both sides | Partial | `features/workorders/`, screen 208, migration `20261015000001` (local Postgres verified); acceptance is in-app only (no signing provider); Contract Pack not generated; Owner can name a QC inspector per milestone (migration `20261015000002`) |
 | P0.7 | Platform records customer-to-partner milestone payments, never moves them; verification gates the next step | Partial | evidence → Owner verification → payment recorded, enforced in SQL; counter-party confirmation, token collection and payment provider not built |
 | P0.9 | Registry gates (licence, insurance, expiry) block offers | Partial | partner account must be active; no expiry registry (always passes, listed in KNOWN_GAPS) |
 | P0 (rest) | Commercial Model comparison, liability review, leakage control, regulatory review | Not started | |

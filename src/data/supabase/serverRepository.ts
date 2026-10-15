@@ -15,7 +15,7 @@ import { captureErrorCode, captureResultOf } from './leadMapping';
 import type { CaptureRpc } from './leadMapping';
 import { customerViewOf, errorCode, feeFromRow, quoteFromRow } from './quoteMapping';
 import { workOrderErrorCode, workOrderFromRows } from './workOrderMapping';
-import type { MilestoneRow, WorkOrderRow } from './workOrderMapping';
+import type { MilestoneRow, QcAssignmentRow, WorkOrderRow } from './workOrderMapping';
 import type { PartnerAccount } from '@/features/workorders/types';
 import type { AcceptanceRow, FeeRow, QuoteRow } from './quoteMapping';
 
@@ -71,7 +71,12 @@ export function withServer(base: Repository): Repository {
     const ms = await supabase().from('work_order_milestones').select('*').in('work_order_id', rows.map((r) => r.id)).order('position').returns<MilestoneRow[]>();
     if (ms.error) throw new RepositoryError(workOrderErrorCode(ms.error.message));
     const role = await roleOf(userId);
-    return rows.map((r) => workOrderFromRows(r, ms.data ?? [], { id: userId, role }));
+    const qc = await supabase().from('work_order_qc_assignments').select('work_order_id, milestone_id, inspector_id').in('work_order_id', rows.map((r) => r.id)).returns<QcAssignmentRow[]>();
+    const inspectors = [...new Set((qc.data ?? []).map((a) => a.inspector_id))];
+    // Names are a courtesy: the profile rules decide who may read them, and a refusal just leaves the name out.
+    const named = inspectors.length ? await supabase().from('profiles').select('id, name').in('id', inspectors).returns<{ id: string; name: string }[]>() : { data: [] as { id: string; name: string }[] };
+    const names = Object.fromEntries((named.data ?? []).map((p) => [p.id, p.name]));
+    return rows.map((r) => workOrderFromRows(r, ms.data ?? [], { id: userId, role }, qc.data ?? [], names));
   };
   const actOnOrder = async (userId: string, fn: string, args: Record<string, unknown>, id: string) => {
     const { error } = await supabase().rpc(fn, args);
@@ -227,6 +232,7 @@ export function withServer(base: Repository): Repository {
     acceptWorkOrder: (userId, id) => actOnOrder(userId, 'accept_work_order', { p_wo: id }, id),
     startWorkOrder: (userId, id) => actOnOrder(userId, 'start_work_order', { p_wo: id }, id),
     submitMilestoneEvidence: (userId, id, milestoneId, names) => actOnOrder(userId, 'submit_milestone_evidence', { p_wo: id, p_ms: milestoneId, p_evidence: names }, id),
+    assignMilestoneInspector: (userId, id, milestoneId, inspectorId) => actOnOrder(userId, 'assign_milestone_inspector', { p_wo: id, p_ms: milestoneId, p_inspector: inspectorId }, id),
     verifyMilestone: (userId, id, milestoneId) => actOnOrder(userId, 'verify_milestone', { p_wo: id, p_ms: milestoneId }, id),
     recordMilestonePayment: (userId, id, milestoneId, reference) => actOnOrder(userId, 'record_milestone_payment', { p_wo: id, p_ms: milestoneId, p_reference: reference }, id),
 

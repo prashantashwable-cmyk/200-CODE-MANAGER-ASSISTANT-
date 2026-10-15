@@ -37,6 +37,21 @@ describe('rows become the same view the in-memory repository gives', () => {
   });
 });
 
+describe('QC inspector assignments', () => {
+  it('attach to the right milestone, with a name only when the caller was allowed to read it', () => {
+    const qc = [{ work_order_id: 'w1', milestone_id: 'handover', inspector_id: 'insp' }, { work_order_id: 'other', milestone_id: 'progress', inspector_id: 'zzz' }];
+    const v = workOrderFromRows(row(), ms(), { id: 'owner', role: 'owner' }, qc, { insp: 'Anand' });
+    expect(v.milestones[0].qcInspectorId).toBeUndefined();
+    expect(v.milestones[1]).toMatchObject({ qcInspectorId: 'insp', qcInspectorName: 'Anand' });
+    const anon = workOrderFromRows(row(), ms(), { id: 'cust', role: 'customer' }, qc, {});
+    expect(anon.milestones[1].qcInspectorId).toBe('insp');
+    expect(anon.milestones[1].qcInspectorName).toBeUndefined();
+  });
+  it('maps the new refusals', () => {
+    for (const c of ['qc_inspector_required', 'inspector_is_partner', 'inspector_not_eligible']) expect(workOrderErrorCode(`ERROR: ${c}`)).toBe(c);
+  });
+});
+
 describe('database errors become the codes the screens know', () => {
   it('maps the short codes, the locked milestone and the permission failures', () => {
     expect(workOrderErrorCode('partner_account_required')).toBe('partner_account_required');

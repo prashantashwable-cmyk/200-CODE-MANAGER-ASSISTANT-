@@ -10189,6 +10189,8 @@ export interface Repository {
   startWorkOrder(userId: string, workOrderId: string): Promise<WorkOrderView>;
   submitMilestoneEvidence(userId: string, workOrderId: string, milestoneId: string, evidenceNames: string[]): Promise<WorkOrderView>;
   verifyMilestone(userId: string, workOrderId: string, milestoneId: string): Promise<WorkOrderView>;
+  /** Owner only: name the technician who checks this milestone. The platform never picks one. */
+  assignMilestoneInspector(userId: string, workOrderId: string, milestoneId: string, inspectorId: string): Promise<WorkOrderView>;
   recordMilestonePayment(userId: string, workOrderId: string, milestoneId: string, reference: string): Promise<WorkOrderView>;
   getProviderStatus(userId: string): Promise<ProviderStatus[]>;
   /* 207 — the customer's own quote: accept component by component */

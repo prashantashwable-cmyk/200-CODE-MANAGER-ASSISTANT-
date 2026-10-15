@@ -104,6 +104,33 @@ describe('work orders from an accepted quote', () => {
     expect(await refusal(repo.recordMilestonePayment(CUST, w.id, m.id, 'UTR99999'))).toBe('locked');
   });
 
+  it('the Owner can name a technician to check one milestone; only that technician (or the Owner) can verify it', async () => {
+    const w = (await repo.listWorkOrders(TECH))[0];
+    const m = w.milestones[1];
+    await repo.submitMilestoneEvidence(TECH, w.id, m.id, ['handover.jpg']);
+    expect(await refusal(repo.verifyMilestone(OTHER_TECH, w.id, m.id))).toBe('not_found'); // not named: cannot even see the order
+    for (const who of [ADMIN, CUST, TECH, OTHER_TECH]) expect(await refusal(repo.assignMilestoneInspector(who, w.id, m.id, OTHER_TECH))).toMatch(/forbidden|not_found/); // only the Owner names an inspector
+    expect(await refusal(repo.assignMilestoneInspector(OWNER, w.id, m.id, ''))).toBe('qc_inspector_required');
+    expect(await refusal(repo.assignMilestoneInspector(OWNER, w.id, m.id, TECH))).toBe('inspector_is_partner');
+    expect(await refusal(repo.assignMilestoneInspector(OWNER, w.id, m.id, CUST))).toBe('inspector_not_eligible');
+    expect(await refusal(repo.assignMilestoneInspector(OWNER, w.id, m.id, 'nobody'))).toBe('inspector_not_eligible');
+    const named = await repo.assignMilestoneInspector(OWNER, w.id, m.id, OTHER_TECH);
+    expect(named.milestones[1].qcInspectorId).toBe(OTHER_TECH);
+    const theirs = await repo.listWorkOrders(OTHER_TECH);
+    expect(theirs).toHaveLength(1); // now able to see the order they were asked to check
+    expect(theirs[0].side).toBe('staff');
+    expect(await refusal(repo.submitMilestoneEvidence(OTHER_TECH, w.id, m.id, ['x.jpg']))).toBe('forbidden');
+    expect(await refusal(repo.recordMilestonePayment(OTHER_TECH, w.id, m.id, 'UTR12345'))).toBe('forbidden');
+    const first = w.milestones[0];
+    expect(await refusal(repo.verifyMilestone(OTHER_TECH, w.id, first.id))).toBe('forbidden'); // named for one milestone only
+    const done = await repo.verifyMilestone(OTHER_TECH, w.id, m.id);
+    expect(done.milestones[1].status).toBe('verified');
+    expect(await refusal(repo.assignMilestoneInspector(OWNER, w.id, m.id, OTHER_TECH))).toBe('invalid_state'); // too late once verified
+    const log = await repo.listEvents(OWNER, {});
+    expect(log.some((e) => e.type === 'qc.assigned')).toBe(true);
+    await repo.recordMilestonePayment(CUST, w.id, m.id, 'UTR55555');
+  });
+
   it('emits the events and says which providers are not connected', async () => {
     const log = await repo.listEvents(OWNER, {});
     const types = new Set(log.map((e) => e.type));
