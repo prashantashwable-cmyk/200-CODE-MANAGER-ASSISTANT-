@@ -4,10 +4,15 @@ import { Badge, Button, Card, EmptyState, ErrorState, Field, Input, ListRow, Loa
 import { useData } from '@/data/DataProvider';
 import { useSession } from '@/session/SessionProvider';
 import type { FacilitatorQuote } from '@/features/quotes/types';
+import { contractPackHtml } from '@/features/workorders/contractPack';
 import { TemplateEditor } from './TemplateEditor';
-import { mayVerify, skipsWorkOrder } from '@/features/workorders/workOrder';
+import { mayVerify, readinessKeys, skipsWorkOrder } from '@/features/workorders/workOrder';
 import type { PartnerAccount, ProviderStatus, WorkOrderView } from '@/features/workorders/types';
 
+const downloadFile = (name: string, body: string) => {
+  const url = URL.createObjectURL(new Blob([body], { type: 'text/html;charset=utf-8' }));
+  const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+};
 const MILESTONE_TONE = { waiting: 'neutral', evidence_submitted: 'warning', verified: 'accent', payment_recorded: 'success', closed: 'success' } as const;
 
 export function WorkOrdersScreen() {
@@ -95,6 +100,14 @@ export function WorkOrdersScreen() {
                   {w.customerAcceptedAt && <Badge tone="success">{t('workOrders.customerAccepted', { date: formatDate(w.customerAcceptedAt, i18n.language) })}</Badge>}
                   {w.partnerAcceptedAt && <Badge tone="success">{t('workOrders.partnerAccepted', { date: formatDate(w.partnerAcceptedAt, i18n.language) })}</Badge>}
                 </div>
+                <Button size="sm" variant="ghost" data-testid={`wo-pack-${w.id}`} onClick={() => downloadFile(`${w.code}.html`, contractPackHtml(w, (k, v) => t(k, v), i18n.language, new Date().toISOString()))}>{t('workOrders.pack.download')}</Button>
+                {readinessKeys(w.kind).length > 0 && w.status !== 'completed' && (
+                  <details data-testid={`wo-readiness-${w.id}`}>
+                    <summary>{t('workOrders.readiness.title')}</summary>
+                    <ul>{readinessKeys(w.kind).map((k) => <li key={k} className="text-sm">{t(k)}</li>)}</ul>
+                    <p className="text-sm text-muted">{t('workOrders.readiness.disclaimer')}</p>
+                  </details>
+                )}
                 {w.can.accept && <Button disabled={busy} onClick={() => void run(() => repository.acceptWorkOrder(uid, w.id), 'workOrders.acceptedOk')}>{t('workOrders.accept')}</Button>}
                 {w.status === 'issued' && w.side === 'partner' && w.startBlock && <p className="text-sm text-muted" data-testid="wo-start-block">{t(`workOrders.problem.${w.startBlock}`)}</p>}
                 {w.can.start && <Button disabled={busy} onClick={() => void run(() => repository.startWorkOrder(uid, w.id), 'workOrders.started')}>{t('workOrders.start')}</Button>}

@@ -31,6 +31,10 @@ export const DEFAULT_TEMPLATES: Record<LineKind, MilestoneTemplate[]> = {
   statutory: [{ id: 'start', label: 'On acceptance (pass-through)', pct: 100, gate: 'on_acceptance' }],
 };
 
+/** How many general site-readiness points each kind of work shows (texts are translation keys `workOrders.readiness.<kind>.<n>`). A statutory fee has none. */
+export const READINESS_COUNT: Record<LineKind, number> = { material: 3, installation: 3, logistics: 3, amc: 2, statutory: 0 };
+export const readinessKeys = (kind: LineKind): string[] => Array.from({ length: READINESS_COUNT[kind] }, (_, i) => `workOrders.readiness.${kind}.${i + 1}`);
+
 export const GATES: MilestoneGate[] = ['on_acceptance', 'on_delivery', 'on_progress', 'on_handover'];
 export const LINE_KINDS = ['material', 'installation', 'logistics', 'amc', 'statutory'] as const;
 export type TemplateSet = Record<LineKind, MilestoneTemplate[]>;

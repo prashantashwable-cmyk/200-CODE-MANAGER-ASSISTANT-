@@ -46,6 +46,21 @@ const translations: ScreenTranslations = {
   "qcAssignedOk": "Inspector named. They can now see this order and verify this milestone.",
   "reference": "Payment reference",
   "recordPayment": "Record payment",
+  "readiness": {
+    "title": "Getting the site ready", "disclaimer": "General guidance only. It is not an engineering, safety or legal check; your installer or inspector confirms what your site needs.",
+    "material": { "1": "The shaft and pit are measured and match the approved drawing.", "2": "A vehicle can reach the site, and there is clear space to unload.", "3": "A dry, lockable place is ready to keep the parts until installation." },
+    "installation": { "1": "The machine room (or overhead) and the pit are clear, dry and safe to enter.", "2": "A three-phase power supply with proper earthing is available at the site.", "3": "Access to the shaft is clear, and someone can open the site each working day." },
+    "logistics": { "1": "The delivery address, gate timing and a contact person at the site are confirmed.", "2": "Gate passes and society permissions for the vehicle are arranged.", "3": "Someone is present to count and sign for what arrives." },
+    "amc": { "1": "The lift can be reached for regular visits, and the machine-room key is with a named person.", "2": "A contact person is named for breakdown calls." }
+  },
+  "pack": {
+    "title": "Contract pack", "site": "Site", "partner": "Partner", "scope": "Scope", "price": "Agreed price", "mismatch": "milestones do not add up to the price",
+    "template": "Payment is released under milestone template version {{version}}, fixed when this order was issued.",
+    "acceptance": "Acceptance", "customer": "Customer accepted", "partnerAccepted": "Partner accepted", "pending": "not yet",
+    "inApp": "Acceptance was recorded in the app. It is not an electronic signature under the IT Act: no signing provider is connected.",
+    "esigned": "Signed through a connected electronic signature provider.",
+    "generated": "Generated on {{date}}", "download": "Download contract pack"
+  },
   "tplTitle": "How payment is released",
   "tplHint": "For each kind of work, the share of the price released at each milestone. Saving adds a new version; orders already issued keep the version they were issued under.",
   "tplVersion": "Version {{version}} in force since {{date}}",
@@ -180,6 +195,21 @@ const translations: ScreenTranslations = {
   "qcAssignedOk": "निरीक्षक नामित हुआ। वे अब यह ऑर्डर देख सकते हैं और इस चरण को सत्यापित कर सकते हैं।",
   "reference": "भुगतान संदर्भ",
   "recordPayment": "भुगतान दर्ज करें",
+  "readiness": {
+    "title": "साइट को तैयार करना", "disclaimer": "यह केवल सामान्य मार्गदर्शन है। यह इंजीनियरिंग, सुरक्षा या कानूनी जाँच नहीं है; आपके साइट को क्या चाहिए, यह आपका इंस्टॉलर या निरीक्षक तय करेगा।",
+    "material": { "1": "शाफ्ट और पिट की नाप ली गई है और स्वीकृत ड्राइंग से मेल खाती है।", "2": "वाहन साइट तक पहुँच सकता है और सामान उतारने की खुली जगह है।", "3": "इंस्टॉलेशन तक पुर्ज़े रखने के लिए सूखी, ताला लगने वाली जगह तैयार है।" },
+    "installation": { "1": "मशीन रूम (या ओवरहेड) और पिट साफ़, सूखे और भीतर जाने के लिए सुरक्षित हैं।", "2": "साइट पर सही अर्थिंग वाली थ्री-फेज़ बिजली उपलब्ध है।", "3": "शाफ्ट तक पहुँच साफ़ है और हर कार्यदिवस पर कोई साइट खोल सकता है।" },
+    "logistics": { "1": "डिलीवरी का पता, गेट का समय और साइट पर संपर्क व्यक्ति तय हैं।", "2": "वाहन के लिए गेट पास और सोसाइटी की अनुमति की व्यवस्था है।", "3": "आने वाले सामान को गिनने और दस्तख़त करने के लिए कोई मौजूद रहेगा।" },
+    "amc": { "1": "नियमित विज़िट के लिए लिफ्ट तक पहुँचा जा सकता है और मशीन रूम की चाबी एक तय व्यक्ति के पास है।", "2": "ख़राबी की कॉल के लिए एक संपर्क व्यक्ति तय है।" }
+  },
+  "pack": {
+    "title": "अनुबंध पैक", "site": "साइट", "partner": "पार्टनर", "scope": "कार्य", "price": "तय कीमत", "mismatch": "चरणों का जोड़ कीमत के बराबर नहीं है",
+    "template": "भुगतान चरण-टेम्पलेट संस्करण {{version}} के अनुसार जारी होता है, जो इस ऑर्डर के जारी होते समय तय हुआ।",
+    "acceptance": "स्वीकृति", "customer": "ग्राहक ने स्वीकार किया", "partnerAccepted": "पार्टनर ने स्वीकार किया", "pending": "अभी नहीं",
+    "inApp": "स्वीकृति ऐप में दर्ज हुई। यह आईटी अधिनियम के तहत इलेक्ट्रॉनिक हस्ताक्षर नहीं है: कोई हस्ताक्षर प्रदाता जुड़ा नहीं है।",
+    "esigned": "जुड़े हुए इलेक्ट्रॉनिक हस्ताक्षर प्रदाता के माध्यम से हस्ताक्षरित।",
+    "generated": "{{date}} को बनाया गया", "download": "अनुबंध पैक डाउनलोड करें"
+  },
   "tplTitle": "भुगतान कैसे जारी होता है",
   "tplHint": "हर तरह के काम के लिए, हर चरण पर कीमत का कितना हिस्सा जारी होगा। सहेजने पर नया संस्करण बनता है; पहले जारी ऑर्डर अपने संस्करण पर ही रहते हैं।",
   "tplVersion": "संस्करण {{version}}, {{date}} से लागू",
@@ -314,6 +344,21 @@ const translations: ScreenTranslations = {
   "qcAssignedOk": "निरीक्षक नेमला. ते आता ही ऑर्डर पाहू शकतात आणि हा टप्पा पडताळू शकतात.",
   "reference": "पेमेंट संदर्भ",
   "recordPayment": "पेमेंट नोंदवा",
+  "readiness": {
+    "title": "साइट तयार करणे", "disclaimer": "हे फक्त सामान्य मार्गदर्शन आहे. ही अभियांत्रिकी, सुरक्षा किंवा कायदेशीर तपासणी नाही; तुमच्या साइटला काय हवे ते तुमचा इन्स्टॉलर किंवा निरीक्षक ठरवेल.",
+    "material": { "1": "शाफ्ट आणि पिटचे मोजमाप झाले असून ते मंजूर आराखड्याशी जुळते.", "2": "वाहन साइटपर्यंत पोहोचू शकते आणि माल उतरवायला मोकळी जागा आहे.", "3": "इन्स्टॉलेशनपर्यंत सुटे भाग ठेवण्यासाठी कोरडी, कुलूप लावता येणारी जागा तयार आहे." },
+    "installation": { "1": "मशीन रूम (किंवा ओव्हरहेड) आणि पिट स्वच्छ, कोरडे आणि आत जाण्यास सुरक्षित आहेत.", "2": "साइटवर योग्य अर्थिंगसह थ्री-फेज वीजपुरवठा उपलब्ध आहे.", "3": "शाफ्टपर्यंतचा मार्ग मोकळा आहे आणि प्रत्येक कामाच्या दिवशी कोणीतरी साइट उघडू शकते." },
+    "logistics": { "1": "डिलिव्हरीचा पत्ता, गेटची वेळ आणि साइटवरील संपर्क व्यक्ती निश्चित आहेत.", "2": "वाहनासाठी गेट पास आणि सोसायटीची परवानगी यांची व्यवस्था आहे.", "3": "येणारा माल मोजून त्यावर सही करण्यासाठी कोणीतरी हजर असेल." },
+    "amc": { "1": "नियमित भेटींसाठी लिफ्टपर्यंत पोहोचता येते आणि मशीन रूमची चावी ठरलेल्या व्यक्तीकडे आहे.", "2": "बिघाडाच्या कॉलसाठी संपर्क व्यक्ती ठरलेली आहे." }
+  },
+  "pack": {
+    "title": "करार पॅक", "site": "साइट", "partner": "पार्टनर", "scope": "काम", "price": "ठरलेली किंमत", "mismatch": "टप्प्यांची बेरीज किमतीएवढी नाही",
+    "template": "पेमेंट टप्पा-टेम्पलेट आवृत्ती {{version}} नुसार मोकळे होते, जी ही ऑर्डर दिली तेव्हा निश्चित झाली.",
+    "acceptance": "स्वीकृती", "customer": "ग्राहकाने स्वीकारले", "partnerAccepted": "पार्टनरने स्वीकारले", "pending": "अजून नाही",
+    "inApp": "स्वीकृती ॲपमध्ये नोंदवली गेली. हे आयटी कायद्यातील इलेक्ट्रॉनिक स्वाक्षरी नाही: कोणताही स्वाक्षरी प्रदाता जोडलेला नाही.",
+    "esigned": "जोडलेल्या इलेक्ट्रॉनिक स्वाक्षरी प्रदात्यामार्फत स्वाक्षरी.",
+    "generated": "{{date}} रोजी तयार केले", "download": "करार पॅक डाउनलोड करा"
+  },
   "tplTitle": "पेमेंट कसे मोकळे होते",
   "tplHint": "प्रत्येक प्रकारच्या कामासाठी, प्रत्येक टप्प्यावर किमतीचा किती हिस्सा मोकळा होतो. जतन केल्यावर नवी आवृत्ती तयार होते; आधी दिलेल्या ऑर्डर त्यांच्या आवृत्तीवरच राहतात.",
   "tplVersion": "आवृत्ती {{version}}, {{date}} पासून लागू",

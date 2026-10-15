@@ -101,5 +101,9 @@ test('Owner: picks a partner account for each accepted part, issues the work ord
   await expect(page.locator('[data-testid^="wo-wo-"]')).toHaveCount(1);
   await expect(card.getByRole('button')).toHaveCount(0); // nothing left to issue; the pass-through note stays
   await expect(card.locator('select')).toHaveCount(0);
+  // The issued order offers the contract pack and the general site-readiness points.
+  await expect(page.locator('[data-testid^="wo-pack-"]')).toHaveCount(1);
+  await page.locator('[data-testid^="wo-readiness-"]').locator('summary').click();
+  await expect(page.locator('[data-testid^="wo-readiness-"] li')).toHaveCount(3);
   expect(errors).toEqual([]);
 });
