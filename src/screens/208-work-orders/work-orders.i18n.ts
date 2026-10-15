@@ -88,7 +88,8 @@ const translations: ScreenTranslations = {
     "evidence_name_long": "A file name is too long.",
     "partner_account_required": "Choose a partner account for every part.",
     "partner_not_eligible": "That account cannot act as a partner. It must be an active installer or supplier.",
-    "no_customer": "This quote has no customer yet."
+    "no_customer": "This quote has no customer yet.",
+    "reference_long": "The reference is too long. Use at most 60 characters."
   },
   "chooseAccount": "Choose the partner account",
   "accountRole": {
@@ -186,7 +187,8 @@ const translations: ScreenTranslations = {
     "evidence_name_long": "किसी फ़ाइल का नाम बहुत लंबा है।",
     "partner_account_required": "हर हिस्से के लिए पार्टनर खाता चुनें।",
     "partner_not_eligible": "यह खाता पार्टनर के रूप में काम नहीं कर सकता। यह सक्रिय इंस्टॉलर या सप्लायर होना चाहिए।",
-    "no_customer": "इस कोटेशन में अभी कोई ग्राहक नहीं है।"
+    "no_customer": "इस कोटेशन में अभी कोई ग्राहक नहीं है।",
+    "reference_long": "संदर्भ बहुत लंबा है। अधिकतम 60 अक्षर लिखें।"
   },
   "chooseAccount": "पार्टनर खाता चुनें",
   "accountRole": {
@@ -284,7 +286,8 @@ const translations: ScreenTranslations = {
     "evidence_name_long": "एका फाइलचे नाव खूप लांब आहे.",
     "partner_account_required": "प्रत्येक भागासाठी पार्टनर खाते निवडा.",
     "partner_not_eligible": "हे खाते पार्टनर म्हणून काम करू शकत नाही. ते सक्रिय इन्स्टॉलर किंवा सप्लायर असावे.",
-    "no_customer": "या कोटेशनला अजून ग्राहक नाही."
+    "no_customer": "या कोटेशनला अजून ग्राहक नाही.",
+    "reference_long": "संदर्भ खूप लांब आहे. जास्तीत जास्त 60 अक्षरे वापरा."
   },
   "chooseAccount": "पार्टनर खाते निवडा",
   "accountRole": {

@@ -98,6 +98,7 @@ describe('work orders from an accepted quote', () => {
     await repo.verifyMilestone(OWNER, w.id, m.id);
     expect(await refusal(repo.recordMilestonePayment(TECH, w.id, m.id, 'UTR12345'))).toBe('forbidden');
     expect(await refusal(repo.recordMilestonePayment(CUST, w.id, m.id, 'x'))).toBe('reference_short');
+    expect(await refusal(repo.recordMilestonePayment(CUST, w.id, m.id, 'R'.repeat(61)))).toBe('reference_long');
     const paid = await repo.recordMilestonePayment(CUST, w.id, m.id, 'UTR12345');
     expect(paid.milestones[0].status).toBe('payment_recorded');
     expect(await refusal(repo.recordMilestonePayment(CUST, w.id, m.id, 'UTR99999'))).toBe('locked');

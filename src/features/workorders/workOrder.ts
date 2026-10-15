@@ -31,11 +31,12 @@ export const DEFAULT_TEMPLATES: Record<LineKind, MilestoneTemplate[]> = {
   statutory: [{ id: 'start', label: 'On acceptance (pass-through)', pct: 100, gate: 'on_acceptance' }],
 };
 
-export type WorkOrderProblem = 'template_empty' | 'template_sum' | 'template_pct' | 'price_invalid';
+export type WorkOrderProblem = 'template_empty' | 'template_sum' | 'template_pct' | 'template_duplicate' | 'price_invalid';
 
 export function templateProblem(t: MilestoneTemplate[]): WorkOrderProblem | null {
   if (t.length === 0) return 'template_empty';
-  if (t.some((m) => !Number.isFinite(m.pct) || m.pct <= 0)) return 'template_pct';
+  if (t.some((m) => !Number.isInteger(m.pct) || m.pct <= 0)) return 'template_pct';
+  if (new Set(t.map((m) => m.id)).size !== t.length) return 'template_duplicate';
   return t.reduce((s, m) => s + m.pct, 0) === 100 ? null : 'template_sum';
 }
 
@@ -46,7 +47,6 @@ export function templateProblem(t: MilestoneTemplate[]): WorkOrderProblem | null
  */
 export function amountsFor(priceInr: number, t: MilestoneTemplate[]): number[] {
   if (!Number.isInteger(priceInr) || priceInr < 0 || templateProblem(t)) throw new Error('price_invalid');
-  if (!t.every((m) => Number.isInteger(m.pct))) throw new Error('price_invalid');
   const floors = t.map((m) => Math.floor((priceInr * m.pct) / 100));
   const rem = t.map((m) => (priceInr * m.pct) % 100);
   let left = priceInr - floors.reduce((a, b) => a + b, 0);
@@ -92,7 +92,7 @@ export function startProblem(w: { status: WorkOrderStatus; customerAcceptedAt?: 
   return null;
 }
 
-export type MilestoneProblem = 'locked' | 'not_waiting' | 'evidence_missing' | 'not_submitted' | 'not_verified' | 'qc_required' | 'self_verify' | 'not_payable';
+export type MilestoneProblem = 'reference_short' | 'reference_long' | 'locked' | 'not_waiting' | 'evidence_missing' | 'not_submitted' | 'not_verified' | 'qc_required' | 'self_verify' | 'not_payable';
 
 /** Handover and progress milestones need an independent QC pass; delivery and acceptance need evidence only. */
 export const needsQc = (g: MilestoneGate): boolean => g === 'on_handover' || g === 'on_progress';
@@ -111,6 +111,14 @@ export function verifyProblem(m: Milestone, o: { verifierId: string; submitterId
   return null;
 }
 
+export const REFERENCE_MIN = 4;
+export const REFERENCE_MAX = 60;
+/** The payment reference the customer types (UTR, cheque number…): present and bounded. */
+export function referenceProblem(reference: string): MilestoneProblem | null {
+  const r = reference.trim();
+  return r.length < REFERENCE_MIN ? 'reference_short' : r.length > REFERENCE_MAX ? 'reference_long' : null;
+}
+
 /** A payment can be recorded only against a verified milestone; the platform records it, it does not move it. */
 export function paymentProblem(m: Milestone): MilestoneProblem | null {
   if (m.status === 'closed' || m.status === 'payment_recorded') return 'locked';
@@ -124,3 +132,23 @@ export function statusOfMilestones(ms: Milestone[]): WorkOrderStatus {
 /** What the signing provider can honestly do. Until one is connected, acceptance is recorded in-app and labelled as such. */
 export type SigningState = 'not_connected' | 'connected';
 export function acceptanceLabel(signing: SigningState): 'in_app_acceptance' | 'esigned' { return signing === 'connected' ? 'esigned' : 'in_app_acceptance'; }
+
+export type Side = 'customer' | 'partner' | 'staff';
+/** Which side of an order an account is on: decided by the account, not by a role name. */
+export function sideOf(callerId: string | undefined, o: { customerId: string; partnerAccountId: string }): Side {
+  if (!callerId) return 'staff';
+  return callerId === o.customerId ? 'customer' : callerId === o.partnerAccountId ? 'partner' : 'staff';
+}
+
+export interface Permissions { accept: boolean; start: boolean; submitEvidence: boolean; verify: boolean; recordPayment: boolean; }
+/** What each person may do next, the one definition the in-memory repository and the database mapping both use. The server still enforces every one. */
+export function permissionsOf(o: { side: Side; role: string | undefined; status: WorkOrderStatus; customerAcceptedAt?: string; partnerAcceptedAt?: string; startBlock: StartProblem | null }): Permissions {
+  const open = o.status === 'in_progress';
+  return {
+    accept: o.status === 'issued' && ((o.side === 'customer' && !o.customerAcceptedAt) || (o.side === 'partner' && !o.partnerAcceptedAt)),
+    start: o.side === 'partner' && o.startBlock === null,
+    submitEvidence: o.side === 'partner' && open,
+    verify: open && o.role === 'owner', // verification outcomes are the Owner's (master prompt P1); a QC inspector arrives with QC tasks
+    recordPayment: o.side === 'customer' && open,
+  };
+}

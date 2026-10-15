@@ -14,6 +14,9 @@ import type { CardRow, RecordRow, StatusRow } from './decisionMapping';
 import { captureErrorCode, captureResultOf } from './leadMapping';
 import type { CaptureRpc } from './leadMapping';
 import { customerViewOf, errorCode, feeFromRow, quoteFromRow } from './quoteMapping';
+import { workOrderErrorCode, workOrderFromRows } from './workOrderMapping';
+import type { MilestoneRow, WorkOrderRow } from './workOrderMapping';
+import type { PartnerAccount } from '@/features/workorders/types';
 import type { AcceptanceRow, FeeRow, QuoteRow } from './quoteMapping';
 
 interface PendingRow {
@@ -55,6 +58,27 @@ export function withServer(base: Repository): Repository {
     const rows = data ?? [];
     const acc = await acceptances(rows.map((r) => r.id));
     return rows.map((r) => quoteFromRow(r, acc));
+  };
+  // ---- 208 work orders: reads go through row-level security, every change through a database function that checks who is asking ----
+  const roleOf = async (userId: string) => (await supabase().from('profiles').select('role').eq('id', userId).maybeSingle<{ role: string }>()).data?.role;
+  const loadOrders = async (userId: string, ids?: string[]) => {
+    if (ids && ids.length === 0) return [];
+    const base = supabase().from('work_orders').select('*').order('created_at', { ascending: false });
+    const { data, error } = await (ids ? base.in('id', ids) : base).returns<WorkOrderRow[]>();
+    if (error) throw new RepositoryError(workOrderErrorCode(error.message));
+    const rows = data ?? [];
+    if (rows.length === 0) return [];
+    const ms = await supabase().from('work_order_milestones').select('*').in('work_order_id', rows.map((r) => r.id)).order('position').returns<MilestoneRow[]>();
+    if (ms.error) throw new RepositoryError(workOrderErrorCode(ms.error.message));
+    const role = await roleOf(userId);
+    return rows.map((r) => workOrderFromRows(r, ms.data ?? [], { id: userId, role }));
+  };
+  const actOnOrder = async (userId: string, fn: string, args: Record<string, unknown>, id: string) => {
+    const { error } = await supabase().rpc(fn, args);
+    if (error) throw new RepositoryError(workOrderErrorCode(error.message));
+    const [view] = await loadOrders(userId, [id]);
+    if (!view) throw new RepositoryError('not_found');
+    return view;
   };
   const repo: Repository = {
     ...base,
@@ -185,6 +209,26 @@ export function withServer(base: Repository): Repository {
       if (!q) throw new RepositoryError('not_found');
       return customerViewOf(q);
     },
+
+    // ---- 208 work orders: the database issues, splits, gates and records ----
+    listWorkOrders: (userId) => loadOrders(userId),
+    listPartnerAccounts: async (userId) => {
+      const role = await roleOf(userId);
+      if (role !== 'owner' && role !== 'admin') throw new RepositoryError('forbidden');
+      const { data, error } = await supabase().from('profiles').select('id, name, role').eq('status', 'active').in('role', ['technician', 'supplier']).order('name').returns<PartnerAccount[]>();
+      if (error) throw new RepositoryError(workOrderErrorCode(error.message));
+      return data ?? [];
+    },
+    createWorkOrdersFromQuote: async (userId, quoteId, partners) => {
+      const { data, error } = await supabase().rpc('create_work_orders', { p_quote: quoteId, p_partners: partners });
+      if (error) throw new RepositoryError(workOrderErrorCode(error.message));
+      return loadOrders(userId, (data as string[] | null) ?? []);
+    },
+    acceptWorkOrder: (userId, id) => actOnOrder(userId, 'accept_work_order', { p_wo: id }, id),
+    startWorkOrder: (userId, id) => actOnOrder(userId, 'start_work_order', { p_wo: id }, id),
+    submitMilestoneEvidence: (userId, id, milestoneId, names) => actOnOrder(userId, 'submit_milestone_evidence', { p_wo: id, p_ms: milestoneId, p_evidence: names }, id),
+    verifyMilestone: (userId, id, milestoneId) => actOnOrder(userId, 'verify_milestone', { p_wo: id, p_ms: milestoneId }, id),
+    recordMilestonePayment: (userId, id, milestoneId, reference) => actOnOrder(userId, 'record_milestone_payment', { p_wo: id, p_ms: milestoneId, p_reference: reference }, id),
 
     // Row-level security returns these only to a signed-in, active Admin (of the same world, real or demo).
     listSignInRequests: async () => {

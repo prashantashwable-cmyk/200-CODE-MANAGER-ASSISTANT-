@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_TEMPLATES, MAX_EVIDENCE, MAX_EVIDENCE_NAME, acceptanceLabel, amountsFor, evidenceNamesProblem, milestonesOf, paymentProblem, skipsWorkOrder, startProblem, statusOfMilestones, submitEvidenceProblem, templateProblem, verifyProblem } from '@/features/workorders/workOrder';
+import { DEFAULT_TEMPLATES, MAX_EVIDENCE, MAX_EVIDENCE_NAME, acceptanceLabel, amountsFor, evidenceNamesProblem, milestonesOf, paymentProblem, permissionsOf, sideOf, skipsWorkOrder, startProblem, statusOfMilestones, submitEvidenceProblem, templateProblem, verifyProblem } from '@/features/workorders/workOrder';
 import type { MilestoneTemplate } from '@/features/workorders/workOrder';
 import type { Milestone } from '@/features/workorders/workOrder';
 
@@ -8,6 +8,11 @@ const ms = (over: Partial<Milestone> = {}): Milestone => ({ ...milestonesOf(1_00
 
 describe('milestone templates', () => {
   it('every default template adds to 100', () => { for (const t of Object.values(DEFAULT_TEMPLATES)) expect(templateProblem(t)).toBeNull(); });
+  it('refuses repeated milestone ids and fractional percentages', () => {
+    const a = { id: 'a', label: 'a', pct: 50, gate: 'on_delivery' as const };
+    expect(templateProblem([a, { ...a, gate: 'on_handover' as const }])).toBe('template_duplicate');
+    expect(templateProblem([{ ...a, pct: 33.5 }, { ...a, id: 'b', pct: 66.5 }])).toBe('template_pct');
+  });
   it('refuses empty, non-positive and wrong-sum templates', () => {
     expect(templateProblem([])).toBe('template_empty');
     expect(templateProblem([{ id: 'a', label: 'a', pct: 0, gate: 'on_delivery' }, { id: 'b', label: 'b', pct: 100, gate: 'on_handover' }])).toBe('template_pct');
@@ -99,4 +104,36 @@ describe('milestone gates', () => {
 
 describe('acceptance is not an e-signature until a provider is connected', () => {
   it('labels honestly', () => { expect(acceptanceLabel('not_connected')).toBe('in_app_acceptance'); expect(acceptanceLabel('connected')).toBe('esigned'); });
+});
+
+describe('who can do what on an order', () => {
+  const order = { customerId: 'c', partnerAccountId: 'p' };
+  it('works out the side from the account, never from a role name', () => {
+    expect(sideOf('c', order)).toBe('customer');
+    expect(sideOf('p', order)).toBe('partner');
+    expect(sideOf('x', order)).toBe('staff');
+    expect(sideOf(undefined, order)).toBe('staff');
+  });
+  const base = { role: 'customer', status: 'issued' as const, startBlock: null };
+  it('each side accepts once, and only while the order is issued', () => {
+    expect(permissionsOf({ ...base, side: 'customer' }).accept).toBe(true);
+    expect(permissionsOf({ ...base, side: 'customer', customerAcceptedAt: 'x' }).accept).toBe(false);
+    expect(permissionsOf({ ...base, side: 'partner', role: 'technician' }).accept).toBe(true);
+    expect(permissionsOf({ ...base, side: 'partner', role: 'technician', partnerAcceptedAt: 'x' }).accept).toBe(false);
+    expect(permissionsOf({ ...base, side: 'staff', role: 'owner' }).accept).toBe(false);
+    expect(permissionsOf({ ...base, side: 'customer', status: 'in_progress' }).accept).toBe(false);
+  });
+  it('only the partner starts and sends evidence; only the customer records payment; only the Owner verifies', () => {
+    const open = { ...base, status: 'in_progress' as const };
+    expect(permissionsOf({ ...base, side: 'partner', role: 'technician' }).start).toBe(true);
+    expect(permissionsOf({ ...base, side: 'partner', role: 'technician', startBlock: 'not_accepted_by_customer' }).start).toBe(false);
+    expect(permissionsOf({ ...base, side: 'customer' }).start).toBe(false);
+    expect(permissionsOf({ ...open, side: 'partner', role: 'technician' }).submitEvidence).toBe(true);
+    expect(permissionsOf({ ...base, side: 'partner', role: 'technician' }).submitEvidence).toBe(false);
+    expect(permissionsOf({ ...open, side: 'customer' }).recordPayment).toBe(true);
+    expect(permissionsOf({ ...open, side: 'partner', role: 'technician' }).recordPayment).toBe(false);
+    expect(permissionsOf({ ...open, side: 'staff', role: 'owner' }).verify).toBe(true);
+    for (const role of ['admin', 'technician', 'supplier', 'customer']) expect(permissionsOf({ ...open, side: role === 'customer' ? 'customer' : 'staff', role }).verify).toBe(false);
+    expect(permissionsOf({ ...base, side: 'staff', role: 'owner' }).verify).toBe(false); // not started yet
+  });
 });

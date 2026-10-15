@@ -1,5 +1,5 @@
 import type { LineKind } from '@/features/quotes/facilitatorQuote';
-import type { Milestone, WorkOrderStatus } from './workOrder';
+import type { Milestone, Permissions, Side, WorkOrderStatus } from './workOrder';
 
 export interface WorkOrder {
   id: string;
@@ -27,8 +27,8 @@ export interface WorkOrder {
 
 /** What each person may do with this order right now, decided by the server from who they are. */
 export interface WorkOrderView extends WorkOrder {
-  side: 'customer' | 'partner' | 'staff';
-  can: { accept: boolean; start: boolean; submitEvidence: boolean; verify: boolean; recordPayment: boolean };
+  side: Side;
+  can: Permissions;
   startBlock: string | null;
   acceptance: 'in_app_acceptance' | 'esigned';
 }

@@ -1017,7 +1017,7 @@ import type { Candidate as BookingCandidate } from '@/features/service/booking';
 import { DRIVE_SKILL } from '@/features/training/skills';
 import { isEmail, isIndianMobile, isPincode } from '@/features/validation/india';
 import { randomCode, randomToken } from '@/features/ids/clientId';
-import { DEFAULT_TEMPLATES as WO_TEMPLATES, acceptanceLabel as woAcceptanceLabel, evidenceNamesProblem as woEvidenceProblem, milestonesOf as woMilestonesOf, skipsWorkOrder as woSkips, paymentProblem as woPaymentProblem, startProblem as woStartProblem, statusOfMilestones as woStatus, submitEvidenceProblem as woSubmitProblem, verifyProblem as woVerifyProblem } from '@/features/workorders/workOrder';
+import { DEFAULT_TEMPLATES as WO_TEMPLATES, acceptanceLabel as woAcceptanceLabel, evidenceNamesProblem as woEvidenceProblem, milestonesOf as woMilestonesOf, skipsWorkOrder as woSkips, paymentProblem as woPaymentProblem, permissionsOf as woPermissionsOf, sideOf as woSideOf, referenceProblem as woReferenceProblem, startProblem as woStartProblem, statusOfMilestones as woStatus, submitEvidenceProblem as woSubmitProblem, verifyProblem as woVerifyProblem } from '@/features/workorders/workOrder';
 import type { PartnerAccount, ProviderStatus, WorkOrder, WorkOrderView } from '@/features/workorders/types';
 import { DEFAULT_COST_RATES, DEFAULT_FEE_SETTINGS, alternatives as fqAlternatives, computeQuote as fqCompute, mayOffer as fqMayOffer, maxBundleDiscountInr as fqMaxDiscount, quoteProblems as fqProblems, settingsProblem as fqSettingsProblem, waterfall as fqWaterfall } from '@/features/quotes/facilitatorQuote';
 import type { CostRates as FqCostRates, FeeActor as FqActor, FeeSettings as FqSettings, QuoteLine as FqLine } from '@/features/quotes/facilitatorQuote';
@@ -18952,19 +18952,9 @@ function woStanding(w: WorkOrder) {
 }
 function woView(w: WorkOrder, userId: string): WorkOrderView {
   const u = byId(users, userId);
-  const side: WorkOrderView['side'] = u?.id === w.customerId ? 'customer' : u?.id === w.partnerAccountId ? 'partner' : 'staff';
+  const side = woSideOf(u?.id, w);
   const startBlock = woStartProblem(w, woStanding(w));
-  const open = w.status === 'in_progress';
-  return {
-    ...w, milestones: w.milestones.map((m) => ({ ...m, evidence: [...m.evidence] })), side, startBlock, acceptance: woAcceptanceLabel(WO_SIGNING),
-    can: {
-      accept: w.status === 'issued' && ((side === 'customer' && !w.customerAcceptedAt) || (side === 'partner' && !w.partnerAcceptedAt)),
-      start: side === 'partner' && startBlock === null,
-      submitEvidence: side === 'partner' && open,
-      verify: open && u?.role === 'owner', // verification outcomes are the Owner's (master prompt P1); a QC inspector arrives with QC tasks
-      recordPayment: side === 'customer' && open,
-    },
-  };
+  return { ...w, milestones: w.milestones.map((m) => ({ ...m, evidence: [...m.evidence] })), side, startBlock, acceptance: woAcceptanceLabel(WO_SIGNING), can: woPermissionsOf({ side, role: u?.role, status: w.status, customerAcceptedAt: w.customerAcceptedAt, partnerAcceptedAt: w.partnerAcceptedAt, startBlock }) };
 }
 /** Who may see an order at all: Admin and Owner, its customer, and the one account that acts for its partner. Nobody else. */
 const woVisibleTo = (w: WorkOrder, userId: string) => { const u = byId(users, userId); return !!u && (isAdminRole(u.role) || u.id === w.customerId || u.id === w.partnerAccountId); };
@@ -28723,7 +28713,9 @@ export const memoryRepository: Repository = {
   acceptWorkOrder: (userId, id) => simulateWrite(() => {
     const w = woFind(userId, id);
     const v = woView(w, userId);
-    if (!v.can.accept) throw new RepositoryError(w.status !== 'issued' ? 'invalid_state' : 'forbidden');
+    if (v.side === 'staff') throw new RepositoryError('forbidden');
+    if (w.status !== 'issued') throw new RepositoryError('invalid_state');
+    if (!v.can.accept) throw new RepositoryError('forbidden'); // this side already accepted
     const now = new Date().toISOString();
     if (v.side === 'customer') w.customerAcceptedAt = now; else w.partnerAcceptedAt = now;
     eventLog.append(userId, { type: 'contract.accepted_in_app', subject: { kind: 'lead', id: w.leadId }, capturedAt: now, payload: { workOrderId: w.id, side: v.side, method: woAcceptanceLabel(WO_SIGNING) } });
@@ -28752,8 +28744,8 @@ export const memoryRepository: Repository = {
   }),
   verifyMilestone: (userId, id, milestoneId) => simulateWrite(() => {
     const w = woFind(userId, id);
-    const v = woView(w, userId);
-    if (!v.can.verify) throw new RepositoryError('forbidden');
+    if (byId(users, userId)?.role !== 'owner') throw new RepositoryError('forbidden'); // verification outcomes are the Owner's
+    if (w.status !== 'in_progress') throw new RepositoryError('invalid_state');
     const m = woMilestone(w, milestoneId);
     // Only the Owner verifies, and the Owner is never the partner's account; the rule still checks it.
     const bad = woVerifyProblem(m, { verifierId: userId, submitterId: w.partnerAccountId, qcPassed: true });
@@ -28767,7 +28759,8 @@ export const memoryRepository: Repository = {
     if (woView(w, userId).side !== 'customer') throw new RepositoryError('forbidden');
     const m = woMilestone(w, milestoneId);
     const ref = reference.trim();
-    if (ref.length < 4) throw new RepositoryError('reference_short');
+    const refBad = woReferenceProblem(ref);
+    if (refBad) throw new RepositoryError(refBad);
     const bad = woPaymentProblem(m);
     if (bad) throw new RepositoryError(bad);
     m.status = 'payment_recorded';
