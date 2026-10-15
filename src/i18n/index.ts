@@ -1,86 +1,67 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import common from './common.i18n';
 import { LANGUAGES } from './types';
-import type { ScreenTranslations, TranslationNode } from './types';
+import type { TranslationNode } from './types';
 import type { Language } from '@/data/types';
 
 /**
- * Translations are ASSEMBLED, not centralised.
+ * Translations are assembled from every screen's own `<name>.i18n.ts` (see ./assemble.ts).
  *
- * Every screen ships its own `<name>.i18n.ts` next to its view, and this module
- * discovers and merges them at build time. That is deliberate: 40+ screens can
- * be built independently without any of them editing one shared en.json —
- * which is exactly where key collisions and accidental overwrites come from.
- *
- * To add copy for a new screen: create `src/screens/<screen>/<screen>.i18n.ts`
- * with a default export of `{ en, hi, mr }`. Nothing else to register.
+ * Development: everything is assembled in the browser, all three languages at once.
+ * Production: `npm run build` first writes one JSON file per language; the reader's own language (and English, the
+ * fallback) load before the first paint, and the other language follows in the background. A screen that shows
+ * another language on purpose (a lesson track, a template preview) re-renders when it arrives (`bindI18nStore`).
  */
-
-const screenBundles = import.meta.glob<{ default: ScreenTranslations }>(
-  ['../screens/**/*.i18n.ts', '../features/**/*.i18n.ts'],
-  { eager: true },
-);
-
-function isNode(value: unknown): value is TranslationNode {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function deepMerge(target: TranslationNode, source: TranslationNode): TranslationNode {
-  for (const [key, value] of Object.entries(source)) {
-    const existing = target[key];
-    if (isNode(value) && isNode(existing)) {
-      deepMerge(existing, value);
-    } else {
-      if (import.meta.env.DEV && existing !== undefined && !isNode(value)) {
-        // Two screens claiming the same key is a real bug — one will win
-        // silently otherwise, and the loser shows the wrong text.
-        console.warn(`[i18n] duplicate translation key overwritten: ${key}`);
-      }
-      target[key] = value;
-    }
-  }
-  return target;
-}
-
-function buildResources() {
-  const resources: Record<Language, { translation: TranslationNode }> = {
-    en: { translation: {} },
-    hi: { translation: {} },
-    mr: { translation: {} },
-  };
-
-  for (const lang of LANGUAGES) {
-    deepMerge(resources[lang].translation, common[lang]);
-  }
-
-  for (const path of Object.keys(screenBundles).sort()) {
-    const bundle = screenBundles[path]?.default;
-    if (!bundle) continue;
-    for (const lang of LANGUAGES) {
-      if (bundle[lang]) deepMerge(resources[lang].translation, bundle[lang]);
-    }
-  }
-
-  return resources;
-}
+const generated = import.meta.glob<TranslationNode>('./generated/*.json', { import: 'default' });
 
 export const STORAGE_KEY_LANGUAGE = 'aiec.language';
 
 function initialLanguage(): Language {
-  const saved = localStorage.getItem(STORAGE_KEY_LANGUAGE) as Language | null;
+  let saved: Language | null = null;
+  try { saved = localStorage.getItem(STORAGE_KEY_LANGUAGE) as Language | null; } catch { /* storage blocked */ }
   if (saved && LANGUAGES.includes(saved)) return saved;
   const browser = navigator.language.slice(0, 2) as Language;
   return LANGUAGES.includes(browser) ? browser : 'en';
 }
 
-void i18n.use(initReactI18next).init({
-  resources: buildResources(),
-  lng: initialLanguage(),
-  fallbackLng: 'en',
-  interpolation: { escapeValue: false },
-  returnNull: false,
-});
+const loading = new Map<Language, Promise<void>>();
+/** Makes sure one language's text is present; safe to call any number of times. */
+export function ensureLanguage(lang: Language): Promise<void> {
+  if (i18n.hasResourceBundle(lang, 'translation')) return Promise.resolve();
+  let p = loading.get(lang);
+  if (!p) {
+    const load = generated[`./generated/${lang}.json`];
+    p = load ? load().then((tree) => { i18n.addResourceBundle(lang, 'translation', tree, true, true); }) : Promise.resolve();
+    loading.set(lang, p);
+  }
+  return p;
+}
+
+async function start(): Promise<void> {
+  const lng = initialLanguage();
+  await i18n.use(initReactI18next).init({
+    resources: {},
+    lng,
+    fallbackLng: 'en',
+    interpolation: { escapeValue: false },
+    returnNull: false,
+    react: { bindI18nStore: 'added' },
+  });
+  if (import.meta.env.DEV || Object.keys(generated).length === 0) {
+    // No generated files (development, tests, or a build that skipped the step): assemble everything here.
+    const { buildResources } = await import('./assemble');
+    const all = buildResources();
+    for (const l of LANGUAGES) i18n.addResourceBundle(l, 'translation', all[l], true, true);
+  } else {
+    await Promise.all([ensureLanguage('en'), ensureLanguage(lng)]);
+    // The rest after the first paint, so a screen that shows another language finds it soon after.
+    setTimeout(() => { for (const l of LANGUAGES) void ensureLanguage(l); }, 1500);
+  }
+  document.documentElement.setAttribute('lang', i18n.language || 'en');
+}
+
+/** Resolves once the first language is ready; main.tsx waits for it before the first render. */
+export const i18nReady: Promise<void> = start();
 
 /**
  * Switching language also switches the font pairing: `lang` on <html> is what
@@ -88,13 +69,10 @@ void i18n.use(initReactI18next).init({
  * back to a system font.
  */
 export function applyLanguage(lang: Language) {
-  void i18n.changeLanguage(lang);
+  void ensureLanguage(lang).then(() => i18n.changeLanguage(lang));
   document.documentElement.setAttribute('lang', lang);
-  localStorage.setItem(STORAGE_KEY_LANGUAGE, lang);
+  try { localStorage.setItem(STORAGE_KEY_LANGUAGE, lang); } catch { /* storage blocked */ }
 }
-
-// Apply once at module load so the very first paint is already correct.
-document.documentElement.setAttribute('lang', i18n.language || 'en');
 
 export default i18n;
 export { LANGUAGES, LANGUAGE_LABELS } from './types';

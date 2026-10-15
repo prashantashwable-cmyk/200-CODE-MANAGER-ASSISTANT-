@@ -19,8 +19,8 @@ import './styles/shell.css';
 import './styles/map.css';
 import './styles/adaptive.css';
 
-// Registers i18next and applies the saved language + font pairing.
-import '@/i18n';
+// Registers i18next; the first render waits until the reader's language is loaded.
+import { i18nReady } from '@/i18n';
 
 /**
  * To go live on Firebase, implement `firebaseRepository` (see data/firebase.ts)
@@ -28,7 +28,7 @@ import '@/i18n';
  * Everything downstream codes against the Repository interface, so nothing else
  * changes.
  */
-ReactDOM.createRoot(document.getElementById('root')!).render(
+void i18nReady.then(() => ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
       <DataProvider>
@@ -46,4 +46,4 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       </DataProvider>
     </BrowserRouter>
   </React.StrictMode>,
-);
+));

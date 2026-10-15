@@ -22,3 +22,6 @@ test-results/
 playwright-report/
 supabase/.temp/
 supabase/.branches/
+
+# Generated per-language translations (npm run build writes them)
+src/i18n/generated/

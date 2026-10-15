@@ -46,5 +46,5 @@ Status uses only: **Done** (persisted as designed, tested), **Partial**, **Plann
 | Slice 7 | Views cannot be written to by a browser (security fix) | Done | migration `20261015000006_views_read_only.sql`; `tests/db/hardening.test.ts` |
 | Slice 7 | Every public table has row-level security, every security-definer function pins its search path, browsers write only reviewed tables | Done | `tests/db/hardening.test.ts` reads the catalogue of a real Postgres |
 | Slice 7 | Security and privacy review, deployment and recovery procedures | Partial | `docs/SECURITY_PRIVACY_REVIEW.md`, `docs/DEPLOYMENT_AND_RECOVERY.md`; procedures written, none rehearsed on a hosted project |
-| Slice 7 | Entry script size budget so the app does not get slower unnoticed | Partial | `scripts/bundle-budget.mjs`; the budget is set at today's size, which is too large for low-end phones (KNOWN_GAPS) |
+| Slice 7 | Entry script size budget so the app does not get slower unnoticed | Partial | `scripts/bundle-budget.mjs` (0.85 MB gzipped); per-language translation files `scripts/build-locales.mjs` cut the entry from 1.9 MB to 0.71 MB; the data layer still ships in it (KNOWN_GAPS) |
 | A9 | Real auth, RLS everywhere, signed URLs, rate limits | Partial | sign-in on Supabase; rest planned |

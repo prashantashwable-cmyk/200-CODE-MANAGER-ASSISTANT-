@@ -29,7 +29,7 @@ A customer could insert events into the append-only stream through the view `pla
 5. **Evidence is recorded by file name only.** No storage, hash or malware scan. A name proves nothing about a file. Needs a storage provider.
 6. **An inspector sees the whole order, including amounts**, because row rules are per order, not per milestone.
 7. **No rate limiting or abuse controls** on the new functions beyond authentication (Supabase's own limits apply). A customer can raise many complaints.
-8. **Entry script is 1.9 MB gzipped.** A performance and availability risk on low-end phones, not a confidentiality one.
+8. **Entry script is 0.71 MB gzipped (was 1.9 MB).** A performance and availability risk on low-end phones, not a confidentiality one.
 
 ## Privacy notes
 

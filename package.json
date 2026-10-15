@@ -6,7 +6,7 @@
   "description": "ALL INDIA ELEVATORS COMPANY (AIEC) \u2014 mobile-first, multi-role elevator business platform",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && node scripts/build-locales.mjs && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint:keys": "node scripts/check-translations.mjs",
