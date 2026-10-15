@@ -277,6 +277,8 @@ export function MapCanvas({
             key={marker.id}
             position={[marker.lat, marker.lng]}
             icon={pinIcon(marker)}
+            title={marker.label}
+            alt={marker.label}
             keyboard={Boolean(marker.onClick)}
             eventHandlers={marker.onClick ? { click: marker.onClick } : undefined}
           >

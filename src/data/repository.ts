@@ -1,4 +1,13 @@
+import type { PartnerAccount, ProviderStatus, TemplateHistory, TemplateVersion, WorkOrderView } from '@/features/workorders/types';
+import type { ComplaintOutcome, TrustSummary } from '@/features/complaints/complaint';
+import type { ComplaintView, RaiseComplaintInput } from '@/features/complaints/types';
+import type { ProjectView } from '@/features/projects/types';
+import type { TemplateSet } from '@/features/workorders/workOrder';
+import type { FeeSettings, CostRates, QuoteLine } from '@/features/quotes/facilitatorQuote';
+import type { FeeSettingsVersion, QuotePreview, SaveQuoteInput, SaveQuoteResult, FacilitatorQuote, CustomerQuoteView } from '@/features/quotes/types';
 import type { VaultKind } from '@/features/documents/vault';
+import type { AppendInput, CorrectionClass, PlatformEvent } from '@/features/events/eventLog';
+import type { ContactLevel, RevealLevel } from '@/features/geo/privacy';
 import type { DecisionCard, DecisionInput, DecisionRecord, DecisionStatusRow, DecisionView, PacketInput } from '@/features/decisions/decisions';
 import type { DecisionKind, DecisionStatus } from '@/features/authority/authority';
 import type { ChainCheck } from '@/features/audit/chain';
@@ -10160,7 +10169,94 @@ export interface Repository {
   prepareDecisionPacket(userId: string, input: PacketInput): Promise<DecisionCard>;
   decideDecisionCard(userId: string, input: DecisionInput): Promise<{ card: DecisionCard; record: DecisionRecord }>;
   verifyDecisionChain(userId: string): Promise<ChainCheck>;
+  /* 203 — platform event log (master prompt P9) */
+  appendEvent(userId: string, input: AppendInput): Promise<{ event: PlatformEvent; duplicate: boolean }>;
+  listEvents(userId: string, filter?: { subject?: { kind: string; id: string }; family?: string; type?: string }): Promise<PlatformEvent[]>;
+  getEffectiveEvent(userId: string, eventId: string): Promise<{ event: PlatformEvent; payload: Record<string, unknown>; corrections: PlatformEvent[] }>;
+  correctEvent(userId: string, eventId: string, patch: Record<string, unknown>, reason: string): Promise<{ status: 'applied' | 'needs_approval'; event: PlatformEvent; class: CorrectionClass }>;
+  decideEventCorrection(userId: string, proposalId: string, approve: boolean, reason: string): Promise<PlatformEvent>;
+  markEvent(userId: string, eventId: string, kind: 'flagged' | 'annotated' | 'disputed', text: string): Promise<PlatformEvent>;
+  verifyEventLog(userId: string): Promise<ChainCheck>;
+  /* 206 — facilitator quote: partner prices + a disclosed platform fee (master prompt P0.5) */
+  getFeeSettings(userId: string): Promise<{ current: FeeSettingsVersion; history: FeeSettingsVersion[] }>;
+  saveFeeSettings(userId: string, settings: FeeSettings, costRates: CostRates, reason: string): Promise<FeeSettingsVersion>;
+  previewFacilitatorQuote(userId: string, input: { lines: QuoteLine[]; bundleDiscountInr?: number }): Promise<QuotePreview>;
+  saveFacilitatorQuote(userId: string, input: SaveQuoteInput): Promise<SaveQuoteResult>;
+  listFacilitatorQuotes(userId: string): Promise<FacilitatorQuote[]>;
+  sendFacilitatorQuote(userId: string, quoteId: string): Promise<FacilitatorQuote>;
+  /* 208 — customer–partner work orders and milestone gates */
+  listWorkOrders(userId: string): Promise<WorkOrderView[]>;
+  /** Owner only. `partners` binds each accepted component (by line id) to the partner account that will act; statutory fees are never work orders. */
+  createWorkOrdersFromQuote(userId: string, quoteId: string, partners: Record<string, string>): Promise<WorkOrderView[]>;
+  listPartnerAccounts(userId: string): Promise<PartnerAccount[]>;
+  acceptWorkOrder(userId: string, workOrderId: string): Promise<WorkOrderView>;
+  startWorkOrder(userId: string, workOrderId: string): Promise<WorkOrderView>;
+  submitMilestoneEvidence(userId: string, workOrderId: string, milestoneId: string, evidenceNames: string[]): Promise<WorkOrderView>;
+  verifyMilestone(userId: string, workOrderId: string, milestoneId: string): Promise<WorkOrderView>;
+  /** Owner only: name the technician who checks this milestone. The platform never picks one. */
+  assignMilestoneInspector(userId: string, workOrderId: string, milestoneId: string, inspectorId: string): Promise<WorkOrderView>;
+  recordMilestonePayment(userId: string, workOrderId: string, milestoneId: string, reference: string): Promise<WorkOrderView>;
+  /** The partner says the money the customer recorded has reached them; that closes the milestone. */
+  confirmMilestonePayment(userId: string, workOrderId: string, milestoneId: string): Promise<WorkOrderView>;
+  /** Owner and Admin read the payment-milestone templates in force and their history. */
+  getMilestoneTemplates(userId: string): Promise<TemplateHistory>;
+  /** Owner only: add a new version. Orders already issued keep the version they were issued under. */
+  saveMilestoneTemplates(userId: string, templates: TemplateSet, reason: string): Promise<TemplateVersion>;
+  /** Projects (a quote's work orders) the caller may see, each with overall progress and the handover record's state. */
+  listProjects(userId: string): Promise<ProjectView[]>;
+  /** A party to the handover (customer, installer, the named QC inspector) acknowledges it in the app. Not a statutory NOC and not an e-signature. */
+  acknowledgeHandover(userId: string, quoteId: string): Promise<ProjectView>;
+  /** Complaints the caller may see: the customer's own, those naming a partner's order, and all of them for the Owner and Admin. */
+  listComplaints(userId: string): Promise<ComplaintView[]>;
+  /** The project's customer raises a complaint; the same client id sent twice is one complaint. */
+  raiseComplaint(userId: string, input: RaiseComplaintInput): Promise<ComplaintView>;
+  /** Owner only. */
+  acknowledgeComplaint(userId: string, complaintId: string): Promise<ComplaintView>;
+  /** Owner only: an outcome and a note the customer can read. A resolved complaint is locked. */
+  resolveComplaint(userId: string, complaintId: string, outcome: ComplaintOutcome, note: string): Promise<ComplaintView>;
+  /** The partner the complaint names answers it once; the customer and staff can read the reply. Refused when resolved. */
+  replyToComplaint(userId: string, complaintId: string, text: string): Promise<ComplaintView>;
+  /** Plain counts about a partner account. Staff and the partner themself only. */
+  getPartnerTrust(userId: string, accountId: string): Promise<TrustSummary>;
+  getProviderStatus(userId: string): Promise<ProviderStatus[]>;
+  /* 207 — the customer's own quote: accept component by component */
+  getMyQuote(userId: string): Promise<CustomerQuoteView | null>;
+  acceptQuoteComponents(userId: string, quoteId: string, lineIds: string[]): Promise<CustomerQuoteView>;
+  /* 204 — map workspace: what each role may see of each site, decided here and not on the screen */
+  listMapSites(userId: string, from?: { lat: number; lng: number }): Promise<MapSitesView>;
+  /* 205 — lead capture with the ownership rule. Idempotent on `clientEventId`, so an offline retry never records twice. */
+  submitLeadCapture(userId: string, input: LeadCaptureInput): Promise<LeadCaptureResult>;
 }
+
+export interface LeadCaptureInput {
+  clientEventId: string;
+  draft: Parameters<Repository['createLead']>[0];
+  /** The phone's GPS error in metres, when it gave one. */
+  accuracyM?: number | null;
+  /** When it truly happened on the device (an offline capture is sent later). */
+  capturedAt?: string;
+  /** The phone's clock when it sent this: lets the server measure the clock error rather than guess it. */
+  deviceSentAt?: string;
+}
+export type LeadCaptureResult =
+  | { outcome: 'claimed'; lead: Lead; duplicate: boolean }
+  | { outcome: 'supporting'; lead: Lead; ownerLeadId: string; duplicate: boolean }
+  | { outcome: 'review'; lead: Lead; ownerLeadId: string; decisionCardId: string; duplicate: boolean };
+
+export interface MapSitePin {
+  id: string;
+  code: string;
+  /** Exact: the site's name. Fuzzed: the locality only. */
+  label: string;
+  stage: string;
+  level: RevealLevel;
+  /** Absent when the role may not see a place. Fuzzed pins carry the fuzzed point, never the real one. */
+  point?: { lat: number; lng: number };
+  distanceM?: number;
+  contact: ContactLevel;
+  mine: boolean;
+}
+export interface MapSitesView { pins: MapSitePin[]; density: { lat: number; lng: number; count: number }[]; fuzzRadiusM: number; role: Role }
 
 export interface DecisionListView { level: 'detail' | 'status'; cards: DecisionCard[]; statusRows: DecisionStatusRow[] }
 

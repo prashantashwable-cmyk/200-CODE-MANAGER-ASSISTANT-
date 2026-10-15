@@ -9,6 +9,7 @@ import { APPROVAL_KEYS as K, APPROVE_DUE, EXPEDITE_REASON_MIN, FLAG_FILTERS, HOL
 import type { PayoutFlag, QueueState } from './payout-approval.types';
 import { usePayoutApproval } from './usePayoutApproval';
 import type { ActionResult, PayoutApprovalState } from './usePayoutApproval';
+import { SendToOwner } from '@/features/decisions/SendToOwner';
 
 type T = ReturnType<typeof useTranslation>['t'];
 const DAY = 86_400_000;
@@ -46,6 +47,7 @@ export function PayoutApprovalScreen() {
       {(pull > 0 || s.refreshing) && <p className="t-xs t-muted" role="status" style={{ textAlign: 'center' }} data-pull>{s.refreshing ? t(K.refresh.busy) : pull >= PULL_DISTANCE ? t(K.refresh.release) : t(K.refresh.pull)}</p>}
       <Screen width="wide">
         <ScreenHeader title={t(K.title)} subtitle={t(K.subtitle)} action={<Button size="sm" variant="ghost" icon={<ArrowsClockwise size={16} />} data-refresh disabled={s.refreshing} onClick={() => void s.refresh()}>{t(K.refresh.button)}</Button>} />
+        <SendToOwner kind="payout_release" />
         <div className="stack gap-4">
           <Summary d={d} s={s} t={t} />
           <Queue d={d} s={s} t={t} />

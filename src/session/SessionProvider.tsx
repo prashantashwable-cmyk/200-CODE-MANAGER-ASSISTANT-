@@ -188,6 +188,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     async (role: Role) => {
       const user = await repository.getUser(DEMO_USER_BY_ROLE[role]);
       if (!user) throw new Error(`No seeded demo account for role ${role}`);
+      // A real server sign-in can outlive the app session in this browser (Supabase keeps it in localStorage). End it before
+      // the demo starts, so nothing in demo can act as that real account. DemoDataScope keeps demo on sample data as well.
+      if (serverConfigured) await signOutServer().catch(() => undefined);
       adopt(user, 'demo');
     },
     [repository, adopt],

@@ -158,6 +158,20 @@ export function createDecisionStore(seed: DecisionCard[], deps: StoreDeps) {
       return card;
     },
 
+    /** The system raises a card by itself (a rule found something only a person can settle). Never reachable from a browser caller. */
+    raiseSystem(input: PacketInput & { proposedByName: string }): DecisionCard {
+      if (input.title.trim().length < TITLE_MIN || input.summary.trim().length < SUMMARY_MIN) throw new DecisionError('summary_short');
+      cardCounter += 1;
+      const card: DecisionCard = {
+        id: `dc-${cardCounter}`, code: `AIEC-DC-${String(cardCounter).padStart(4, '0')}`, kind: input.kind, title: input.title.trim(), summary: input.summary.trim(), status: 'pending',
+        proposedBy: { role: 'system', name: input.proposedByName }, createdAt: deps.now(),
+        ...(input.amountInr != null ? { amountInr: input.amountInr } : {}), ...(input.place ? { place: input.place } : {}),
+        evidence: input.evidence ?? [], impact: input.impact ?? [], isDemo: false,
+      };
+      cards.set(card.id, card);
+      return card;
+    },
+
     /** The Owner (or a delegate for this card) decides. The record is appended to the chain and never changed. */
     decide(userId: string, input: DecisionInput): { card: DecisionCard; record: DecisionRecord } {
       const r = role(userId);

@@ -30,6 +30,8 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
+      - name: Bundle budget (the entry script must not grow)
+        run: npm run budget
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: End-to-end smoke (every role)

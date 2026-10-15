@@ -10,6 +10,7 @@ import type { Risk } from '@/features/access/permissions';
 import { USER_ROLE_PERMISSIONS_KEYS as K } from './user-role-permissions.types';
 import { TABS, useUserRolePermissions } from './useUserRolePermissions';
 import type { PermissionTab, PermissionsState } from './useUserRolePermissions';
+import { SendToOwner } from '@/features/decisions/SendToOwner';
 
 type T = ReturnType<typeof useTranslation>['t'];
 const RISK_TONE: Record<Risk, 'success' | 'warning' | 'error'> = { low: 'success', medium: 'warning', high: 'error' };
@@ -42,6 +43,7 @@ export function UserRolePermissionsScreen() {
     <Screen width="default">
       {head}
       <div className="stack gap-4">
+        <SendToOwner kind="access_suspension" />
         {s.offline && <p className="t-xs t-muted" role="status" data-offline>{t(K.offline)}</p>}
         <Summary o={o} t={t} />
         <Tabs label={t(K.tab.label)} value={s.tab} onChange={(id) => s.setTab(id as PermissionTab)} items={TABS.map((id) => ({ id, label: t(`accessControl.tab.${id}`) }))} />

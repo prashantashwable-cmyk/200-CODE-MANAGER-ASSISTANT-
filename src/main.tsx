@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { DataProvider } from '@/data/DataProvider';
 import { SessionProvider } from '@/session/SessionProvider';
+import { DemoDataScope } from '@/session/DemoDataScope';
 import { ToastProvider } from '@/design-system';
 import { CaptureDraftProvider } from '@/features/leadCapture/CaptureDraftProvider';
 import { BrandProvider } from '@/features/brand/BrandProvider';
@@ -19,8 +20,8 @@ import './styles/shell.css';
 import './styles/map.css';
 import './styles/adaptive.css';
 
-// Registers i18next and applies the saved language + font pairing.
-import '@/i18n';
+// Registers i18next; the first render waits until the reader's language is loaded.
+import { i18nReady } from '@/i18n';
 
 /**
  * To go live on Firebase, implement `firebaseRepository` (see data/firebase.ts)
@@ -28,12 +29,13 @@ import '@/i18n';
  * Everything downstream codes against the Repository interface, so nothing else
  * changes.
  */
-ReactDOM.createRoot(document.getElementById('root')!).render(
+void i18nReady.then(() => ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
       <DataProvider>
         <BrandProvider>
         <SessionProvider>
+          <DemoDataScope>
           <AccessProvider>
           <ToastProvider>
             <CaptureDraftProvider>
@@ -41,9 +43,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             </CaptureDraftProvider>
           </ToastProvider>
           </AccessProvider>
+          </DemoDataScope>
         </SessionProvider>
         </BrandProvider>
       </DataProvider>
     </BrowserRouter>
   </React.StrictMode>,
-);
+));

@@ -16,8 +16,11 @@ export type LoginErrorKind =
   | 'tooMany'
   | 'google';
 
-/** The four roles offered on the Demo tab. Supplier onboards, it does not demo. */
-export const DEMO_ROLES: Role[] = ['admin', 'surveyor', 'technician', 'customer'];
+/**
+ * Every role is offered on the Demo tab (owner, 2026-10-15: "add all roles to demo"). Spec 002 asked for four tiles; the
+ * Owner role came later with the master prompt, and the Owner wants to try every view from a phone without codes.
+ */
+export const DEMO_ROLES: Role[] = ['owner', 'admin', 'surveyor', 'technician', 'customer', 'supplier'];
 
 export const LOGIN_KEYS = {
   title: 'login.title',
@@ -51,10 +54,12 @@ export const LOGIN_KEYS = {
     body: 'login.demo.body',
     entering: 'login.demo.entering',
     role: {
+      owner: 'login.demo.role.owner',
       admin: 'login.demo.role.admin',
       surveyor: 'login.demo.role.surveyor',
       technician: 'login.demo.role.technician',
       customer: 'login.demo.role.customer',
+      supplier: 'login.demo.role.supplier',
     },
     safety: 'login.demo.safety',
   },

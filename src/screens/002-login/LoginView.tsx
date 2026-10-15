@@ -2,9 +2,11 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
   ChartLineUp,
+  Crown,
   GoogleLogo,
   HardHat,
   MapPinLine,
+  Package,
   User as UserIcon,
 } from '@phosphor-icons/react';
 import { Button, Card, Checkbox, Field, Input, SegBar, Tabs } from '@/design-system';
@@ -13,10 +15,12 @@ import { useLogin } from './useLogin';
 import { DEMO_ROLES, LOGIN_KEYS as K } from './login.types';
 
 const ROLE_ICON: Record<string, JSX.Element> = {
+  owner: <Crown size={24} />,
   admin: <ChartLineUp size={24} />,
   surveyor: <MapPinLine size={24} />,
   technician: <HardHat size={24} />,
   customer: <UserIcon size={24} />,
+  supplier: <Package size={24} />,
 };
 
 /**
@@ -195,7 +199,7 @@ function DemoTab({ state: s }: { state: ReturnType<typeof useLogin> }) {
             onClick={s.enteringRole ? undefined : () => void s.enterDemoAs(role)}
             selected={s.enteringRole === role}
           >
-            <div className="stack gap-2">
+            <div className="stack gap-2" data-demo-role={role}>
               <span className="t-emerald">{ROLE_ICON[role]}</span>
               <span className="t-md t-semibold">{t(`role.${role}`)}</span>
               <span className="t-xs t-muted">{t(K.demo.role[role as keyof typeof K.demo.role])}</span>

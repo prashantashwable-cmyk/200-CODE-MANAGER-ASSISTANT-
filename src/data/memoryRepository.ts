@@ -93,6 +93,7 @@ import {
   simulateRead,
   simulateWrite,
 } from './repository';
+import type { LeadCaptureResult, MapSitePin, MapSitesView } from './repository';
 import type {
   BotSimulationResult,
   BroadcastSegmentPreview,
@@ -894,6 +895,12 @@ import type {
   TrainingFeedback,
 } from './types';
 import { createDecisionStore, DecisionError } from '@/features/decisions/decisions';
+import { createEventLog, EventError } from '@/features/events/eventLog';
+import { decideOwnership } from '@/features/leads/ownership';
+import type { Capture as OwnCapture0 } from '@/features/leads/ownership';
+import type { AppendInput } from '@/features/events/eventLog';
+import { aggregateDensity, contactLevel, DEFAULT_FUZZ_RADIUS_M, fuzzPin, revealLevel, shownDistanceM } from '@/features/geo/privacy';
+import type { SiteStage } from '@/features/geo/privacy';
 import { seedDecisionCards } from './decisionSeed';
 import { formatDate, formatDateTime, formatINR, formatINRCompact, formatTime, haversineKm } from '@/design-system/format';
 import { MAX_SAFE_BOT_DISCOUNT_PCT } from '@/features/communication/botRules';
@@ -1010,6 +1017,19 @@ import type { Candidate as BookingCandidate } from '@/features/service/booking';
 import { DRIVE_SKILL } from '@/features/training/skills';
 import { isEmail, isIndianMobile, isPincode } from '@/features/validation/india';
 import { randomCode, randomToken } from '@/features/ids/clientId';
+import { ackDueAt as cpAckDueAt, acknowledgeProblem as cpAckProblem, isAckOverdue as cpOverdue, raiseProblem as cpRaiseProblem, replyProblem as cpReplyProblem, resolveProblem as cpResolveProblem } from '@/features/complaints/complaint';
+import type { ComplaintOutcome as CpOutcome, TrustSummary as CpTrust } from '@/features/complaints/complaint';
+import type { ComplaintView as CpView, RaiseComplaintInput as CpInput } from '@/features/complaints/types';
+import { acknowledgeProblem as pjAcknowledgeProblem, handoverGateProblem as pjGateProblem, handoverState as pjHandoverState, projectProgress as pjProgress } from '@/features/projects/project';
+import type { HandoverParty as PjParty, ProjectOrder as PjOrder } from '@/features/projects/project';
+import type { ProjectView } from '@/features/projects/types';
+import { templateSetProblem as woTemplateSetProblem } from '@/features/workorders/workOrder';
+import type { TemplateSet as WoTemplateSet } from '@/features/workorders/workOrder';
+import { DEFAULT_TEMPLATES as WO_TEMPLATES, acceptanceLabel as woAcceptanceLabel, evidenceNamesProblem as woEvidenceProblem, milestonesOf as woMilestonesOf, skipsWorkOrder as woSkips, paymentProblem as woPaymentProblem, permissionsOf as woPermissionsOf, confirmProblem as woConfirmProblem, mayVerify as woMayVerify, qcAssignProblem as woQcAssignProblem, sideOf as woSideOf, referenceProblem as woReferenceProblem, startProblem as woStartProblem, statusOfMilestones as woStatus, submitEvidenceProblem as woSubmitProblem, verifyProblem as woVerifyProblem } from '@/features/workorders/workOrder';
+import type { PartnerAccount, ProviderStatus, TemplateHistory, TemplateVersion, WorkOrder, WorkOrderView } from '@/features/workorders/types';
+import { DEFAULT_COST_RATES, DEFAULT_FEE_SETTINGS, alternatives as fqAlternatives, computeQuote as fqCompute, mayOffer as fqMayOffer, maxBundleDiscountInr as fqMaxDiscount, quoteProblems as fqProblems, settingsProblem as fqSettingsProblem, waterfall as fqWaterfall } from '@/features/quotes/facilitatorQuote';
+import type { CostRates as FqCostRates, FeeActor as FqActor, FeeSettings as FqSettings, QuoteLine as FqLine } from '@/features/quotes/facilitatorQuote';
+import type { CustomerQuoteView, FacilitatorQuote, FeeSettingsVersion, QuotePreview, SaveQuoteInput, SaveQuoteResult } from '@/features/quotes/types';
 import { addDays } from '@/features/qc/inspectors';
 import { HUMAN_HOLD as SUPPORT_HUMAN_HOLD, MAX_MESSAGE as SUPPORT_MAX_MESSAGE, QUEUE_BUSY as SUPPORT_QUEUE_BUSY, REPLY_TARGET_MIN as SUPPORT_REPLY_TARGET_MIN, decide as supportDecide, handlingOf as supportHandlingOf, intentOf as supportIntentOf, queueOf as supportQueueOf } from '@/features/support/chat';
 import type { Intent as SupportIntent, Parsed as SupportParsed } from '@/features/support/chat';
@@ -11989,6 +12009,12 @@ function ofAdmin(userId: string): User {
   if (!u || !isAdminRole(u.role)) throw new RepositoryError('not_admin');
   return u;
 }
+/** A business decision (master prompt P1): the Owner decides; Admin may only send it to the Owner's Decision Desk. */
+function ownerDecides(userId: string): User {
+  const u = ofAdmin(userId);
+  if (u.role !== 'owner') throw new RepositoryError('admin_cannot_decide');
+  return u;
+}
 function ofApp(applicationId: string): PartnerApplication {
   const app = byId(partnerApplications, applicationId);
   if (!app) throw new RepositoryError('not_found');
@@ -18841,6 +18867,234 @@ function decisionCall<T>(fn: () => T): T {
   try { return fn(); } catch (e) { if (e instanceof DecisionError) throw new RepositoryError(e.code); throw e; }
 }
 
+type OwnCapture = OwnCapture0;
+/** What each lead's capture looked like when it came in, for the ownership rule. Leads from before this existed fall back to their created time. */
+const captureMeta = new Map<string, OwnCapture>();
+const captureResults = new Map<string, LeadCaptureResult>();
+
+function ownershipSummary(reason: 'accuracy_conflict' | 'too_close_to_order' | 'earlier_capture_synced_late', first: string, second: string): string {
+  if (reason === 'too_close_to_order') return `${first} and ${second} captured the same site minutes apart, too close for phone clocks to say who was first.`;
+  if (reason === 'earlier_capture_synced_late') return `${second} says they captured this site before ${first}'s capture on record, but it reached the server later. It cannot be checked, so it needs a decision.`;
+  return `${first}'s earlier capture has a poor GPS fix and ${second}'s later one is accurate.`;
+}
+
+function createLeadRecord(draft: Parameters<Repository['createLead']>[0], meta?: { clientEventId?: string; capturedAt?: string; receivedAt?: string; deviceSentAt?: string; clockSkewMs?: number; accuracyM?: number | null; duplicateOfLeadId?: string }): Lead {
+  leadCounter += 1;
+  const now = new Date().toISOString();
+  const lead: Lead = {
+    ...draft,
+    id: `l-new-${leadCounter}`,
+    code: `AIEC-L-0${leadCounter}`,
+    originalSurveyorId: draft.surveyorId,
+    createdAt: now,
+    updatedAt: now,
+    stageEnteredAt: now,
+    isDemo: true,
+    ...(meta?.duplicateOfLeadId ? { duplicateOfLeadId: meta.duplicateOfLeadId } : {}),
+  };
+  leads.unshift(lead);
+  captureMeta.set(lead.id, { leadId: lead.id, scoutId: lead.surveyorId, at: lead.location, capturedAt: meta?.capturedAt ?? now, receivedAt: meta?.receivedAt ?? now, ...(meta?.clockSkewMs !== undefined ? { clockSkewMs: meta.clockSkewMs } : {}), accuracyM: meta?.accuracyM ?? null, phone: lead.contactPhone });
+  pushTimelineEvent({ leadId: lead.id, kind: 'captured', actorName: nameOf(lead.surveyorId), at: now, detail: lead.siteName });
+  // The same capture, as an event in the platform stream. Admin cannot write business events, so a lead entered for a scout is a system event naming who.
+  const capturer = byId(users, lead.surveyorId);
+  const captured: AppendInput = {
+    type: 'lead.captured', subject: { kind: 'lead', id: lead.id }, clientEventId: meta?.clientEventId ?? `lead:${lead.id}`, ...(meta?.capturedAt ? { capturedAt: meta.capturedAt } : {}), ...(meta?.deviceSentAt ? { deviceSentAt: meta.deviceSentAt } : {}),
+    ...(meta?.accuracyM != null ? { geo: { lat: lead.location.lat, lng: lead.location.lng, accuracyM: meta.accuracyM } } : {}),
+    payload: { code: lead.code, siteName: lead.siteName, city: lead.city, lat: lead.location.lat, lng: lead.location.lng },
+  };
+  if (capturer && capturer.role !== 'admin') eventLog.append(capturer.id, captured);
+  else eventLog.appendSystem({ ...captured, source: 'system', reasonTag: 'entered_for_scout', payload: { ...captured.payload, byUserId: lead.surveyorId } });
+  return lead;
+}
+
+/** Server-only salt for pin fuzzing: never sent to a browser. A database build keeps it as a secret. */
+const GEO_SALT = randomToken(16);
+const geoRadiusM = DEFAULT_FUZZ_RADIUS_M;
+
+const eventLog = createEventLog({
+  now: () => new Date().toISOString(),
+  roleOf: (userId) => byId(users, userId)?.role ?? null,
+  // Visibility matrix: your own events; a scout's events on a lead they own; a customer's events on their own project.
+  canSee: (userId, _role, e) => e.actor.id === userId || (e.subject.kind === 'lead' && byId(leads, e.subject.id)?.surveyorId === userId) || e.payload.customerId === userId,
+});
+function eventCall<T>(fn: () => T): T {
+  try { return fn(); } catch (e) { if (e instanceof EventError) throw new RepositoryError(e.code); throw e; }
+}
+
+/* ---- 206/207 facilitator quotes: partner prices + a disclosed fee, priced on the fee version in force ---- */
+const feeVersions: FeeSettingsVersion[] = [
+  { version: 1, settings: DEFAULT_FEE_SETTINGS, costRates: DEFAULT_COST_RATES, setByName: 'Initial default [ASSUMPTION]', reason: 'Starting values for the Owner to replace', at: new Date().toISOString() },
+];
+const facilitatorQuotes: FacilitatorQuote[] = [];
+let fqCounter = 3000;
+const currentFee = () => feeVersions[feeVersions.length - 1];
+function fqActorOf(role: string | undefined): FqActor { return role === 'owner' ? 'owner' : 'sales'; }
+function fqRequireStaff(userId: string) {
+  const u = byId(users, userId);
+  if (!u || !isAdminRole(u.role)) throw new RepositoryError('forbidden');
+  fqSeed();
+  return u;
+}
+function fqPreview(userId: string, lines: FqLine[], bundleDiscountInr?: number): QuotePreview {
+  const u = fqRequireStaff(userId);
+  const fee = currentFee();
+  const input = { lines, settings: fee.settings, ...(bundleDiscountInr != null ? { bundleDiscountInr } : {}) };
+  const totals = fqCompute(input);
+  const actor = fqActorOf(u.role);
+  return {
+    totals, problems: fqProblems(input), band: totals.band, actor, allowed: fqMayOffer(totals.band, actor),
+    maxDiscountInr: fqMaxDiscount(lines, fee.settings, actor),
+    waterfall: fqWaterfall(totals.feeInr, totals.gstOnFeeInr, fee.costRates),
+    alternatives: fqAlternatives(totals.baseInr, fee.settings), feeVersion: fee.version,
+  };
+}
+function fqCustomerView(q: FacilitatorQuote): CustomerQuoteView {
+  return { quote: { id: q.id, code: q.code, siteName: q.siteName, status: q.status, ...(q.sentAt ? { sentAt: q.sentAt } : {}), components: q.components.map((c) => ({ ...c })), bundleDiscountInr: q.bundleDiscountInr, totals: { ...q.totals } }, tokenInr: q.totals.tokenInr };
+}
+/* ---- 208 work orders: one customer, one partner, milestones that are payable only after verification ---- */
+const workOrders: WorkOrder[] = [];
+let woCounter = 4000;
+/** Append-only versions of the payment-milestone templates; version 1 is the starting default for the Owner to replace. */
+const woTemplateVersions: TemplateVersion[] = [{ version: 1, templates: structuredClone(WO_TEMPLATES), setByName: 'Initial default [ASSUMPTION]', reason: 'Starting values for the Owner to replace; material 90/10 is from the original brief', at: new Date(0).toISOString() }];
+/** Customer complaints; kept, never deleted. A resolved one is locked. */
+interface CpRecord { id: string; code: string; quoteId: string; workOrderId?: string; customerId: string; leadId: string; category: CpView['category']; description: string; status: CpView['status']; createdAt: string; ackDueAt: string; clientId: string; acknowledgedAt?: string; resolvedAt?: string; outcome?: CpOutcome; resolutionNote?: string; partnerReply?: string; partnerRepliedAt?: string; }
+const complaints: CpRecord[] = [];
+let cpCounter = 1000;
+function cmpVisibleTo(c: CpRecord, userId: string): boolean {
+  const u = byId(users, userId);
+  if (!u) return false;
+  if (isAdminRole(u.role) || c.customerId === userId) return true;
+  const w = c.workOrderId ? workOrders.find((x) => x.id === c.workOrderId) : undefined;
+  return !!w && w.partnerAccountId === userId;
+}
+function cmpView(c: CpRecord, userId: string): CpView {
+  const u = byId(users, userId);
+  const staff = !!u && isAdminRole(u.role);
+  const w = c.workOrderId ? workOrders.find((x) => x.id === c.workOrderId) : undefined;
+  return {
+    id: c.id, code: c.code, quoteId: c.quoteId, siteName: workOrders.find((x) => x.quoteId === c.quoteId)?.siteName ?? '', category: c.category, description: c.description, status: c.status,
+    createdAt: c.createdAt, ackDueAt: c.ackDueAt, overdue: cpOverdue({ status: c.status, ackDueAt: c.ackDueAt }, Date.now()),
+    ...(w ? { workOrderId: w.id, workOrderCode: w.code, ...(staff ? { partnerName: w.partnerName, partnerAccountId: w.partnerAccountId } : {}) } : {}),
+    ...(c.acknowledgedAt ? { acknowledgedAt: c.acknowledgedAt } : {}), ...(c.resolvedAt ? { resolvedAt: c.resolvedAt } : {}),
+    ...(c.outcome ? { outcome: c.outcome } : {}), ...(c.resolutionNote ? { resolutionNote: c.resolutionNote } : {}),
+    ...(c.partnerReply ? { partnerReply: c.partnerReply, partnerRepliedAt: c.partnerRepliedAt! } : {}),
+    can: { acknowledge: u?.role === 'owner' && c.status === 'open', resolve: u?.role === 'owner' && c.status === 'acknowledged', reply: !!w && w.partnerAccountId === userId && c.status !== 'resolved' && !c.partnerReply },
+  };
+}
+function cmpFind(userId: string, id: string): CpRecord {
+  const c = complaints.find((x) => x.id === id);
+  if (!c || !cmpVisibleTo(c, userId)) throw new RepositoryError('not_found');
+  return c;
+}
+/** Acknowledgements of the handover record; append-only. */
+const handoverAcks: { quoteId: string; role: PjParty['role']; accountId: string; at: string }[] = [];
+const pjOrdersOf = (quoteId: string): PjOrder[] => workOrders.filter((w) => w.quoteId === quoteId).map((w) => ({ kind: w.kind, customerId: w.customerId, partnerAccountId: w.partnerAccountId, priceInr: w.priceInr, milestones: w.milestones.map((m) => ({ gate: m.gate, amountInr: m.amountInr, status: m.status, ...(m.qcInspectorId ? { qcInspectorId: m.qcInspectorId } : {}) })) }));
+const pjAcksOf = (quoteId: string): PjParty[] => handoverAcks.filter((a) => a.quoteId === quoteId).map((a) => ({ role: a.role, accountId: a.accountId }));
+function pjView(quoteId: string, userId: string): ProjectView | null {
+  const u = byId(users, userId);
+  const all = workOrders.filter((w) => w.quoteId === quoteId);
+  const mine = all.filter((w) => woVisibleTo(w, userId));
+  if (!u || mine.length === 0) return null;
+  const orders = pjOrdersOf(quoteId);
+  const st = pjHandoverState(orders, pjAcksOf(quoteId));
+  const p = pjProgress(orders);
+  const staffOrCustomer = isAdminRole(u.role) || all.some((w) => w.customerId === userId);
+  const q = byId(facilitatorQuotes, quoteId);
+  return {
+    quoteId, code: q?.code ?? quoteId, siteName: all[0].siteName, percent: p.percent,
+    amounts: staffOrCustomer ? { verifiedInr: p.verifiedInr, paidInr: p.paidInr, totalInr: p.totalInr } : null,
+    orders: mine.map((w) => ({ id: w.id, code: w.code, kind: w.kind, partnerName: w.partnerName, status: w.status })),
+    handover: {
+      ready: st.ready, qcMissing: st.qcMissing, complete: st.complete,
+      parties: st.parties.map((x) => ({ role: x.role, accountId: x.accountId, name: byId(users, x.accountId)?.name ?? '', signed: x.signed, mine: x.accountId === userId })),
+      canAcknowledge: pjAcknowledgeProblem({ orders, callerId: userId, acks: pjAcksOf(quoteId) }) === null,
+    },
+  };
+}
+const woTemplateNow = () => woTemplateVersions[woTemplateVersions.length - 1];
+/** No signing provider is connected in this build: acceptance is recorded in-app and labelled as such. */
+const WO_SIGNING = 'not_connected' as const;
+/** An account can act for a partner only if it is an active technician or supplier. */
+const woEligibleAccount = (id: string | undefined) => { const a = id ? byId(users, id) : undefined; return a && a.status === 'active' && (a.role === 'technician' || a.role === 'supplier') ? a : undefined; };
+function woStanding(w: WorkOrder) {
+  const acct = byId(users, w.partnerAccountId);
+  const sup = acct ? suppliers.find((x) => x.contactPhone && x.contactPhone === acct.phone) : undefined;
+  // [GAP] no licence/insurance expiry registry exists yet: a supplier is gated on KYC, anyone on suspension.
+  return { licenceValid: sup ? sup.kycStatus === 'approved' : true, insuranceValid: true, suspended: !acct || acct.status !== 'active' || sup?.status === 'suspended' };
+}
+function woView(w: WorkOrder, userId: string): WorkOrderView {
+  const u = byId(users, userId);
+  const side = woSideOf(u?.id, w);
+  const startBlock = woStartProblem(w, woStanding(w));
+  return { ...w, milestones: w.milestones.map((m) => ({ ...m, evidence: [...m.evidence] })), side, startBlock, acceptance: woAcceptanceLabel(WO_SIGNING), can: woPermissionsOf({ side, role: u?.role, status: w.status, customerAcceptedAt: w.customerAcceptedAt, partnerAcceptedAt: w.partnerAcceptedAt, startBlock }) };
+}
+/** Who may see an order at all: Admin and Owner, its customer, the one account that acts for its partner, and a technician the Owner named to check one of its milestones. Nobody else. */
+const woVisibleTo = (w: WorkOrder, userId: string) => { const u = byId(users, userId); return !!u && (isAdminRole(u.role) || u.id === w.customerId || u.id === w.partnerAccountId || w.milestones.some((m) => m.qcInspectorId === u.id)); };
+function woFind(userId: string, id: string): WorkOrder {
+  const w = workOrders.find((x) => x.id === id);
+  if (!w || !woVisibleTo(w, userId)) throw new RepositoryError('not_found');
+  return w;
+}
+function woMilestone(w: WorkOrder, id: string) {
+  const m = w.milestones.find((x) => x.id === id);
+  if (!m) throw new RepositoryError('not_found');
+  return m;
+}
+let fqSeeded = false;
+function fqSeed() {
+  if (fqSeeded) return;
+  fqSeeded = true;
+  const lead = leads.find((l) => l.id === 'l-3');
+  if (!lead) return;
+  const lines: FqLine[] = [
+    { id: 'c1', partnerId: 'sp-1', partnerName: 'Vertex Lifts', kind: 'material', description: 'Machine, controller, cabin and doors', partnerPriceInr: 2_300_000 },
+    { id: 'c2', partnerId: 'u-tech-1', partnerName: 'Santosh Patil', kind: 'installation', description: 'Installation and commissioning', partnerPriceInr: 450_000 },
+    { id: 'c3', partnerId: 'dp-1', partnerName: 'City Freight', kind: 'logistics', description: 'Delivery to site', partnerPriceInr: 60_000 },
+    { id: 'c4', partnerId: 'gov', partnerName: 'Lift Inspectorate', kind: 'statutory', description: 'Licence and inspection fee (pass-through)', partnerPriceInr: 20_000 },
+  ];
+  const totals = fqCompute({ lines, settings: currentFee().settings });
+  fqCounter += 1;
+  facilitatorQuotes.push({ id: `fq-${fqCounter}`, code: `AIEC-FQ-${fqCounter}`, leadId: lead.id, siteName: lead.siteName, customerId: 'u-cust-3', components: lines, bundleDiscountInr: 0, feeVersion: 1, totals, status: 'sent', createdAt: new Date().toISOString(), createdByName: 'Demo seed', sentAt: new Date().toISOString() });
+}
+
+/** Where a person stands with a site: owns the lead, is its customer, or has been offered / has accepted the work. */
+function siteStageFor(lead: Lead, user: User): { stage: SiteStage; relation: { ownsLead: boolean; isCustomerOfSite: boolean } } {
+  const deal = deals.find((d) => d.leadId === lead.id);
+  const relation = { ownsLead: lead.surveyorId === user.id, isCustomerOfSite: !!deal && deal.customerId === user.id };
+  const dealJobs = deal ? jobs.filter((j) => j.dealId === deal.id) : [];
+  if (user.role === 'technician') {
+    if (dealJobs.some((j) => j.technicianId === user.id || (j.crew ?? []).some((c) => c.userId === user.id))) return { stage: 'accepted', relation };
+    if (dealJobs.some((j) => !j.technicianId && j.status !== 'completed')) return { stage: 'offered', relation };
+  }
+  return { stage: 'lead', relation };
+}
+
+function mapSitesFor(userId: string, from?: { lat: number; lng: number }): MapSitesView {
+  const user = byId(users, userId);
+  if (!user) throw new RepositoryError('not_found');
+  const pins: MapSitePin[] = [];
+  const points: { lat: number; lng: number }[] = [];
+  for (const lead of leads) {
+    const { stage, relation } = siteStageFor(lead, user);
+    const level = revealLevel(user.role, stage, relation);
+    if (level === 'density') { points.push(lead.location); continue; }
+    if (level === 'none') continue;
+    const fuzzed = level === 'fuzzed' ? fuzzPin({ id: lead.id, ...lead.location }, geoRadiusM, GEO_SALT) : null;
+    pins.push({
+      id: lead.id,
+      code: lead.code,
+      label: level === 'exact' ? lead.siteName : lead.city,
+      stage: lead.stage,
+      level,
+      point: fuzzed ?? lead.location,
+      ...(fuzzed && from ? { distanceM: shownDistanceM(from, fuzzed) } : {}),
+      contact: contactLevel(user.role, stage, relation),
+      mine: relation.ownsLead,
+    });
+  }
+  return { pins, density: aggregateDensity(points), fuzzRadiusM: geoRadiusM, role: user.role };
+}
+
 export const memoryRepository: Repository = {
   /* ------------------------------------------------------------- Users */
   listUsers: (filter) =>
@@ -18895,23 +19149,47 @@ export const memoryRepository: Repository = {
 
   getLead: (id) => simulateRead(() => resolveLead(id)),
 
-  createLead: (draft) =>
+  createLead: (draft) => simulateWrite(() => createLeadRecord(draft)),
+
+  submitLeadCapture: (userId, input) =>
     simulateWrite(() => {
-      leadCounter += 1;
-      const now = new Date().toISOString();
-      const lead: Lead = {
-        ...draft,
-        id: `l-new-${leadCounter}`,
-        code: `AIEC-L-0${leadCounter}`,
-        originalSurveyorId: draft.surveyorId,
-        createdAt: now,
-        updatedAt: now,
-        stageEnteredAt: now,
-        isDemo: true,
-      };
-      leads.unshift(lead);
-      pushTimelineEvent({ leadId: lead.id, kind: 'captured', actorName: nameOf(lead.surveyorId), at: now, detail: lead.siteName });
-      return lead;
+      const user = byId(users, userId);
+      if (!user || (user.role !== 'surveyor' && user.role !== 'owner')) throw new RepositoryError('forbidden');
+      if (!input.clientEventId) throw new RepositoryError('client_event_id_required');
+      if (user.role === 'surveyor' && input.draft.surveyorId !== userId) throw new RepositoryError('forbidden');
+      const done = captureResults.get(`${userId}|${input.clientEventId}`);
+      if (done) return { ...done, duplicate: true };
+      const point = input.draft.location;
+      if (!Number.isFinite(point.lat) || !Number.isFinite(point.lng) || Math.abs(point.lat) > 90 || Math.abs(point.lng) > 180) throw new RepositoryError('location_invalid');
+      if (!input.draft.siteName.trim()) throw new RepositoryError('site_name_required');
+      const receivedAt = new Date().toISOString();
+      const capturedAt = input.capturedAt && Number.isFinite(Date.parse(input.capturedAt)) ? input.capturedAt : receivedAt;
+      const clockSkewMs = input.deviceSentAt && Number.isFinite(Date.parse(input.deviceSentAt)) ? Date.parse(input.deviceSentAt) - Date.parse(receivedAt) : undefined;
+      const incoming: OwnCapture = { leadId: `pending:${input.clientEventId}`, scoutId: input.draft.surveyorId, at: point, capturedAt, receivedAt, ...(clockSkewMs !== undefined ? { clockSkewMs } : {}), accuracyM: input.accuracyM ?? null, phone: input.draft.contactPhone };
+      const existing: OwnCapture[] = leads.map((l) => captureMeta.get(l.id) ?? { leadId: l.id, scoutId: l.originalSurveyorId, at: l.location, capturedAt: l.createdAt, receivedAt: l.createdAt, accuracyM: null, phone: l.contactPhone });
+      const verdict = decideOwnership(existing, incoming);
+      let result: LeadCaptureResult;
+      if (verdict.outcome === 'supporting') {
+        const owner = byId(leads, verdict.ownerLeadId)!;
+        pushTimelineEvent({ leadId: owner.id, kind: 'note_added', actorName: nameOf(userId), at: receivedAt, detail: `Another capture of this site by ${nameOf(input.draft.surveyorId)}: kept as supporting evidence`, topic: 'other' });
+        eventLog.append(userId, { type: 'lead.duplicate_detected', subject: { kind: 'lead', id: owner.id }, capturedAt, ...(input.deviceSentAt ? { deviceSentAt: input.deviceSentAt } : {}), clientEventId: input.clientEventId, geo: { lat: point.lat, lng: point.lng, accuracyM: input.accuracyM ?? 0 }, payload: { supportingFor: owner.id, siteName: input.draft.siteName } });
+        result = { outcome: 'supporting', lead: owner, ownerLeadId: owner.id, duplicate: false };
+      } else {
+        const lead = createLeadRecord(input.draft, { clientEventId: input.clientEventId, capturedAt, receivedAt, ...(input.deviceSentAt ? { deviceSentAt: input.deviceSentAt } : {}), ...(clockSkewMs !== undefined ? { clockSkewMs } : {}), accuracyM: input.accuracyM ?? null, ...(verdict.outcome === 'review' ? { duplicateOfLeadId: verdict.ownerLeadId } : {}) });
+        if (verdict.outcome === 'review') {
+          const owner = byId(leads, verdict.ownerLeadId)!;
+          const card = decisionStore.raiseSystem({
+            kind: 'lead_ownership_dispute', proposedByName: 'Duplicate detection',
+            title: `Two scouts captured ${lead.siteName}`,
+            summary: ownershipSummary(verdict.reason, nameOf(owner.originalSurveyorId), nameOf(input.draft.surveyorId)),
+            place: { lat: point.lat, lng: point.lng, label: lead.city }, evidence: [{ label: `First capture ${owner.code}`, kind: 'map' }, { label: `Second capture ${lead.code}`, kind: 'map' }],
+            impact: ['The winner earns the lead commission', 'The other capture stays as supporting evidence'],
+          });
+          result = { outcome: 'review', lead, ownerLeadId: owner.id, decisionCardId: card.id, duplicate: false };
+        } else result = { outcome: 'claimed', lead, duplicate: false };
+      }
+      captureResults.set(`${userId}|${input.clientEventId}`, result);
+      return result;
     }),
 
   updateLead: (id, patch) =>
@@ -25113,7 +25391,7 @@ export const memoryRepository: Repository = {
 
   approvePayout: (entryId, input, adminId) =>
     simulateWrite((): PayoutQueueRow => {
-      const admin = ofAdmin(adminId);
+      const admin = ownerDecides(adminId);
       const e = byId(commissions, entryId);
       if (!e || e.status !== 'approved') throw new RepositoryError('not_found');
       const now = Date.now();
@@ -25130,7 +25408,7 @@ export const memoryRepository: Repository = {
 
   approvePayoutsBatch: (entryIds, adminId) =>
     simulateWrite((): PayoutBatchResult => {
-      const admin = ofAdmin(adminId);
+      const admin = ownerDecides(adminId);
       const now = Date.now();
       const at = new Date(now).toISOString();
       const ctx = paContext();
@@ -25171,7 +25449,7 @@ export const memoryRepository: Repository = {
 
   releasePayoutHold: (entryId, adminId) =>
     simulateWrite((): PayoutQueueRow => {
-      const admin = ofAdmin(adminId);
+      const admin = ownerDecides(adminId);
       const e = byId(commissions, entryId);
       if (!e || e.status !== 'approved') throw new RepositoryError('not_found');
       const now = Date.now();
@@ -25814,7 +26092,7 @@ export const memoryRepository: Repository = {
 
   publishCommissionRule: (ruleId, input, adminId) =>
     simulateWrite((): CommissionRulesView => {
-      const admin = ofAdmin(adminId);
+      const admin = ownerDecides(adminId);
       if (!crIsRuleId(ruleId)) throw new RepositoryError('unknown_rule');
       const now = Date.now();
       tcEnsure(now);
@@ -26552,7 +26830,7 @@ export const memoryRepository: Repository = {
 
   assignPartnerTier: (partnerId, input, userId) =>
     simulateWrite((): PartnerTierDetailView => {
-      const admin = ofAdmin(userId);
+      const admin = ownerDecides(userId);
       const now = Date.now();
       tcEnsure(now);
       const review = tierReviews.find((r) => r.userId === partnerId && !r.resolved);
@@ -28310,10 +28588,10 @@ export const memoryRepository: Repository = {
   getPermissionOverview: (userId) => simulateRead(() => { intAdmin(userId); const now = Date.now(); syncPermissions(now); return pmOverview(now); }),
   getPermissionMatrix: (userId, filter) => simulateRead(() => { intAdmin(userId); return pmMatrix(filter); }),
   previewRoleChange: (userId, input) => simulateRead(() => { intAdmin(userId); return pmPlan(input).preview; }),
-  changeRolePermission: (userId, input) => simulateWrite(() => { const admin = intAdmin(userId); return pmChangeRole(admin, input, Date.now()); }),
+  changeRolePermission: (userId, input) => simulateWrite(() => { const admin = intAdmin(userId); ownerDecides(userId); return pmChangeRole(admin, input, Date.now()); }),
   createCustomRole: (userId, input) =>
     simulateWrite(() => {
-      const admin = intAdmin(userId);
+      const admin = intAdmin(userId); ownerDecides(userId);
       pmEnsure();
       const now = Date.now();
       if (pmLetters(input.name) < PM_NAME_MIN) throw new RepositoryError('name_short');
@@ -28347,7 +28625,7 @@ export const memoryRepository: Repository = {
   getUserAccess: (userId, targetUserId) => simulateRead(() => { intAdmin(userId); pmEnsure(); const t = byId(users, targetUserId); if (!t) throw new RepositoryError('not_found'); return pmUserAccess(t, Date.now()); }),
   assignUserRole: (userId, targetUserId, roleId, assign, reason) =>
     simulateWrite(() => {
-      const admin = intAdmin(userId);
+      const admin = intAdmin(userId); ownerDecides(userId);
       pmEnsure();
       const t = byId(users, targetUserId);
       const c = customRoles.find((x) => x.id === roleId && !x.retired);
@@ -28360,7 +28638,7 @@ export const memoryRepository: Repository = {
       pmWrite(admin, assign ? 'role_assigned' : 'role_unassigned', Date.now(), { roleId, roleLabel: c.name, userId: t.id, userName: t.name, reason: reason.trim() });
       return pmUserAccess(t, Date.now());
     }),
-  setUserOverride: (userId, input) => simulateWrite(() => { const admin = intAdmin(userId); const now = Date.now(); pmEnsure(); pmSetOverride(admin, input, now); return pmUserAccess(byId(users, input.targetUserId)!, now); }),
+  setUserOverride: (userId, input) => simulateWrite(() => { const admin = intAdmin(userId); ownerDecides(userId); const now = Date.now(); pmEnsure(); pmSetOverride(admin, input, now); return pmUserAccess(byId(users, input.targetUserId)!, now); }),
   removeUserOverride: (userId, overrideId, reason) =>
     simulateWrite(() => {
       const admin = intAdmin(userId);
@@ -28403,7 +28681,295 @@ export const memoryRepository: Repository = {
       const limit = filter.limit === 0 ? list.length : filter.limit ?? PM_PAGE;
       return { entries: list.slice(offset, offset + limit).map((e) => ({ ...e })), total: list.length } as PermissionLogView;
     }),
+  /* 206/207 — facilitator quote */
+  getFeeSettings: (userId) => simulateRead(() => { fqRequireStaff(userId); return { current: { ...currentFee() }, history: [...feeVersions].reverse() }; }),
+  saveFeeSettings: (userId, settings, costRates, reason) => simulateWrite(() => {
+    const u = byId(users, userId);
+    if (!u || u.role !== 'owner') throw new RepositoryError('owner_only');
+    if (reason.trim().length < 10) throw new RepositoryError('reason_short');
+    const bad = fqSettingsProblem(settings);
+    if (bad) throw new RepositoryError(bad);
+    const v: FeeSettingsVersion = { version: currentFee().version + 1, settings, costRates, setByName: u.name, reason: reason.trim(), at: new Date().toISOString() };
+    feeVersions.push(v);
+    eventLog.append(userId, { type: 'system.rule_changed', subject: { kind: 'setting', id: 'fee' }, capturedAt: v.at, payload: { setting: 'facilitation_fee', version: v.version, targetPct: settings.targetPct, reason: v.reason } });
+    return { ...v };
+  }),
+  previewFacilitatorQuote: (userId, input) => simulateRead(() => fqPreview(userId, input.lines, input.bundleDiscountInr)),
+  saveFacilitatorQuote: (userId, input: SaveQuoteInput) => simulateWrite((): SaveQuoteResult => {
+    const u = fqRequireStaff(userId);
+    const dup = facilitatorQuotes.find((q) => q.clientEventId === input.clientEventId);
+    if (dup) return { status: 'saved', quote: { ...dup } };
+    const lead = byId(leads, input.leadId);
+    if (!lead) throw new RepositoryError('not_found');
+    const pv = fqPreview(userId, input.lines, input.bundleDiscountInr);
+    if (pv.problems.length) throw new RepositoryError(pv.problems[0]);
+    if (!pv.allowed) {
+      const card = decisionStore.prepare(userId, { kind: 'fee_change', title: `Fee below ${pv.actor === 'owner' ? 'floor' : 'your floor'} for ${lead.siteName}`, summary: `Quote for ${lead.siteName} would carry a fee of ${pv.totals.effectivePct}% on partner cost, which is in the "${pv.band}" band and needs the Owner.`, amountInr: pv.totals.feeInr, impact: [`Fee ₹${pv.totals.feeInr}`, `Margin after costs ₹${pv.waterfall.marginInr}`] });
+      return { status: 'needs_owner', cardId: card.id, preview: pv };
+    }
+    const deal = deals.find((d) => d.leadId === lead.id);
+    fqCounter += 1;
+    const quote: FacilitatorQuote = { id: `fq-${fqCounter}`, code: `AIEC-FQ-${fqCounter}`, leadId: lead.id, siteName: lead.siteName, ...(deal?.customerId ? { customerId: deal.customerId } : {}), components: input.lines.map((l) => ({ ...l })), bundleDiscountInr: pv.totals.bundleDiscountInr, feeVersion: pv.feeVersion, totals: pv.totals, status: 'draft', createdAt: new Date().toISOString(), createdByName: u.name, clientEventId: input.clientEventId };
+    facilitatorQuotes.unshift(quote);
+    eventLog.append(userId, { type: 'quote.itemised', subject: { kind: 'lead', id: lead.id }, capturedAt: quote.createdAt, clientEventId: input.clientEventId, payload: { quoteId: quote.id, feeInr: pv.totals.feeInr, effectivePct: pv.totals.effectivePct, band: pv.band, feeVersion: pv.feeVersion, customerId: quote.customerId ?? null } });
+    return { status: 'saved', quote: { ...quote } };
+  }),
+  listFacilitatorQuotes: (userId) => simulateRead(() => { fqRequireStaff(userId); fqSeed(); return facilitatorQuotes.map((q) => ({ ...q })); }),
+  sendFacilitatorQuote: (userId, quoteId) => simulateWrite(() => {
+    fqRequireStaff(userId);
+    const q = byId(facilitatorQuotes, quoteId);
+    if (!q) throw new RepositoryError('not_found');
+    if (q.status !== 'draft') throw new RepositoryError('invalid_state');
+    q.status = 'sent'; q.sentAt = new Date().toISOString();
+    eventLog.append(userId, { type: 'quote.sent', subject: { kind: 'lead', id: q.leadId }, capturedAt: q.sentAt, payload: { quoteId: q.id, customerId: q.customerId ?? null } });
+    return { ...q };
+  }),
+  getMyQuote: (userId) => simulateRead(() => {
+    const u = byId(users, userId);
+    if (!u || u.role !== 'customer') throw new RepositoryError('forbidden');
+    fqSeed();
+    const q = facilitatorQuotes.find((x) => x.customerId === userId && x.status !== 'draft');
+    return q ? fqCustomerView(q) : null;
+  }),
+  acceptQuoteComponents: (userId, quoteId, lineIds) => simulateWrite(() => {
+    const u = byId(users, userId);
+    if (!u || u.role !== 'customer') throw new RepositoryError('forbidden');
+    const q = byId(facilitatorQuotes, quoteId);
+    if (!q || q.customerId !== userId || q.status === 'draft') throw new RepositoryError('not_found');
+    if (q.status === 'accepted' || q.status === 'rejected') throw new RepositoryError('invalid_state');
+    const now = new Date().toISOString();
+    for (const id of lineIds) {
+      const c = q.components.find((x) => x.id === id);
+      if (!c) throw new RepositoryError('not_found');
+      if (c.acceptedAt) continue;
+      c.acceptedAt = now;
+      eventLog.append(userId, { type: 'quote.component_accepted', subject: { kind: 'lead', id: q.leadId }, capturedAt: now, payload: { quoteId: q.id, lineId: c.id, partnerId: c.partnerId, priceInr: c.partnerPriceInr, customerId: userId } });
+    }
+    q.status = q.components.every((c) => c.acceptedAt) ? 'accepted' : 'partly_accepted';
+    return fqCustomerView(q);
+  }),
+  /* 208 — work orders */
+  listWorkOrders: (userId) => simulateRead(() => {
+    if (!byId(users, userId)) throw new RepositoryError('not_found');
+    return workOrders.filter((w) => woVisibleTo(w, userId)).map((w) => woView(w, userId));
+  }),
+  listPartnerAccounts: (userId) => simulateRead((): PartnerAccount[] => {
+    const u = byId(users, userId);
+    if (!u || !isAdminRole(u.role)) throw new RepositoryError('forbidden');
+    return users.filter((x) => woEligibleAccount(x.id)).map((x) => ({ id: x.id, name: x.name, role: x.role as PartnerAccount['role'] }));
+  }),
+  createWorkOrdersFromQuote: (userId, quoteId, partners) => simulateWrite(() => {
+    const u = byId(users, userId);
+    if (!u || u.role !== 'owner') throw new RepositoryError('forbidden'); // the Owner issues work orders; Admin only watches
+    fqSeed();
+    const q = byId(facilitatorQuotes, quoteId);
+    if (!q) throw new RepositoryError('not_found');
+    if (!q.customerId) throw new RepositoryError('no_customer');
+    const todo = q.components.filter((c) => c.acceptedAt && !woSkips(c.kind) && !workOrders.some((w) => w.quoteId === q.id && w.lineId === c.id));
+    // Check every component before creating any, so a refusal never leaves half an order set behind.
+    for (const c of todo) {
+      if (!partners[c.id]) throw new RepositoryError('partner_account_required');
+      if (!woEligibleAccount(partners[c.id])) throw new RepositoryError('partner_not_eligible');
+    }
+    const made: WorkOrder[] = [];
+    for (const c of todo) {
+      woCounter += 1;
+      const now = new Date().toISOString();
+      const w: WorkOrder = { id: `wo-${woCounter}`, code: `AIEC-WO-${woCounter}`, quoteId: q.id, lineId: c.id, leadId: q.leadId, siteName: q.siteName, customerId: q.customerId, partnerId: c.partnerId, partnerName: c.partnerName, partnerAccountId: partners[c.id], kind: c.kind, description: c.description, priceInr: c.partnerPriceInr, status: 'issued', milestones: woMilestonesOf(c.partnerPriceInr, woTemplateNow().templates[c.kind]), templateVersion: woTemplateNow().version, createdAt: now };
+      workOrders.push(w);
+      made.push(w);
+      eventLog.append(userId, { type: 'contract.work_order_created', subject: { kind: 'lead', id: q.leadId }, capturedAt: now, payload: { workOrderId: w.id, quoteId: q.id, partnerId: w.partnerId, partnerAccountId: w.partnerAccountId, priceInr: w.priceInr, kind: w.kind } });
+    }
+    return made.map((w) => woView(w, userId));
+  }),
+  acceptWorkOrder: (userId, id) => simulateWrite(() => {
+    const w = woFind(userId, id);
+    const v = woView(w, userId);
+    if (v.side === 'staff') throw new RepositoryError('forbidden');
+    if (w.status !== 'issued') throw new RepositoryError('invalid_state');
+    if (!v.can.accept) throw new RepositoryError('forbidden'); // this side already accepted
+    const now = new Date().toISOString();
+    if (v.side === 'customer') w.customerAcceptedAt = now; else w.partnerAcceptedAt = now;
+    eventLog.append(userId, { type: 'contract.accepted_in_app', subject: { kind: 'lead', id: w.leadId }, capturedAt: now, payload: { workOrderId: w.id, side: v.side, method: woAcceptanceLabel(WO_SIGNING) } });
+    return woView(w, userId);
+  }),
+  startWorkOrder: (userId, id) => simulateWrite(() => {
+    const w = woFind(userId, id);
+    const v = woView(w, userId);
+    if (v.side !== 'partner') throw new RepositoryError('forbidden');
+    if (v.startBlock) throw new RepositoryError(v.startBlock);
+    w.status = 'in_progress'; w.startedAt = new Date().toISOString();
+    eventLog.append(userId, { type: 'milestone.opened', subject: { kind: 'lead', id: w.leadId }, capturedAt: w.startedAt, payload: { workOrderId: w.id, milestones: w.milestones.length } });
+    return woView(w, userId);
+  }),
+  submitMilestoneEvidence: (userId, id, milestoneId, evidenceNames) => simulateWrite(() => {
+    const w = woFind(userId, id);
+    if (woView(w, userId).side !== 'partner') throw new RepositoryError('forbidden');
+    if (w.status !== 'in_progress') throw new RepositoryError('invalid_state');
+    const m = woMilestone(w, milestoneId);
+    const names = evidenceNames.map((n) => n.trim()).filter(Boolean);
+    const bad = woEvidenceProblem(names) ?? woSubmitProblem(m, names.length);
+    if (bad) throw new RepositoryError(bad);
+    m.status = 'evidence_submitted'; m.evidence = names;
+    eventLog.append(userId, { type: 'milestone.evidence_submitted', subject: { kind: 'lead', id: w.leadId }, capturedAt: new Date().toISOString(), payload: { workOrderId: w.id, milestoneId, evidence: names, submitterId: userId } });
+    return woView(w, userId);
+  }),
+  verifyMilestone: (userId, id, milestoneId) => simulateWrite(() => {
+    const w = woFind(userId, id);
+    const m = woMilestone(w, milestoneId);
+    // The Owner verifies, or the technician the Owner named for this one milestone. Nobody else, and never the partner.
+    if (!woMayVerify({ role: byId(users, userId)?.role, callerId: userId, partnerAccountId: w.partnerAccountId, inspectorId: m.qcInspectorId, orderOpen: true })) throw new RepositoryError('forbidden');
+    if (w.status !== 'in_progress') throw new RepositoryError('invalid_state');
+    const bad = woVerifyProblem(m, { verifierId: userId, submitterId: w.partnerAccountId, qcPassed: true });
+    if (bad) throw new RepositoryError(bad);
+    const gate = pjGateProblem(m.gate, pjHandoverState(pjOrdersOf(w.quoteId), pjAcksOf(w.quoteId)).complete);
+    if (gate) throw new RepositoryError(gate); // the final milestone waits for the handover record
+    m.status = 'verified';
+    eventLog.append(userId, { type: 'milestone.verified', subject: { kind: 'lead', id: w.leadId }, capturedAt: new Date().toISOString(), payload: { workOrderId: w.id, milestoneId, amountInr: m.amountInr, verifierId: userId } });
+    return woView(w, userId);
+  }),
+  assignMilestoneInspector: (userId, id, milestoneId, inspectorId) => simulateWrite(() => {
+    const u = byId(users, userId);
+    if (!u || u.role !== 'owner') throw new RepositoryError('forbidden'); // only the Owner names an inspector
+    const w = woFind(userId, id);
+    const m = woMilestone(w, milestoneId);
+    if (w.status !== 'in_progress') throw new RepositoryError('invalid_state');
+    const insp = byId(users, inspectorId);
+    const bad = woQcAssignProblem(m, { inspectorId, partnerAccountId: w.partnerAccountId, inspectorEligible: !!insp && insp.status === 'active' && insp.role === 'technician' && insp.id !== w.customerId });
+    if (bad) throw new RepositoryError(bad);
+    m.qcInspectorId = insp!.id; m.qcInspectorName = insp!.name;
+    eventLog.append(userId, { type: 'qc.assigned', subject: { kind: 'lead', id: w.leadId }, capturedAt: new Date().toISOString(), payload: { workOrderId: w.id, milestoneId, inspectorId: insp!.id } });
+    return woView(w, userId);
+  }),
+  recordMilestonePayment: (userId, id, milestoneId, reference) => simulateWrite(() => {
+    const w = woFind(userId, id);
+    if (woView(w, userId).side !== 'customer') throw new RepositoryError('forbidden');
+    const m = woMilestone(w, milestoneId);
+    const ref = reference.trim();
+    const refBad = woReferenceProblem(ref);
+    if (refBad) throw new RepositoryError(refBad);
+    const bad = woPaymentProblem(m);
+    if (bad) throw new RepositoryError(bad);
+    m.status = 'payment_recorded';
+    w.status = woStatus(w.milestones);
+    eventLog.append(userId, { type: 'milestone.payment_recorded', subject: { kind: 'lead', id: w.leadId }, capturedAt: new Date().toISOString(), payload: { workOrderId: w.id, milestoneId, amountInr: m.amountInr, reference: ref, movedByPlatform: false } });
+    return woView(w, userId);
+  }),
+  confirmMilestonePayment: (userId, id, milestoneId) => simulateWrite(() => {
+    const w = woFind(userId, id);
+    if (woView(w, userId).side !== 'partner') throw new RepositoryError('forbidden'); // only the partner who was paid can say they were paid
+    const m = woMilestone(w, milestoneId);
+    const bad = woConfirmProblem(m);
+    if (bad) throw new RepositoryError(bad);
+    m.status = 'closed';
+    eventLog.append(userId, { type: 'milestone.payment_confirmed', subject: { kind: 'lead', id: w.leadId }, capturedAt: new Date().toISOString(), payload: { workOrderId: w.id, milestoneId, amountInr: m.amountInr, movedByPlatform: false } });
+    return woView(w, userId);
+  }),
+  getMilestoneTemplates: (userId) => simulateRead((): TemplateHistory => {
+    const u = byId(users, userId);
+    if (!u || !isAdminRole(u.role)) throw new RepositoryError('forbidden');
+    const copy = (v: TemplateVersion): TemplateVersion => ({ ...v, templates: structuredClone(v.templates) });
+    return { current: copy(woTemplateNow()), history: [...woTemplateVersions].reverse().map(copy) };
+  }),
+  saveMilestoneTemplates: (userId, templates, reason) => simulateWrite((): TemplateVersion => {
+    const u = byId(users, userId);
+    if (!u || u.role !== 'owner') throw new RepositoryError('forbidden'); // only the Owner sets how money is released
+    const bad = woTemplateSetProblem(templates as WoTemplateSet, woTemplateNow().templates, reason);
+    if (bad) throw new RepositoryError(bad);
+    const v: TemplateVersion = { version: woTemplateNow().version + 1, templates: structuredClone(templates), setByName: u.name, reason: reason.trim(), at: new Date().toISOString() };
+    woTemplateVersions.push(v);
+    eventLog.append(userId, { type: 'system.rule_changed', subject: { kind: 'system', id: 'milestone_templates' }, capturedAt: v.at, payload: { rule: 'milestone_templates', version: v.version, reason: v.reason } });
+    return structuredClone(v);
+  }),
+  listProjects: (userId) => simulateRead((): ProjectView[] => {
+    if (!byId(users, userId)) throw new RepositoryError('not_found');
+    const ids = [...new Set(workOrders.map((w) => w.quoteId))];
+    return ids.map((id) => pjView(id, userId)).filter((v): v is ProjectView => v !== null);
+  }),
+  acknowledgeHandover: (userId, quoteId) => simulateWrite((): ProjectView => {
+    const first = workOrders.find((w) => w.quoteId === quoteId && woVisibleTo(w, userId));
+    if (!first) throw new RepositoryError('not_found');
+    const orders = pjOrdersOf(quoteId);
+    const bad = pjAcknowledgeProblem({ orders, callerId: userId, acks: pjAcksOf(quoteId) });
+    if (bad) throw new RepositoryError(bad);
+    const before = pjHandoverState(orders, pjAcksOf(quoteId));
+    const now = new Date().toISOString();
+    for (const p of before.parties) if (p.accountId === userId && !p.signed) {
+      handoverAcks.push({ quoteId, role: p.role, accountId: userId, at: now });
+      eventLog.append(userId, { type: 'contract.accepted_in_app', subject: { kind: 'lead', id: first.leadId }, capturedAt: now, payload: { quoteId, kind: 'handover', role: p.role, method: 'in_app_acceptance' } });
+    }
+    if (pjHandoverState(orders, pjAcksOf(quoteId)).complete) eventLog.append(userId, { type: 'installation.completed', subject: { kind: 'lead', id: first.leadId }, capturedAt: now, payload: { quoteId, record: 'handover_and_completion', statutoryNoc: false } });
+    return pjView(quoteId, userId)!;
+  }),
+  listComplaints: (userId) => simulateRead((): CpView[] => {
+    if (!byId(users, userId)) throw new RepositoryError('not_found');
+    return complaints.filter((c) => cmpVisibleTo(c, userId)).map((c) => cmpView(c, userId)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }),
+  raiseComplaint: (userId, input: CpInput) => simulateWrite((): CpView => {
+    const mine = workOrders.filter((w) => w.quoteId === input.quoteId && w.customerId === userId);
+    if (mine.length === 0) throw new RepositoryError('not_found'); // only the project's customer
+    const bad = cpRaiseProblem({ category: input.category, text: input.text });
+    if (bad) throw new RepositoryError(bad);
+    if (input.workOrderId && !workOrders.some((w) => w.id === input.workOrderId && w.quoteId === input.quoteId)) throw new RepositoryError('not_found');
+    const again = complaints.find((c) => c.customerId === userId && c.clientId === input.clientId);
+    if (again) return cmpView(again, userId); // a retry is the same complaint
+    cpCounter += 1;
+    const now = new Date().toISOString();
+    const c: CpRecord = { id: `cp-${cpCounter}`, code: `AIEC-CP-${cpCounter}`, quoteId: input.quoteId, ...(input.workOrderId ? { workOrderId: input.workOrderId } : {}), customerId: userId, leadId: mine[0].leadId, category: input.category, description: input.text.trim(), status: 'open', createdAt: now, ackDueAt: cpAckDueAt(input.category, now), clientId: input.clientId };
+    complaints.push(c);
+    eventLog.append(userId, { type: 'complaint.raised', subject: { kind: 'lead', id: c.leadId }, capturedAt: now, payload: { complaintId: c.id, quoteId: c.quoteId, workOrderId: c.workOrderId ?? null, category: c.category } });
+    return cmpView(c, userId);
+  }),
+  acknowledgeComplaint: (userId, id) => simulateWrite((): CpView => {
+    const c = cmpFind(userId, id);
+    if (byId(users, userId)?.role !== 'owner') throw new RepositoryError('forbidden');
+    const bad = cpAckProblem(c);
+    if (bad) throw new RepositoryError(bad);
+    c.status = 'acknowledged'; c.acknowledgedAt = new Date().toISOString();
+    eventLog.append(userId, { type: 'complaint.acknowledged', subject: { kind: 'lead', id: c.leadId }, capturedAt: c.acknowledgedAt, payload: { complaintId: c.id, overdue: Date.parse(c.acknowledgedAt) > Date.parse(c.ackDueAt) } });
+    return cmpView(c, userId);
+  }),
+  resolveComplaint: (userId, id, outcome, note) => simulateWrite((): CpView => {
+    const c = cmpFind(userId, id);
+    if (byId(users, userId)?.role !== 'owner') throw new RepositoryError('forbidden');
+    const bad = cpResolveProblem(c, { outcome, note });
+    if (bad) throw new RepositoryError(bad);
+    c.status = 'resolved'; c.outcome = outcome; c.resolutionNote = note.trim(); c.resolvedAt = new Date().toISOString();
+    eventLog.append(userId, { type: 'complaint.resolved', subject: { kind: 'lead', id: c.leadId }, capturedAt: c.resolvedAt, payload: { complaintId: c.id, outcome } });
+    return cmpView(c, userId);
+  }),
+  replyToComplaint: (userId, id, text) => simulateWrite((): CpView => {
+    const c = cmpFind(userId, id);
+    const w = c.workOrderId ? workOrders.find((x) => x.id === c.workOrderId) : undefined;
+    if (!w || w.partnerAccountId !== userId) throw new RepositoryError('forbidden'); // only the partner the complaint names
+    const bad = cpReplyProblem(c, text);
+    if (bad) throw new RepositoryError(bad);
+    c.partnerReply = text.trim(); c.partnerRepliedAt = new Date().toISOString();
+    eventLog.append(userId, { type: 'complaint.replied', subject: { kind: 'lead', id: c.leadId }, capturedAt: c.partnerRepliedAt, payload: { complaintId: c.id } });
+    return cmpView(c, userId);
+  }),
+  getPartnerTrust: (userId, accountId) => simulateRead((): CpTrust => {
+    const u = byId(users, userId);
+    if (!u || !(isAdminRole(u.role) || userId === accountId)) throw new RepositoryError('forbidden');
+    const theirs = workOrders.filter((w) => w.partnerAccountId === accountId);
+    const ms = theirs.flatMap((w) => w.milestones);
+    const about = complaints.filter((c) => c.workOrderId && theirs.some((w) => w.id === c.workOrderId));
+    return { verifiedMilestones: ms.filter((m) => ['verified', 'payment_recorded', 'closed'].includes(m.status)).length, closedMilestones: ms.filter((m) => m.status === 'closed').length, complaintsRaised: about.length, complaintsUpheld: about.filter((c) => c.outcome === 'upheld').length };
+  }),
+  getProviderStatus: (userId) => simulateRead((): ProviderStatus[] => {
+    if (!byId(users, userId)) throw new RepositoryError('not_found');
+    const off = (id: ProviderStatus['id'], note: string): ProviderStatus => ({ id, connected: false, note });
+    return [off('esign', 'No signing provider is connected. Acceptance is recorded in the app and is not an electronic signature.'), off('payments', 'No payment provider is connected. Payments between customer and partner are recorded with a reference, never moved by the platform.'), off('whatsapp', 'WhatsApp Business is not connected.'), off('sms', 'SMS is not connected.'), off('maps', 'No production map or geocoding provider is connected.'), off('nbfc', 'No lender is connected.'), off('storage', 'File storage is not connected; evidence is recorded by name.')];
+  }),
   /* 193 — single-person monitor */
+  appendEvent: (userId, input) => simulateWrite(() => eventCall(() => eventLog.append(userId, input))),
+  listEvents: (userId, filter) => simulateRead(() => eventCall(() => eventLog.list(userId, filter))),
+  getEffectiveEvent: (userId, eventId) => simulateRead(() => eventCall(() => eventLog.effective(userId, eventId))),
+  correctEvent: (userId, eventId, patch, reason) => simulateWrite(() => eventCall(() => eventLog.correct(userId, eventId, patch, reason))),
+  decideEventCorrection: (userId, proposalId, approve, reason) => simulateWrite(() => eventCall(() => eventLog.decideCorrection(userId, proposalId, approve, reason))),
+  markEvent: (userId, eventId, kind, text) => simulateWrite(() => eventCall(() => eventLog.mark(userId, eventId, kind, text))),
+  verifyEventLog: (userId) => simulateRead(() => { if (!isAdminRole(byId(users, userId)?.role)) throw new RepositoryError('forbidden'); return eventLog.verify(); }),
+  listMapSites: (userId, from) => simulateRead(() => mapSitesFor(userId, from)),
   listDecisionCards: (userId, filter) => simulateRead(() => decisionCall(() => decisionStore.list(userId, filter))),
   getDecisionCard: (userId, cardId) => simulateRead(() => decisionCall(() => decisionStore.get(userId, cardId))),
   prepareDecisionPacket: (userId, input) => simulateWrite(() => decisionCall(() => decisionStore.prepare(userId, input))),
