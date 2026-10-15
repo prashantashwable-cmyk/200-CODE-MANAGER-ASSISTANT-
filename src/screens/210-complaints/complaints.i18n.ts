@@ -15,13 +15,14 @@ const translations: ScreenTranslations = {
   "status": { "open": "Waiting", "acknowledged": "Being looked at", "resolved": "Resolved" },
   "overdue": "Overdue to acknowledge", "raisedOn": "Raised {{date}}", "dueBy": "To be acknowledged by {{date}}",
   "acknowledge": "Acknowledge", "acknowledgedOk": "Acknowledged.",
+  "partnerReplyTitle": "Partner's reply", "replyLabel": "Your reply", "replyHint": "At least {{min}} letters. You can answer once, and the customer and AIEC will read it.", "reply": "Send reply", "repliedOk": "Reply sent.",
   "outcomeLabel": "Outcome", "noteLabel": "What was decided", "noteHint": "The customer reads this. At least {{min}} letters.", "resolve": "Resolve", "resolvedOk": "Resolved.",
   "outcome": { "upheld": "Upheld", "not_upheld": "Not upheld", "settled": "Settled" },
   "partnerRecord": "Partner record", "trustCounts": "{{verified}} verified milestones, {{raised}} complaints, {{upheld}} upheld",
   "trust": { "no_record": "Nothing on record yet.", "clean": "No complaint upheld.", "watch": "At least one complaint upheld." },
   "problem": {
     "category_invalid": "Choose what kind of problem it is.", "text_short": "Say a little more about what happened.", "text_long": "Please keep it under 1000 letters.",
-    "not_open": "It has already been acknowledged.", "not_acknowledged": "Acknowledge it first.", "outcome_invalid": "Choose an outcome.", "note_short": "Write what was decided, in a few words.",
+    "not_open": "It has already been acknowledged.", "not_acknowledged": "Acknowledge it first.", "outcome_invalid": "Choose an outcome.", "note_short": "Write what was decided, in a few words.", "reply_short": "Write a few more words in your reply.", "already_replied": "You have already replied to this one.",
     "locked": "A resolved complaint cannot change.", "forbidden": "You cannot do that.", "not_found": "That is not available to you.", "invalid_state": "That cannot be done in this state."
   }
 } },
@@ -38,13 +39,14 @@ const translations: ScreenTranslations = {
   "status": { "open": "प्रतीक्षा में", "acknowledged": "देखी जा रही है", "resolved": "सुलझी" },
   "overdue": "स्वीकार करने में देरी", "raisedOn": "{{date}} को दर्ज", "dueBy": "{{date}} तक स्वीकार होनी है",
   "acknowledge": "स्वीकार करें", "acknowledgedOk": "स्वीकार की गई।",
+  "partnerReplyTitle": "पार्टनर का उत्तर", "replyLabel": "आपका उत्तर", "replyHint": "कम से कम {{min}} अक्षर। आप एक बार उत्तर दे सकते हैं, ग्राहक और AIEC इसे पढ़ेंगे।", "reply": "उत्तर भेजें", "repliedOk": "उत्तर भेज दिया गया।",
   "outcomeLabel": "नतीजा", "noteLabel": "क्या तय हुआ", "noteHint": "ग्राहक इसे पढ़ेगा। कम से कम {{min}} अक्षर।", "resolve": "सुलझाएँ", "resolvedOk": "सुलझाई गई।",
   "outcome": { "upheld": "सही पाई गई", "not_upheld": "सही नहीं पाई गई", "settled": "आपसी समझौता" },
   "partnerRecord": "पार्टनर का रिकॉर्ड", "trustCounts": "{{verified}} सत्यापित चरण, {{raised}} शिकायतें, {{upheld}} सही पाई गईं",
   "trust": { "no_record": "अभी कुछ दर्ज नहीं।", "clean": "कोई शिकायत सही नहीं पाई गई।", "watch": "कम से कम एक शिकायत सही पाई गई।" },
   "problem": {
     "category_invalid": "समस्या का प्रकार चुनें।", "text_short": "क्या हुआ, थोड़ा और बताइए।", "text_long": "कृपया 1000 अक्षरों से कम रखें।",
-    "not_open": "इसे पहले ही स्वीकार किया जा चुका है।", "not_acknowledged": "पहले इसे स्वीकार करें।", "outcome_invalid": "नतीजा चुनें।", "note_short": "कुछ शब्दों में लिखें कि क्या तय हुआ।",
+    "not_open": "इसे पहले ही स्वीकार किया जा चुका है।", "not_acknowledged": "पहले इसे स्वीकार करें।", "outcome_invalid": "नतीजा चुनें।", "note_short": "कुछ शब्दों में लिखें कि क्या तय हुआ।", "reply_short": "अपने उत्तर में कुछ और शब्द लिखें।", "already_replied": "आप इसका उत्तर पहले ही दे चुके हैं।",
     "locked": "सुलझी हुई शिकायत बदल नहीं सकती।", "forbidden": "आप यह नहीं कर सकते।", "not_found": "यह आपके लिए उपलब्ध नहीं है।", "invalid_state": "इस स्थिति में यह नहीं हो सकता।"
   }
 } },
@@ -61,13 +63,14 @@ const translations: ScreenTranslations = {
   "status": { "open": "प्रतीक्षेत", "acknowledged": "पाहिली जात आहे", "resolved": "सुटली" },
   "overdue": "स्वीकारण्यास उशीर", "raisedOn": "{{date}} रोजी नोंदवली", "dueBy": "{{date}} पर्यंत स्वीकारायची आहे",
   "acknowledge": "स्वीकारा", "acknowledgedOk": "स्वीकारली.",
+  "partnerReplyTitle": "भागीदाराचे उत्तर", "replyLabel": "तुमचे उत्तर", "replyHint": "किमान {{min}} अक्षरे. तुम्ही एकदाच उत्तर देऊ शकता; ग्राहक आणि AIEC ते वाचतील.", "reply": "उत्तर पाठवा", "repliedOk": "उत्तर पाठवले.",
   "outcomeLabel": "निकाल", "noteLabel": "काय ठरले", "noteHint": "ग्राहक हे वाचेल. किमान {{min}} अक्षरे.", "resolve": "सोडवा", "resolvedOk": "सोडवली.",
   "outcome": { "upheld": "योग्य ठरली", "not_upheld": "योग्य ठरली नाही", "settled": "तडजोड झाली" },
   "partnerRecord": "पार्टनरची नोंद", "trustCounts": "{{verified}} पडताळलेले टप्पे, {{raised}} तक्रारी, {{upheld}} योग्य ठरल्या",
   "trust": { "no_record": "अजून काही नोंद नाही.", "clean": "एकही तक्रार योग्य ठरलेली नाही.", "watch": "किमान एक तक्रार योग्य ठरली आहे." },
   "problem": {
     "category_invalid": "समस्येचा प्रकार निवडा.", "text_short": "काय झाले ते थोडे अधिक सांगा.", "text_long": "कृपया 1000 अक्षरांपेक्षा कमी ठेवा.",
-    "not_open": "ती आधीच स्वीकारली आहे.", "not_acknowledged": "आधी ती स्वीकारा.", "outcome_invalid": "निकाल निवडा.", "note_short": "काय ठरले ते काही शब्दांत लिहा.",
+    "not_open": "ती आधीच स्वीकारली आहे.", "not_acknowledged": "आधी ती स्वीकारा.", "outcome_invalid": "निकाल निवडा.", "note_short": "काय ठरले ते काही शब्दांत लिहा.", "reply_short": "तुमच्या उत्तरात आणखी काही शब्द लिहा.", "already_replied": "तुम्ही यावर आधीच उत्तर दिले आहे.",
     "locked": "सुटलेली तक्रार बदलता येत नाही.", "forbidden": "तुम्ही ते करू शकत नाही.", "not_found": "ते तुमच्यासाठी उपलब्ध नाही.", "invalid_state": "या स्थितीत ते करता येत नाही."
   }
 } },

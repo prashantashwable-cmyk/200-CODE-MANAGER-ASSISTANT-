@@ -160,11 +160,13 @@ test('Owner: a customer\'s complaint is acknowledged and resolved in order, and 
     await repo.acceptQuoteComponents('u-cust-3', quote.id, [install.id]);
     const [wo] = await repo.createWorkOrdersFromQuote('u-owner-1', quote.id, { [install.id]: 'u-tech-1' });
     const c = await repo.raiseComplaint('u-cust-3', { quoteId: quote.id, workOrderId: wo.id, category: 'delay', text: 'The team has not come for ten days', clientId: 'e2e-1' });
+    await repo.replyToComplaint('u-tech-1', c.id, 'We will send the team on Monday morning');
     return c.id as string;
   });
   await go(page, '/complaints');
   const card = page.getByTestId(`cp-${id}`);
   await expect(card).toBeVisible();
+  await expect(page.getByTestId(`cp-reply-${id}`)).toContainText('Monday morning'); // the partner's answer is read next to the complaint
   await card.getByRole('button', { name: 'Acknowledge' }).click();
   await expect(card.getByText('Being looked at')).toBeVisible();
   const resolve = card.getByRole('button', { name: 'Resolve' });

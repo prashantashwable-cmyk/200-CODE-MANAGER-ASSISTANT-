@@ -5,7 +5,7 @@ Everything here is a procedure to follow, **not something that has been done**. 
 ## 1. First deployment (new free Supabase project)
 
 1. Create the project (Owner). Note the project URL and the anon key. Keep the database password and the service-role key in a password manager. Never put them in the repository, the browser or CI logs.
-2. Apply migrations **in file order** from `supabase/migrations/` (`20261010000001` … `20261015000006`). Either `npx supabase db push` (after `supabase link`) or paste each file into the SQL editor in order. Do not edit an applied file; fix forward with a new one.
+2. Apply migrations **in file order** from `supabase/migrations/` (`20261010000001` … `20261015000007`). Either `npx supabase db push` (after `supabase link`) or paste each file into the SQL editor in order. Do not edit an applied file; fix forward with a new one.
 3. Run the structural checks against the hosted database (read-only catalogue queries): every public table has RLS; every security-definer function pins `search_path`; no browser role can write through a view; browsers write only to the reviewed tables. The same queries are in `tests/db/hardening.test.ts`; run it with `DATABASE_URL` pointing at the hosted database **only on a throwaway copy**, because the other tests create rows.
 4. Auth: enable phone sign-in with a provider (decision needed: SMS provider and DLT registration). Keep `[auth.sms] enable_confirmations` on. Until a provider exists, codes go to `sms_outbox`, which is for development only: do not use it with real customers.
 5. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the static host. Build with `npm run build`, then `npm run budget`. Deploy `dist/`.

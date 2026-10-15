@@ -10214,6 +10214,8 @@ export interface Repository {
   acknowledgeComplaint(userId: string, complaintId: string): Promise<ComplaintView>;
   /** Owner only: an outcome and a note the customer can read. A resolved complaint is locked. */
   resolveComplaint(userId: string, complaintId: string, outcome: ComplaintOutcome, note: string): Promise<ComplaintView>;
+  /** The partner the complaint names answers it once; the customer and staff can read the reply. Refused when resolved. */
+  replyToComplaint(userId: string, complaintId: string, text: string): Promise<ComplaintView>;
   /** Plain counts about a partner account. Staff and the partner themself only. */
   getPartnerTrust(userId: string, accountId: string): Promise<TrustSummary>;
   getProviderStatus(userId: string): Promise<ProviderStatus[]>;

@@ -17,7 +17,7 @@ export const EVENT_FAMILIES = {
   decision: ['card_created', 'approved', 'rejected', 'info_requested', 'delegated'],
   correction: ['applied', 'proposed', 'rejected'],
   event: ['flagged', 'annotated', 'disputed'],
-  complaint: ['raised', 'acknowledged', 'resolved'],
+  complaint: ['raised', 'acknowledged', 'resolved', 'replied'],
   access: ['sensitive_viewed', 'export_requested', 'login', 'permission_changed'],
   system: ['sync_conflict', 'integration_unavailable', 'rule_changed'],
 } as const;

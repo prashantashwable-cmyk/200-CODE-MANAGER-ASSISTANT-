@@ -41,7 +41,7 @@ Status uses only: **Done** (persisted as designed, tested), **Partial**, **Plann
 | P0.7, A10 | Payment-milestone templates editable by the Owner, versioned | Done | `TemplateEditor` on screen 208, `milestone_template_versions`; orders keep their version |
 | A6 step 20 | Handover and Completion Record acknowledged by customer, installer and QC; not a statutory NOC | Partial | screen 209, migration `20261015000004`; in-app acknowledgement, not an e-signature |
 | Slice 5 | Project progress as a percentage, handover gates the final milestone | Done | `features/projects/project.ts`, `project_view`, 101 DB tests incl. parity with the TypeScript rule |
-| Slice 6 | Complaints and service tracking, Owner handles, partner named can read | Partial | screen 210, migration `20261015000005`; no partner reply, no notification provider |
+| Slice 6 | Complaints and service tracking, Owner handles, partner named can read | Partial | screen 210, migrations `20261015000005` and `20261015000007` (the named partner replies once; the customer and staff read it); no notification provider |
 | Slice 6 | Trust shown as plain counts, no hidden score | Partial | `partner_trust`, `getPartnerTrust`; does not yet drive tiers or work offers |
 | Slice 7 | Views cannot be written to by a browser (security fix) | Done | migration `20261015000006_views_read_only.sql`; `tests/db/hardening.test.ts` |
 | Slice 7 | Every public table has row-level security, every security-definer function pins its search path, browsers write only reviewed tables | Done | `tests/db/hardening.test.ts` reads the catalogue of a real Postgres |

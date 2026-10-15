@@ -9,11 +9,12 @@ export const COMPLAINT_OUTCOMES: ComplaintOutcome[] = ['upheld', 'not_upheld', '
 export const TEXT_MIN = 15;
 export const TEXT_MAX = 1000;
 export const NOTE_MIN = 15;
+export const REPLY_MIN = 15;
 /** [ASSUMPTION] Time to acknowledge a complaint: 24 hours, 4 hours when it is about safety. The Owner confirms. */
 export const ACK_HOURS = 24;
 export const ACK_HOURS_SAFETY = 4;
 
-export type ComplaintProblem = 'category_invalid' | 'text_short' | 'text_long' | 'not_open' | 'not_acknowledged' | 'locked' | 'outcome_invalid' | 'note_short';
+export type ComplaintProblem = 'category_invalid' | 'text_short' | 'text_long' | 'not_open' | 'not_acknowledged' | 'locked' | 'outcome_invalid' | 'note_short' | 'reply_short' | 'already_replied';
 
 export function raiseProblem(o: { category: string; text: string }): ComplaintProblem | null {
   if (!(COMPLAINT_CATEGORIES as readonly string[]).includes(o.category)) return 'category_invalid';
@@ -34,6 +35,13 @@ export function resolveProblem(c: { status: ComplaintStatus }, o: { outcome: str
   if (c.status !== 'acknowledged') return 'not_acknowledged';
   if (!(COMPLAINT_OUTCOMES as string[]).includes(o.outcome)) return 'outcome_invalid';
   return o.note.trim().length < NOTE_MIN ? 'note_short' : null;
+}
+
+/** The partner a complaint names may answer it once, while it is not resolved. The reply is shown to the customer and to staff. */
+export function replyProblem(c: { status: ComplaintStatus; partnerReply?: string }, text: string): ComplaintProblem | null {
+  if (c.status === 'resolved') return 'locked';
+  if (c.partnerReply) return 'already_replied';
+  return text.trim().length < REPLY_MIN ? 'reply_short' : text.trim().length > TEXT_MAX ? 'text_long' : null;
 }
 
 /** Plain counts about a partner, with no hidden weighting: what was verified and closed, and how many complaints were upheld. */

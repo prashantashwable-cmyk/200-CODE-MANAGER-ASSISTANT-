@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge, Button, Card, EmptyState, ErrorState, Field, ListRow, LoadingState, Screen, ScreenHeader, Select, TextArea, formatDate, useToast } from '@/design-system';
 import { useData } from '@/data/DataProvider';
 import { useSession } from '@/session/SessionProvider';
-import { COMPLAINT_CATEGORIES, COMPLAINT_OUTCOMES, NOTE_MIN, TEXT_MIN, raiseProblem, resolveProblem } from '@/features/complaints/complaint';
+import { COMPLAINT_CATEGORIES, COMPLAINT_OUTCOMES, NOTE_MIN, REPLY_MIN, TEXT_MIN, raiseProblem, replyProblem, resolveProblem } from '@/features/complaints/complaint';
 import type { ComplaintCategory, ComplaintOutcome, TrustSummary } from '@/features/complaints/complaint';
 import { trustSummaryText } from '@/features/complaints/complaint';
 import type { ComplaintView } from '@/features/complaints/types';
@@ -25,6 +25,7 @@ export function ComplaintsScreen() {
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState<{ quoteId: string; orderId: string; category: ComplaintCategory; text: string; clientId: string }>({ quoteId: '', orderId: '', category: 'defect', text: '', clientId: crypto.randomUUID() });
+  const [replies, setReplies] = useState<Record<string, string>>({});
   const [res, setRes] = useState<Record<string, { outcome: ComplaintOutcome; note: string }>>({});
 
   const load = useCallback(async () => {
@@ -106,6 +107,13 @@ export function ComplaintsScreen() {
                   {c.status !== 'resolved' && <p className="text-sm text-muted">{t('complaints.dueBy', { date: formatDate(c.ackDueAt, i18n.language) })}</p>}
                   {tr && <ListRow title={t('complaints.partnerRecord')} subtitle={t(`complaints.trust.${trustSummaryText(tr)}`)} trailing={<span className="text-sm" data-testid={`cp-trust-${c.id}`}>{t('complaints.trustCounts', { verified: tr.verifiedMilestones, raised: tr.complaintsRaised, upheld: tr.complaintsUpheld })}</span>} />}
                   {c.status === 'resolved' && c.outcome && <p data-testid={`cp-outcome-${c.id}`}><strong>{t(`complaints.outcome.${c.outcome}`)}</strong>{c.resolutionNote ? `: ${c.resolutionNote}` : ''}</p>}
+                  {c.partnerReply && <p className="text-sm" data-testid={`cp-reply-${c.id}`}><strong>{t('complaints.partnerReplyTitle')}</strong>: {c.partnerReply}</p>}
+                  {c.can.reply && (
+                    <div className="stack gap-2">
+                      <Field label={t('complaints.replyLabel')} hint={t('complaints.replyHint', { min: REPLY_MIN })}>{({ id }) => <TextArea id={id} rows={3} value={replies[c.id] ?? ''} onChange={(e) => setReplies({ ...replies, [c.id]: e.target.value })} />}</Field>
+                      <Button disabled={busy || replyProblem({ status: c.status }, replies[c.id] ?? '') !== null} onClick={() => void run(() => repository.replyToComplaint(uid, c.id, replies[c.id] ?? ''), 'complaints.repliedOk')}>{t('complaints.reply')}</Button>
+                    </div>
+                  )}
                   {c.can.acknowledge && <Button disabled={busy} onClick={() => void run(() => repository.acknowledgeComplaint(uid, c.id), 'complaints.acknowledgedOk')}>{t('complaints.acknowledge')}</Button>}
                   {c.can.resolve && isOwner && (
                     <div className="stack gap-2">

@@ -1017,7 +1017,7 @@ import type { Candidate as BookingCandidate } from '@/features/service/booking';
 import { DRIVE_SKILL } from '@/features/training/skills';
 import { isEmail, isIndianMobile, isPincode } from '@/features/validation/india';
 import { randomCode, randomToken } from '@/features/ids/clientId';
-import { ackDueAt as cpAckDueAt, acknowledgeProblem as cpAckProblem, isAckOverdue as cpOverdue, raiseProblem as cpRaiseProblem, resolveProblem as cpResolveProblem } from '@/features/complaints/complaint';
+import { ackDueAt as cpAckDueAt, acknowledgeProblem as cpAckProblem, isAckOverdue as cpOverdue, raiseProblem as cpRaiseProblem, replyProblem as cpReplyProblem, resolveProblem as cpResolveProblem } from '@/features/complaints/complaint';
 import type { ComplaintOutcome as CpOutcome, TrustSummary as CpTrust } from '@/features/complaints/complaint';
 import type { ComplaintView as CpView, RaiseComplaintInput as CpInput } from '@/features/complaints/types';
 import { acknowledgeProblem as pjAcknowledgeProblem, handoverGateProblem as pjGateProblem, handoverState as pjHandoverState, projectProgress as pjProgress } from '@/features/projects/project';
@@ -18951,7 +18951,7 @@ let woCounter = 4000;
 /** Append-only versions of the payment-milestone templates; version 1 is the starting default for the Owner to replace. */
 const woTemplateVersions: TemplateVersion[] = [{ version: 1, templates: structuredClone(WO_TEMPLATES), setByName: 'Initial default [ASSUMPTION]', reason: 'Starting values for the Owner to replace; material 90/10 is from the original brief', at: new Date(0).toISOString() }];
 /** Customer complaints; kept, never deleted. A resolved one is locked. */
-interface CpRecord { id: string; code: string; quoteId: string; workOrderId?: string; customerId: string; leadId: string; category: CpView['category']; description: string; status: CpView['status']; createdAt: string; ackDueAt: string; clientId: string; acknowledgedAt?: string; resolvedAt?: string; outcome?: CpOutcome; resolutionNote?: string; }
+interface CpRecord { id: string; code: string; quoteId: string; workOrderId?: string; customerId: string; leadId: string; category: CpView['category']; description: string; status: CpView['status']; createdAt: string; ackDueAt: string; clientId: string; acknowledgedAt?: string; resolvedAt?: string; outcome?: CpOutcome; resolutionNote?: string; partnerReply?: string; partnerRepliedAt?: string; }
 const complaints: CpRecord[] = [];
 let cpCounter = 1000;
 function cmpVisibleTo(c: CpRecord, userId: string): boolean {
@@ -18971,7 +18971,8 @@ function cmpView(c: CpRecord, userId: string): CpView {
     ...(w ? { workOrderId: w.id, workOrderCode: w.code, ...(staff ? { partnerName: w.partnerName, partnerAccountId: w.partnerAccountId } : {}) } : {}),
     ...(c.acknowledgedAt ? { acknowledgedAt: c.acknowledgedAt } : {}), ...(c.resolvedAt ? { resolvedAt: c.resolvedAt } : {}),
     ...(c.outcome ? { outcome: c.outcome } : {}), ...(c.resolutionNote ? { resolutionNote: c.resolutionNote } : {}),
-    can: { acknowledge: u?.role === 'owner' && c.status === 'open', resolve: u?.role === 'owner' && c.status === 'acknowledged' },
+    ...(c.partnerReply ? { partnerReply: c.partnerReply, partnerRepliedAt: c.partnerRepliedAt! } : {}),
+    can: { acknowledge: u?.role === 'owner' && c.status === 'open', resolve: u?.role === 'owner' && c.status === 'acknowledged', reply: !!w && w.partnerAccountId === userId && c.status !== 'resolved' && !c.partnerReply },
   };
 }
 function cmpFind(userId: string, id: string): CpRecord {
@@ -28929,6 +28930,16 @@ export const memoryRepository: Repository = {
     if (bad) throw new RepositoryError(bad);
     c.status = 'resolved'; c.outcome = outcome; c.resolutionNote = note.trim(); c.resolvedAt = new Date().toISOString();
     eventLog.append(userId, { type: 'complaint.resolved', subject: { kind: 'lead', id: c.leadId }, capturedAt: c.resolvedAt, payload: { complaintId: c.id, outcome } });
+    return cmpView(c, userId);
+  }),
+  replyToComplaint: (userId, id, text) => simulateWrite((): CpView => {
+    const c = cmpFind(userId, id);
+    const w = c.workOrderId ? workOrders.find((x) => x.id === c.workOrderId) : undefined;
+    if (!w || w.partnerAccountId !== userId) throw new RepositoryError('forbidden'); // only the partner the complaint names
+    const bad = cpReplyProblem(c, text);
+    if (bad) throw new RepositoryError(bad);
+    c.partnerReply = text.trim(); c.partnerRepliedAt = new Date().toISOString();
+    eventLog.append(userId, { type: 'complaint.replied', subject: { kind: 'lead', id: c.leadId }, capturedAt: c.partnerRepliedAt, payload: { complaintId: c.id } });
     return cmpView(c, userId);
   }),
   getPartnerTrust: (userId, accountId) => simulateRead((): CpTrust => {

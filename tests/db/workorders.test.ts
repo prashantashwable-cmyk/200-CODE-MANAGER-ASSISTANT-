@@ -596,6 +596,35 @@ describe('complaints and partner trust', () => {
     expect(ev[2].actor_profile_id).toBe(w.owner.profileId);
   });
 
+  it('lets only the partner a complaint names answer it, once, until it is resolved; the guard holds for the server too', async () => {
+    const w = await world();
+    await issue(w);
+    const inst = (await ordersOf(w, w.tech))[0];
+    const id = await idOf(raise(w.customer, w.quoteId, inst.id, 'delay', 'The team has not come for ten days'));
+    const reply = (who: P, text: string) => call(who.authId, 'select public.reply_to_complaint($1, $2)', [id, text]);
+    const noOrder = await idOf(raise(w.customer, w.quoteId, null, 'other', 'A general worry about the whole project'));
+    for (const who of [w.customer, w.owner, w.admin, w.supplier, w.otherCustomer]) expect(await refusal(reply(who, 'We will come on Monday morning'))).toMatch(/forbidden|not_found/);
+    expect(await refusal(call(w.tech.authId, 'select public.reply_to_complaint($1, $2)', [noOrder, 'We will come on Monday morning']))).toMatch(/forbidden|not_found/); // names no order
+    expect(await refusal(reply(w.tech, 'soon'))).toBe('reply_short');
+    expect(await refusal(reply(w.tech, 'x'.repeat(1001)))).toBe('text_long');
+    expect(await refusal(reply(w.tech, 'We will come on Monday morning'))).toBe('ok');
+    expect(await refusal(reply(w.tech, 'And again, with a different answer'))).toBe('already_replied');
+    const row = (who: P) => as(who.authId, async (c) => (await c.query<{ partner_reply: string | null }>('select partner_reply from public.complaints where id = $1', [id])).rows[0]);
+    expect((await row(w.customer)).partner_reply).toContain('Monday'); // the customer and staff read it
+    expect((await row(w.owner)).partner_reply).toContain('Monday');
+    expect(await refusal(asServer((c) => c.query("update public.complaints set partner_reply = 'rewritten after the fact' where id = $1", [id])))).toMatch(/complaint_is_fixed/);
+    expect(await refusal(call(w.tech.authId, "update public.complaints set partner_reply = 'direct write' where id = $1", [id]))).toMatch(/permission denied/);
+    expect(await refusal(call(w.owner.authId, 'select public.acknowledge_complaint($1)', [id]))).toBe('ok'); // an answer does not change the status
+    expect(await refusal(call(w.owner.authId, "select public.resolve_complaint($1, 'settled', 'The team came and the customer agreed')", [id]))).toBe('ok');
+    const late = await idOf(raise(w.customer, w.quoteId, inst.id, 'defect', 'The sensor failed again after rain'));
+    await call(w.owner.authId, 'select public.acknowledge_complaint($1)', [late]);
+    await call(w.owner.authId, "select public.resolve_complaint($1, 'not_upheld', 'Checked and found to be working')", [late]);
+    expect(await refusal(call(w.tech.authId, 'select public.reply_to_complaint($1, $2)', [late, 'It works as designed, thank you']))).toBe('locked');
+    const ev = (await events(w.lead)).filter((e) => e.event_type === 'complaint.replied');
+    expect(ev).toHaveLength(1);
+    expect(ev[0].actor_profile_id).toBe(w.tech.profileId);
+  });
+
   it('gives plain trust counts to staff and to the partner only', async () => {
     const w = await world();
     await issue(w);

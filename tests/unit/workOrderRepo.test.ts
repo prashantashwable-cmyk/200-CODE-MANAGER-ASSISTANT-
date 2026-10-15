@@ -218,7 +218,7 @@ describe('work orders from an accepted quote', () => {
     expect(await repo.listComplaints(OTHER_TECH)).toHaveLength(0);
     const staff = (await repo.listComplaints(ADMIN)).find((c) => c.id === a.id)!;
     expect(staff.partnerName).toBeTruthy();
-    expect(staff.can).toEqual({ acknowledge: false, resolve: false }); // Admin only watches
+    expect(staff.can).toEqual({ acknowledge: false, resolve: false, reply: false }); // Admin only watches
     for (const who of [CUST, TECH, ADMIN]) expect(await refusal(repo.acknowledgeComplaint(who, a.id))).toBe('forbidden');
     expect(await refusal(repo.resolveComplaint(OWNER, a.id, 'upheld', 'The partner will replace the sensor'))).toBe('not_acknowledged');
     expect((await repo.acknowledgeComplaint(OWNER, a.id)).status).toBe('acknowledged');
@@ -229,12 +229,25 @@ describe('work orders from an accepted quote', () => {
     expect(done).toMatchObject({ status: 'resolved', outcome: 'upheld' });
     expect(await refusal(repo.resolveComplaint(OWNER, a.id, 'settled', 'Changed my mind about this one'))).toBe('locked');
     expect((await repo.listComplaints(CUST)).find((c) => c.id === a.id)?.resolutionNote).toContain('replace the sensor'); // the customer reads the outcome
+    // The partner the complaint names answers once, while it is open; before and after, nobody else can.
+    const b2 = await repo.raiseComplaint(CUST, { ...base, workOrderId: w.id, clientId: 'cl-3', text: 'The team left rubbish in the lobby' });
+    expect((await repo.listComplaints(TECH)).find((c) => c.id === b2.id)?.can.reply).toBe(true);
+    for (const who of [CUST, OTHER_TECH, OWNER, ADMIN]) expect(await refusal(repo.replyToComplaint(who, b2.id, 'We will clean the lobby tomorrow'))).toMatch(/forbidden|not_found/);
+    expect(await refusal(repo.replyToComplaint(TECH, b2.id, 'short'))).toBe('reply_short');
+    const replied = await repo.replyToComplaint(TECH, b2.id, 'We will clean the lobby tomorrow');
+    expect(replied).toMatchObject({ partnerReply: 'We will clean the lobby tomorrow', can: { reply: false } });
+    expect((await repo.listComplaints(CUST)).find((c) => c.id === b2.id)?.partnerReply).toContain('lobby'); // the customer reads it
+    expect(await refusal(repo.replyToComplaint(TECH, b2.id, 'Another answer to the same complaint'))).toBe('already_replied');
+    await repo.acknowledgeComplaint(OWNER, b2.id); await repo.resolveComplaint(OWNER, b2.id, 'settled', 'Cleaned and confirmed by the customer');
+    const b3 = await repo.raiseComplaint(CUST, { ...base, workOrderId: w.id, clientId: 'cl-4', text: 'The lift light flickers every evening' });
+    await repo.acknowledgeComplaint(OWNER, b3.id); await repo.resolveComplaint(OWNER, b3.id, 'not_upheld', 'Checked and found to be working normally');
+    expect(await refusal(repo.replyToComplaint(TECH, b3.id, 'It works as designed, thank you'))).toBe('locked');
     const trust = await repo.getPartnerTrust(OWNER, TECH);
-    expect(trust).toMatchObject({ complaintsRaised: 1, complaintsUpheld: 1 });
+    expect(trust).toMatchObject({ complaintsRaised: 3, complaintsUpheld: 1 });
     expect((await repo.getPartnerTrust(TECH, TECH)).complaintsUpheld).toBe(1);
     for (const who of [CUST, OTHER_TECH]) expect(await refusal(repo.getPartnerTrust(who, TECH))).toBe('forbidden');
     const types = (await repo.listEvents(OWNER, {})).map((e) => e.type);
-    for (const t of ['complaint.raised', 'complaint.acknowledged', 'complaint.resolved']) expect(types).toContain(t);
+    for (const t of ['complaint.raised', 'complaint.acknowledged', 'complaint.resolved', 'complaint.replied']) expect(types).toContain(t);
   });
 
   it('emits the events and says which providers are not connected', async () => {

@@ -20,7 +20,9 @@ export interface ComplaintView {
   resolvedAt?: string;
   outcome?: ComplaintOutcome;
   resolutionNote?: string;
-  can: { acknowledge: boolean; resolve: boolean };
+  partnerReply?: string;
+  partnerRepliedAt?: string;
+  can: { acknowledge: boolean; resolve: boolean; reply: boolean };
 }
 export interface RaiseComplaintInput { quoteId: string; workOrderId?: string; category: ComplaintCategory; text: string; clientId: string; }
 export type { TrustSummary };

@@ -114,7 +114,7 @@ export function withServer(base: Repository): Repository {
     // Names and codes come from the orders the caller may read; a refusal just leaves them out.
     const orders = ids.length ? await supabase().from('work_orders').select('id, code, site_name, partner_name, partner_profile_id, quote_id').in('id', ids).returns<OrderBrief[]>() : { data: [] as OrderBrief[] };
     const role = await roleOf(userId);
-    return rows.map((r) => complaintFromRow(r, (orders.data ?? []).find((o) => o.id === r.work_order_id), { role }, Date.now()));
+    return rows.map((r) => complaintFromRow(r, (orders.data ?? []).find((o) => o.id === r.work_order_id), { role, userId }, Date.now()));
   };
   const repo: Repository = {
     ...base,
@@ -293,6 +293,13 @@ export function withServer(base: Repository): Repository {
     },
     resolveComplaint: async (userId, id, outcome, note) => {
       const { error } = await supabase().rpc('resolve_complaint', { p_id: id, p_outcome: outcome, p_note: note });
+      if (error) throw new RepositoryError(workOrderErrorCode(error.message));
+      const [v] = await loadComplaints(userId, id);
+      if (!v) throw new RepositoryError('not_found');
+      return v;
+    },
+    replyToComplaint: async (userId, id, text) => {
+      const { error } = await supabase().rpc('reply_to_complaint', { p_id: id, p_text: text });
       if (error) throw new RepositoryError(workOrderErrorCode(error.message));
       const [v] = await loadComplaints(userId, id);
       if (!v) throw new RepositoryError('not_found');

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ACK_HOURS, ACK_HOURS_SAFETY, ackDueAt, acknowledgeProblem, isAckOverdue, raiseProblem, resolveProblem, trustSummaryText } from '@/features/complaints/complaint';
+import { ACK_HOURS, ACK_HOURS_SAFETY, ackDueAt, acknowledgeProblem, isAckOverdue, raiseProblem, replyProblem, resolveProblem, trustSummaryText } from '@/features/complaints/complaint';
 
 describe('complaint rules', () => {
   it('needs a known category and a described problem of a sensible length', () => {
@@ -33,5 +33,13 @@ describe('complaint rules', () => {
     expect(trustSummaryText({ verifiedMilestones: 0, closedMilestones: 0, complaintsRaised: 0, complaintsUpheld: 0 })).toBe('no_record');
     expect(trustSummaryText({ verifiedMilestones: 4, closedMilestones: 3, complaintsRaised: 1, complaintsUpheld: 0 })).toBe('clean');
     expect(trustSummaryText({ verifiedMilestones: 4, closedMilestones: 3, complaintsRaised: 2, complaintsUpheld: 1 })).toBe('watch');
+  });
+  it('lets the named partner answer once, in words, until it is resolved', () => {
+    expect(replyProblem({ status: 'open' }, 'We will visit tomorrow morning')).toBeNull();
+    expect(replyProblem({ status: 'acknowledged' }, 'We will visit tomorrow morning')).toBeNull();
+    expect(replyProblem({ status: 'open' }, '   short   ')).toBe('reply_short');
+    expect(replyProblem({ status: 'open' }, 'x'.repeat(1001))).toBe('text_long');
+    expect(replyProblem({ status: 'open', partnerReply: 'Already answered earlier' }, 'We will visit tomorrow morning')).toBe('already_replied');
+    expect(replyProblem({ status: 'resolved' }, 'We will visit tomorrow morning')).toBe('locked');
   });
 });

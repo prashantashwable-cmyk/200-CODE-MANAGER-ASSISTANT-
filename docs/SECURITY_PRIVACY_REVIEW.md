@@ -1,6 +1,6 @@
 # Security and privacy review (Slice 7)
 
-Scope: the facilitator model built in this branch (quotes, work orders, milestones, QC inspectors, handover record, complaints, event stream, Decision Desk, lead ownership) and the database behind it (`supabase/migrations/20261010…` to `20261015000006`). It is a review by the developer, not an independent audit, and it was run against a local Postgres 16 only. **Nothing here has been checked on a hosted Supabase project.** Read it with `KNOWN_GAPS.md`.
+Scope: the facilitator model built in this branch (quotes, work orders, milestones, QC inspectors, handover record, complaints, event stream, Decision Desk, lead ownership) and the database behind it (`supabase/migrations/20261010…` to `20261015000007`). It is a review by the developer, not an independent audit, and it was run against a local Postgres 16 only. **Nothing here has been checked on a hosted Supabase project.** Read it with `KNOWN_GAPS.md`.
 
 ## What is enforced where
 
