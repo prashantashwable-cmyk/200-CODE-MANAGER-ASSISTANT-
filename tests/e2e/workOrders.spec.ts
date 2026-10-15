@@ -107,3 +107,41 @@ test('Owner: picks a partner account for each accepted part, issues the work ord
   await expect(page.locator('[data-testid^="wo-readiness-"] li')).toHaveCount(3);
   expect(errors).toEqual([]);
 });
+
+test('Owner: the Projects screen shows a % progress bar and the handover record, which completes only when all three parties acknowledge', async ({ page }) => {
+  const errors = watchErrors(page);
+  await signIn(page, '9822011009', true);
+  const quoteId = await page.evaluate(async () => {
+    const repo = (window as unknown as { __aiecRepo: Record<string, (...a: unknown[]) => Promise<any>> }).__aiecRepo;
+    const quote = (await repo.listFacilitatorQuotes('u-owner-1'))[0];
+    await repo.sendFacilitatorQuote('u-owner-1', quote.id).catch(() => undefined);
+    const mine = await repo.getMyQuote('u-cust-3');
+    const install = mine.quote.components.find((c: { kind: string }) => c.kind === 'installation');
+    await repo.acceptQuoteComponents('u-cust-3', quote.id, [install.id]);
+    const [wo] = await repo.createWorkOrdersFromQuote('u-owner-1', quote.id, { [install.id]: 'u-tech-1' });
+    await repo.acceptWorkOrder('u-cust-3', wo.id); await repo.acceptWorkOrder('u-tech-1', wo.id); await repo.startWorkOrder('u-tech-1', wo.id);
+    await repo.submitMilestoneEvidence('u-tech-1', wo.id, 'progress', ['rails.jpg']);
+    await repo.verifyMilestone('u-owner-1', wo.id, 'progress');
+    return quote.id as string;
+  });
+  await go(page, '/projects');
+  const card = page.getByTestId(`pj-${quoteId}`);
+  await expect(card).toBeVisible();
+  await expect(page.getByTestId(`pj-percent-${quoteId}`)).toHaveText('50%'); // the 50% progress milestone is verified
+  await expect(card.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '50');
+  await expect(page.getByTestId(`pj-qc-missing-${quoteId}`)).toBeVisible(); // nobody has been named to check the handover yet
+  await page.evaluate(async (q) => {
+    const repo = (window as unknown as { __aiecRepo: Record<string, (...a: unknown[]) => Promise<any>> }).__aiecRepo;
+    const wo = (await repo.listWorkOrders('u-owner-1')).find((w: { quoteId: string }) => w.quoteId === q);
+    await repo.assignMilestoneInspector('u-owner-1', wo.id, 'handover', 'u-tech-2');
+    for (const who of ['u-cust-3', 'u-tech-1', 'u-tech-2']) await repo.acknowledgeHandover(who, q);
+    await repo.submitMilestoneEvidence('u-tech-1', wo.id, 'handover', ['handover.pdf']);
+    await repo.verifyMilestone('u-tech-2', wo.id, 'handover');
+  }, quoteId);
+  await go(page, '/work-orders');
+  await go(page, '/projects');
+  await expect(page.getByTestId(`pj-percent-${quoteId}`)).toHaveText('100%');
+  await expect(page.getByTestId(`pj-handover-${quoteId}`)).toContainText('Handover record complete');
+  await expect(page.getByTestId(`pj-handover-${quoteId}`)).toContainText('not a statutory approval');
+  expect(errors).toEqual([]);
+});

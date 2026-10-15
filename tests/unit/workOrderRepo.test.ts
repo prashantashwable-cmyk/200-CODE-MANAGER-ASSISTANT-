@@ -8,6 +8,7 @@ const OWNER = 'u-owner-1';
 const ADMIN = 'u-admin-1';
 const CUST = 'u-cust-3';
 const OTHER = 'u-cust-1';
+const OTHER_CUST_STRANGER = 'u-cust-1';
 const TECH = 'u-tech-1';
 const OTHER_TECH = 'u-tech-2';
 const refusal = async (p: Promise<unknown>) => { try { await p; return 'ok'; } catch (e) { return e instanceof Error ? e.message : String(e); } };
@@ -123,6 +124,19 @@ describe('work orders from an accepted quote', () => {
     expect(await refusal(repo.recordMilestonePayment(OTHER_TECH, w.id, m.id, 'UTR12345'))).toBe('forbidden');
     const first = w.milestones[0];
     expect(await refusal(repo.verifyMilestone(OTHER_TECH, w.id, first.id))).toBe('forbidden'); // named for one milestone only
+    // The final milestone waits for the handover record: customer, installer and the named inspector each acknowledge it.
+    expect(await refusal(repo.verifyMilestone(OTHER_TECH, w.id, m.id))).toBe('handover_unsigned');
+    const quoteId = w.quoteId;
+    expect(await refusal(repo.acknowledgeHandover(OTHER_CUST_STRANGER, quoteId))).toBe('not_found');
+    expect(await refusal(repo.acknowledgeHandover(OWNER, quoteId))).toBe('not_a_party');
+    const p1 = await repo.acknowledgeHandover(CUST, quoteId);
+    expect(p1.handover.complete).toBe(false);
+    expect(await refusal(repo.acknowledgeHandover(CUST, quoteId))).toBe('already_acknowledged');
+    await repo.acknowledgeHandover(TECH, quoteId);
+    expect(await refusal(repo.verifyMilestone(OTHER_TECH, w.id, m.id))).toBe('handover_unsigned');
+    const p3 = await repo.acknowledgeHandover(OTHER_TECH, quoteId);
+    expect(p3.handover.complete).toBe(true);
+    expect(p3.percent).toBeGreaterThan(0);
     const done = await repo.verifyMilestone(OTHER_TECH, w.id, m.id);
     expect(done.milestones[1].status).toBe('verified');
     expect(await refusal(repo.assignMilestoneInspector(OWNER, w.id, m.id, OTHER_TECH))).toBe('invalid_state'); // too late once verified
@@ -166,6 +180,23 @@ describe('work orders from an accepted quote', () => {
     expect(w.milestones.map((m) => m.pct)).toEqual([50, 50]); // unchanged by the new version
     const log = await repo.listEvents(OWNER, {});
     expect(log.some((e) => e.type === 'system.rule_changed')).toBe(true);
+  });
+
+  it('shows each person their project with overall progress; money only to staff and the customer', async () => {
+    const owner = await repo.listProjects(OWNER);
+    expect(owner).toHaveLength(1);
+    expect(owner[0].percent).toBe(100); // every milestone verified by now
+    expect(owner[0].amounts?.totalInr).toBeGreaterThan(0);
+    expect(owner[0].handover.complete).toBe(true);
+    expect((await repo.listProjects(CUST))[0].amounts).not.toBeNull();
+    const tech = (await repo.listProjects(TECH))[0];
+    expect(tech.amounts).toBeNull(); // the installer sees progress, not the whole project's money
+    expect(tech.handover.parties.filter((p) => p.mine).map((p) => p.role)).toEqual(['installer']);
+    expect(await repo.listProjects(OTHER)).toHaveLength(0);
+    expect((await repo.listProjects(OTHER_TECH))[0].orders).toHaveLength(1); // the inspector sees the order they check
+    const log = await repo.listEvents(OWNER, {});
+    expect(log.filter((e) => e.type === 'contract.accepted_in_app' && (e.payload as { kind?: string }).kind === 'handover')).toHaveLength(3);
+    expect(log.some((e) => e.type === 'installation.completed')).toBe(true);
   });
 
   it('emits the events and says which providers are not connected', async () => {

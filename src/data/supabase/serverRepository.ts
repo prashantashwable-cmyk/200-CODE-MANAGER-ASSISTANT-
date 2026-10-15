@@ -14,9 +14,12 @@ import type { CardRow, RecordRow, StatusRow } from './decisionMapping';
 import { captureErrorCode, captureResultOf } from './leadMapping';
 import type { CaptureRpc } from './leadMapping';
 import { customerViewOf, errorCode, feeFromRow, quoteFromRow } from './quoteMapping';
+import { projectFromJson } from './projectMapping';
+import type { ProjectJson } from './projectMapping';
 import { templateVersionFromRow, workOrderErrorCode, workOrderFromRows } from './workOrderMapping';
 import type { MilestoneRow, QcAssignmentRow, TemplateRow, WorkOrderRow } from './workOrderMapping';
 import type { PartnerAccount } from '@/features/workorders/types';
+import type { ProjectView } from '@/features/projects/types';
 import type { AcceptanceRow, FeeRow, QuoteRow } from './quoteMapping';
 
 interface PendingRow {
@@ -84,6 +87,21 @@ export function withServer(base: Repository): Repository {
     const [view] = await loadOrders(userId, [id]);
     if (!view) throw new RepositoryError('not_found');
     return view;
+  };
+  const loadProjects = async (userId: string): Promise<ProjectView[]> => {
+    const orders = await loadOrders(userId);
+    const ids = [...new Set(orders.map((o) => o.quoteId))];
+    if (ids.length === 0) return [];
+    // A quote's code is a courtesy: a partner may not be allowed to read the quote, and then the short id stands in.
+    const codes = await supabase().from('facilitator_quotes').select('id, code').in('id', ids).returns<{ id: string; code: string }[]>();
+    const codeOf = new Map((codes.data ?? []).map((c) => [c.id, c.code]));
+    const out: ProjectView[] = [];
+    for (const id of ids) {
+      const { data, error } = await supabase().rpc('project_view', { p_quote: id });
+      if (error) throw new RepositoryError(workOrderErrorCode(error.message));
+      out.push(projectFromJson(data as ProjectJson, orders, codeOf.get(id), userId));
+    }
+    return out;
   };
   const repo: Repository = {
     ...base,
@@ -237,6 +255,14 @@ export function withServer(base: Repository): Repository {
     confirmMilestonePayment: (userId, id, milestoneId) => actOnOrder(userId, 'confirm_milestone_payment', { p_wo: id, p_ms: milestoneId }, id),
     recordMilestonePayment: (userId, id, milestoneId, reference) => actOnOrder(userId, 'record_milestone_payment', { p_wo: id, p_ms: milestoneId, p_reference: reference }, id),
 
+    listProjects: (userId) => loadProjects(userId),
+    acknowledgeHandover: async (userId, quoteId) => {
+      const { error } = await supabase().rpc('acknowledge_handover', { p_quote: quoteId });
+      if (error) throw new RepositoryError(workOrderErrorCode(error.message));
+      const p = (await loadProjects(userId)).find((x) => x.quoteId === quoteId);
+      if (!p) throw new RepositoryError('not_found');
+      return p;
+    },
     getMilestoneTemplates: async (userId) => {
       const role = await roleOf(userId);
       if (role !== 'owner' && role !== 'admin') throw new RepositoryError('forbidden');

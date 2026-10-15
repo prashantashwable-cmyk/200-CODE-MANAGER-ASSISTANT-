@@ -6,6 +6,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import pg from 'pg';
 import { randomInt } from 'node:crypto';
 import { DEFAULT_TEMPLATES, amountsFor, templateProblem } from '@/features/workorders/workOrder';
+import { projectProgress } from '@/features/projects/project';
 import type { MilestoneTemplate } from '@/features/workorders/workOrder';
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
@@ -70,6 +71,19 @@ const ordersOf = async (w: World, who: P) => (await orders(who.authId)).filter((
 const milestones = (authId: string, wo: string) => as(authId, async (c) => (await c.query<{ milestone_id: string; amount_inr: string; status: string; evidence: string[]; position: number }>('select * from public.work_order_milestones where work_order_id = $1 order by position', [wo])).rows);
 const call = (authId: string, sql: string, args: unknown[]) => as(authId, (c) => c.query(sql, args));
 const events = async (lead: string) => (await pool.query<{ event_type: string; actor_profile_id: string; actor_role: string; seq: string; payload: Record<string, unknown> }>('select event_type, actor_profile_id, actor_role, seq, payload from public.platform_events where subject_id = $1 order by seq', [lead])).rows;
+
+
+/** Gets a project to a complete handover record: the supplier's order done and verified, an inspector named on the handover milestone, all three parties acknowledged. */
+async function completeHandover(w: World, inst: { id: string }) {
+  const mat = (await ordersOf(w, w.supplier))[0];
+  await call(w.customer.authId, 'select public.accept_work_order($1)', [mat.id]);
+  await call(w.supplier.authId, 'select public.accept_work_order($1)', [mat.id]);
+  await call(w.supplier.authId, 'select public.start_work_order($1)', [mat.id]);
+  await call(w.supplier.authId, 'select public.submit_milestone_evidence($1, $2, $3::text[])', [mat.id, 'delivery', ['d.jpg']]);
+  await call(w.owner.authId, 'select public.verify_milestone($1, $2)', [mat.id, 'delivery']);
+  await call(w.owner.authId, 'select public.assign_milestone_inspector($1, $2, $3)', [inst.id, 'handover', w.otherTech.profileId]);
+  for (const who of [w.customer, w.tech, w.otherTech]) await call(who.authId, 'select public.acknowledge_handover($1)', [w.quoteId]);
+}
 
 describe('milestone templates', () => {
   it('start from the defaults, only the Owner adds a version, bad ones are refused, and history is append-only', async () => {
@@ -206,7 +220,7 @@ describe('acceptance, start and the money gates', () => {
     expect(await refusal(payRpc(w.customer, inst.id, 'progress', 'UTR99999'))).toBe('locked');
     expect((await ordersOf(w, w.customer))[0].status).toBe('in_progress');
     // the second milestone completes the order
-    await evidenceRpc(w.tech, inst.id, 'handover', ['handover.pdf']); await verifyRpc(w.owner, inst.id, 'handover'); await payRpc(w.customer, inst.id, 'handover', 'UTR55555');
+    await evidenceRpc(w.tech, inst.id, 'handover', ['handover.pdf']); await completeHandover(w, inst); await verifyRpc(w.owner, inst.id, 'handover'); await payRpc(w.customer, inst.id, 'handover', 'UTR55555');
     expect((await ordersOf(w, w.customer)).find((o) => o.id === inst.id)!.status).toBe('completed');
     expect((await milestones(w.customer.authId, inst.id)).map((m) => m.status)).toEqual(['payment_recorded', 'payment_recorded']);
   });
@@ -327,7 +341,8 @@ describe('QC inspectors for a milestone', () => {
     expect(await refusal(verify(w.otherTech, inst.id, a))).toBe('ok');
     expect((await milestones(w.owner.authId, inst.id)).find((m) => m.milestone_id === a)!.status).toBe('verified');
     expect(await refusal(assign(w.owner, inst.id, a, w.otherTech.profileId))).toBe('invalid_state'); // too late once verified
-    expect(await refusal(verify(w.owner, inst.id, b))).toBe('ok'); // the Owner can still verify any milestone
+    await completeHandover(w, inst);
+    expect(await refusal(verify(w.owner, inst.id, b))).toBe('ok'); // the Owner can still verify any milestone, once the handover record is complete
     const log = await events(w.lead);
     const qc = log.find((e) => e.event_type === 'qc.assigned')!;
     expect(qc.actor_profile_id).toBe(w.owner.profileId);
@@ -403,5 +418,108 @@ describe('template versions and orders', () => {
     expect((await milestones(first.owner.authId, old.id)).map((m) => Number(m.amount_inr))).toEqual([200000, 200000]); // still 50 / 50
     // put the defaults back so later tests see the usual split
     await as(owner.authId, (c) => c.query('insert into public.milestone_template_versions (version, templates, set_by_name, reason) values (0, $1, $2, $3)', [JSON.stringify(cur.templates), 'x', 'Restore the defaults after the test']));
+  });
+});
+
+describe('handover and completion record', () => {
+  async function ready() {
+    const w = await world();
+    await issue(w);
+    const inst = (await ordersOf(w, w.tech))[0];
+    const mat = (await ordersOf(w, w.supplier))[0];
+    for (const o of [inst, mat]) {
+      await call(w.customer.authId, 'select public.accept_work_order($1)', [o.id]);
+      await call((o === inst ? w.tech : w.supplier).authId, 'select public.accept_work_order($1)', [o.id]);
+      await call((o === inst ? w.tech : w.supplier).authId, 'select public.start_work_order($1)', [o.id]);
+    }
+    const evidence = (who: P, o: { id: string }, ms: string) => call(who.authId, 'select public.submit_milestone_evidence($1, $2, $3::text[])', [o.id, ms, ['a.jpg']]);
+    const verify = (o: { id: string }, ms: string) => call(w.owner.authId, 'select public.verify_milestone($1, $2)', [o.id, ms]);
+    await evidence(w.supplier, mat, 'delivery'); await verify(mat, 'delivery');
+    await evidence(w.tech, inst, 'progress'); await verify(inst, 'progress');
+    return { w, inst, mat, evidence, verify };
+  }
+  const ack = (who: P, quote: string) => call(who.authId, 'select public.acknowledge_handover($1)', [quote]);
+  const parties = (quote: string) => pool.query<{ role: string; profile_id: string }>('select role, profile_id from app.handover_parties($1) order by role', [quote]);
+
+  it('needs the customer, the installer and a named inspector; nobody else; only once the earlier work is verified', async () => {
+    const { w, inst, evidence, verify } = await ready();
+    expect(await refusal(ack(w.otherCustomer, w.quoteId))).toMatch(/not_a_party|not_found/);
+    expect(await refusal(ack(w.owner, w.quoteId))).toBe('not_a_party'); // the Owner is not a party to the record
+    expect((await parties(w.quoteId)).rows.map((r) => r.role)).toEqual(['customer', 'installer']); // no inspector named yet
+    expect(await refusal(ack(w.customer, w.quoteId))).toBe('qc_missing');
+    await call(w.owner.authId, 'select public.assign_milestone_inspector($1, $2, $3)', [inst.id, 'handover', w.otherTech.profileId]);
+    expect((await parties(w.quoteId)).rows.map((r) => `${r.role}`)).toEqual(['customer', 'installer', 'qc']);
+    // the handover milestone cannot be verified while the record is incomplete
+    await evidence(w.tech, inst, 'handover');
+    expect(await refusal(verify(inst, 'handover'))).toBe('handover_unsigned');
+    expect(await refusal(ack(w.customer, w.quoteId))).toBe('ok');
+    expect(await refusal(ack(w.customer, w.quoteId))).toBe('already_acknowledged');
+    expect(await refusal(ack(w.tech, w.quoteId))).toBe('ok');
+    expect(await refusal(verify(inst, 'handover'))).toBe('handover_unsigned'); // two of three
+    expect(await refusal(ack(w.otherTech, w.quoteId))).toBe('ok');
+    expect(await refusal(call(w.otherTech.authId, 'select public.verify_milestone($1, $2)', [inst.id, 'handover']))).toBe('ok'); // the named inspector, now allowed
+    // events: three in-app acknowledgements and the completion
+    const ev = await events(w.lead);
+    expect(ev.filter((e) => e.payload.kind === 'handover').map((e) => e.payload.role)).toEqual(['customer', 'installer', 'qc']);
+    const done = ev.find((e) => e.event_type === 'installation.completed')!;
+    expect(done.payload).toMatchObject({ record: 'handover_and_completion', statutoryNoc: false });
+  });
+
+  it('is refused before the earlier milestones are verified, and the record cannot be edited or removed', async () => {
+    const w = await world();
+    await issue(w);
+    const inst = (await ordersOf(w, w.tech))[0];
+    for (const o of await ordersOf(w, w.owner)) {
+      await call(w.customer.authId, 'select public.accept_work_order($1)', [o.id]);
+      const partner = o.partner_profile_id === w.tech.profileId ? w.tech : w.supplier;
+      await call(partner.authId, 'select public.accept_work_order($1)', [o.id]);
+      await call(partner.authId, 'select public.start_work_order($1)', [o.id]);
+    }
+    await call(w.owner.authId, 'select public.assign_milestone_inspector($1, $2, $3)', [inst.id, 'handover', w.otherTech.profileId]);
+    expect(await refusal(ack(w.customer, w.quoteId))).toBe('handover_not_ready');
+    const r = await ready();
+    await call(r.w.owner.authId, 'select public.assign_milestone_inspector($1, $2, $3)', [r.inst.id, 'handover', r.w.otherTech.profileId]);
+    await ack(r.w.customer, r.w.quoteId);
+    expect(await refusal(call(r.w.customer.authId, 'delete from public.handover_acknowledgements', []))).toMatch(/permission denied/);
+    expect(await refusal(asServer((c) => c.query('delete from public.handover_acknowledgements where quote_id = $1', [r.w.quoteId])))).toMatch(/handover_is_kept/);
+    expect(await refusal(asServer((c) => c.query("update public.handover_acknowledgements set role = 'qc' where quote_id = $1", [r.w.quoteId])))).toMatch(/handover_is_kept/);
+    expect(await refusal(as(null, (c) => c.query('select public.acknowledge_handover($1)', [r.w.quoteId])))).toMatch(/permission denied/);
+  });
+});
+
+describe('project view', () => {
+  it('shows progress across all orders, money only to staff and the customer, and matches the TypeScript rule', async () => {
+    const w = await world();
+    await issue(w);
+    const inst = (await ordersOf(w, w.tech))[0];
+    const mat = (await ordersOf(w, w.supplier))[0];
+    const view = async (who: P) => (await call(who.authId, 'select public.project_view($1) as v', [w.quoteId])).rows[0].v as { percent: number; amounts: { totalInr: number; verifiedInr: number } | null; parties: { role: string; signed: boolean }[]; ready: boolean; qcMissing: boolean; complete: boolean };
+    expect((await view(w.owner)).percent).toBe(0);
+    for (const o of [mat, inst]) {
+      await call(w.customer.authId, 'select public.accept_work_order($1)', [o.id]);
+      const partner = o === mat ? w.supplier : w.tech;
+      await call(partner.authId, 'select public.accept_work_order($1)', [o.id]);
+      await call(partner.authId, 'select public.start_work_order($1)', [o.id]);
+    }
+    await call(w.supplier.authId, 'select public.submit_milestone_evidence($1, $2, $3::text[])', [mat.id, 'delivery', ['d.jpg']]);
+    await call(w.owner.authId, 'select public.verify_milestone($1, $2)', [mat.id, 'delivery']);
+    // material 540001 of a total of 600001 + 400000 = 1000001 -> 54%
+    const o = await view(w.owner);
+    const expected = projectProgress([
+      { kind: 'material', customerId: 'c', partnerAccountId: 's', priceInr: 600001, milestones: [{ gate: 'on_delivery', amountInr: 540001, status: 'verified' }, { gate: 'on_handover', amountInr: 60000, status: 'waiting' }] },
+      { kind: 'installation', customerId: 'c', partnerAccountId: 't', priceInr: 400000, milestones: [{ gate: 'on_progress', amountInr: 200000, status: 'waiting' }, { gate: 'on_handover', amountInr: 200000, status: 'waiting' }] },
+    ]);
+    expect(o.percent).toBe(expected.percent);
+    expect(Number(o.amounts!.totalInr)).toBe(expected.totalInr);
+    expect((await view(w.customer)).amounts).not.toBeNull();
+    expect((await view(w.tech)).amounts).toBeNull(); // a partner sees the percentage, not the whole project's money
+    expect((await view(w.tech)).percent).toBe(expected.percent);
+    expect(await refusal(view(w.otherTech))).toBe('not_found');
+    expect(await refusal(view(w.otherCustomer))).toBe('not_found');
+    expect(await refusal(as(null, (c) => c.query('select public.project_view($1)', [w.quoteId])))).toMatch(/permission denied/);
+    const v = await view(w.owner);
+    expect(v.ready).toBe(false);
+    expect(v.qcMissing).toBe(true);
+    expect(v.parties.map((p) => p.role)).toEqual(['customer', 'installer']);
   });
 });

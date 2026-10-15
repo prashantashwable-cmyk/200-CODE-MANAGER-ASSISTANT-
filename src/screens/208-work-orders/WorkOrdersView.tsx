@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { Badge, Button, Card, EmptyState, ErrorState, Field, Input, ListRow, LoadingState, Screen, ScreenHeader, Select, formatDate, formatINR, useToast } from '@/design-system';
 import { useData } from '@/data/DataProvider';
 import { useSession } from '@/session/SessionProvider';
@@ -54,7 +55,7 @@ export function WorkOrdersScreen() {
   return (
     <Screen width="default">
       <ScreenHeader title={t('workOrders.title')} subtitle={t('workOrders.subtitle')} />
-      <Card><p className="text-sm" data-testid="wo-disclosure">{t('workOrders.disclosure')}</p></Card>
+      <Card><p className="text-sm" data-testid="wo-disclosure">{t('workOrders.disclosure')}</p><p className="text-sm"><Link to="/projects" data-testid="wo-open-projects">{t('workOrders.openProjects')}</Link></p></Card>
       {state === 'loading' && <LoadingState label={t('workOrders.loading')} rows={3} />}
       {state === 'error' && <ErrorState title={t('workOrders.error.title')} body={t('workOrders.error.body')} retryLabel={t('workOrders.retry')} onRetry={() => void load()} />}
       {state === 'ready' && (

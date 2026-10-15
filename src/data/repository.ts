@@ -1,4 +1,5 @@
 import type { PartnerAccount, ProviderStatus, TemplateHistory, TemplateVersion, WorkOrderView } from '@/features/workorders/types';
+import type { ProjectView } from '@/features/projects/types';
 import type { TemplateSet } from '@/features/workorders/workOrder';
 import type { FeeSettings, CostRates, QuoteLine } from '@/features/quotes/facilitatorQuote';
 import type { FeeSettingsVersion, QuotePreview, SaveQuoteInput, SaveQuoteResult, FacilitatorQuote, CustomerQuoteView } from '@/features/quotes/types';
@@ -10199,6 +10200,10 @@ export interface Repository {
   getMilestoneTemplates(userId: string): Promise<TemplateHistory>;
   /** Owner only: add a new version. Orders already issued keep the version they were issued under. */
   saveMilestoneTemplates(userId: string, templates: TemplateSet, reason: string): Promise<TemplateVersion>;
+  /** Projects (a quote's work orders) the caller may see, each with overall progress and the handover record's state. */
+  listProjects(userId: string): Promise<ProjectView[]>;
+  /** A party to the handover (customer, installer, the named QC inspector) acknowledges it in the app. Not a statutory NOC and not an e-signature. */
+  acknowledgeHandover(userId: string, quoteId: string): Promise<ProjectView>;
   getProviderStatus(userId: string): Promise<ProviderStatus[]>;
   /* 207 — the customer's own quote: accept component by component */
   getMyQuote(userId: string): Promise<CustomerQuoteView | null>;

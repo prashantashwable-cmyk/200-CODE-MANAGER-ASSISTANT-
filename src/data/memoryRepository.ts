@@ -1017,6 +1017,9 @@ import type { Candidate as BookingCandidate } from '@/features/service/booking';
 import { DRIVE_SKILL } from '@/features/training/skills';
 import { isEmail, isIndianMobile, isPincode } from '@/features/validation/india';
 import { randomCode, randomToken } from '@/features/ids/clientId';
+import { acknowledgeProblem as pjAcknowledgeProblem, handoverGateProblem as pjGateProblem, handoverState as pjHandoverState, projectProgress as pjProgress } from '@/features/projects/project';
+import type { HandoverParty as PjParty, ProjectOrder as PjOrder } from '@/features/projects/project';
+import type { ProjectView } from '@/features/projects/types';
 import { templateSetProblem as woTemplateSetProblem } from '@/features/workorders/workOrder';
 import type { TemplateSet as WoTemplateSet } from '@/features/workorders/workOrder';
 import { DEFAULT_TEMPLATES as WO_TEMPLATES, acceptanceLabel as woAcceptanceLabel, evidenceNamesProblem as woEvidenceProblem, milestonesOf as woMilestonesOf, skipsWorkOrder as woSkips, paymentProblem as woPaymentProblem, permissionsOf as woPermissionsOf, confirmProblem as woConfirmProblem, mayVerify as woMayVerify, qcAssignProblem as woQcAssignProblem, sideOf as woSideOf, referenceProblem as woReferenceProblem, startProblem as woStartProblem, statusOfMilestones as woStatus, submitEvidenceProblem as woSubmitProblem, verifyProblem as woVerifyProblem } from '@/features/workorders/workOrder';
@@ -18944,6 +18947,31 @@ const workOrders: WorkOrder[] = [];
 let woCounter = 4000;
 /** Append-only versions of the payment-milestone templates; version 1 is the starting default for the Owner to replace. */
 const woTemplateVersions: TemplateVersion[] = [{ version: 1, templates: structuredClone(WO_TEMPLATES), setByName: 'Initial default [ASSUMPTION]', reason: 'Starting values for the Owner to replace; material 90/10 is from the original brief', at: new Date(0).toISOString() }];
+/** Acknowledgements of the handover record; append-only. */
+const handoverAcks: { quoteId: string; role: PjParty['role']; accountId: string; at: string }[] = [];
+const pjOrdersOf = (quoteId: string): PjOrder[] => workOrders.filter((w) => w.quoteId === quoteId).map((w) => ({ kind: w.kind, customerId: w.customerId, partnerAccountId: w.partnerAccountId, priceInr: w.priceInr, milestones: w.milestones.map((m) => ({ gate: m.gate, amountInr: m.amountInr, status: m.status, ...(m.qcInspectorId ? { qcInspectorId: m.qcInspectorId } : {}) })) }));
+const pjAcksOf = (quoteId: string): PjParty[] => handoverAcks.filter((a) => a.quoteId === quoteId).map((a) => ({ role: a.role, accountId: a.accountId }));
+function pjView(quoteId: string, userId: string): ProjectView | null {
+  const u = byId(users, userId);
+  const all = workOrders.filter((w) => w.quoteId === quoteId);
+  const mine = all.filter((w) => woVisibleTo(w, userId));
+  if (!u || mine.length === 0) return null;
+  const orders = pjOrdersOf(quoteId);
+  const st = pjHandoverState(orders, pjAcksOf(quoteId));
+  const p = pjProgress(orders);
+  const staffOrCustomer = isAdminRole(u.role) || all.some((w) => w.customerId === userId);
+  const q = byId(facilitatorQuotes, quoteId);
+  return {
+    quoteId, code: q?.code ?? quoteId, siteName: all[0].siteName, percent: p.percent,
+    amounts: staffOrCustomer ? { verifiedInr: p.verifiedInr, paidInr: p.paidInr, totalInr: p.totalInr } : null,
+    orders: mine.map((w) => ({ id: w.id, code: w.code, kind: w.kind, partnerName: w.partnerName, status: w.status })),
+    handover: {
+      ready: st.ready, qcMissing: st.qcMissing, complete: st.complete,
+      parties: st.parties.map((x) => ({ role: x.role, accountId: x.accountId, name: byId(users, x.accountId)?.name ?? '', signed: x.signed, mine: x.accountId === userId })),
+      canAcknowledge: pjAcknowledgeProblem({ orders, callerId: userId, acks: pjAcksOf(quoteId) }) === null,
+    },
+  };
+}
 const woTemplateNow = () => woTemplateVersions[woTemplateVersions.length - 1];
 /** No signing provider is connected in this build: acceptance is recorded in-app and labelled as such. */
 const WO_SIGNING = 'not_connected' as const;
@@ -28755,6 +28783,8 @@ export const memoryRepository: Repository = {
     if (w.status !== 'in_progress') throw new RepositoryError('invalid_state');
     const bad = woVerifyProblem(m, { verifierId: userId, submitterId: w.partnerAccountId, qcPassed: true });
     if (bad) throw new RepositoryError(bad);
+    const gate = pjGateProblem(m.gate, pjHandoverState(pjOrdersOf(w.quoteId), pjAcksOf(w.quoteId)).complete);
+    if (gate) throw new RepositoryError(gate); // the final milestone waits for the handover record
     m.status = 'verified';
     eventLog.append(userId, { type: 'milestone.verified', subject: { kind: 'lead', id: w.leadId }, capturedAt: new Date().toISOString(), payload: { workOrderId: w.id, milestoneId, amountInr: m.amountInr, verifierId: userId } });
     return woView(w, userId);
@@ -28811,6 +28841,26 @@ export const memoryRepository: Repository = {
     woTemplateVersions.push(v);
     eventLog.append(userId, { type: 'system.rule_changed', subject: { kind: 'system', id: 'milestone_templates' }, capturedAt: v.at, payload: { rule: 'milestone_templates', version: v.version, reason: v.reason } });
     return structuredClone(v);
+  }),
+  listProjects: (userId) => simulateRead((): ProjectView[] => {
+    if (!byId(users, userId)) throw new RepositoryError('not_found');
+    const ids = [...new Set(workOrders.map((w) => w.quoteId))];
+    return ids.map((id) => pjView(id, userId)).filter((v): v is ProjectView => v !== null);
+  }),
+  acknowledgeHandover: (userId, quoteId) => simulateWrite((): ProjectView => {
+    const first = workOrders.find((w) => w.quoteId === quoteId && woVisibleTo(w, userId));
+    if (!first) throw new RepositoryError('not_found');
+    const orders = pjOrdersOf(quoteId);
+    const bad = pjAcknowledgeProblem({ orders, callerId: userId, acks: pjAcksOf(quoteId) });
+    if (bad) throw new RepositoryError(bad);
+    const before = pjHandoverState(orders, pjAcksOf(quoteId));
+    const now = new Date().toISOString();
+    for (const p of before.parties) if (p.accountId === userId && !p.signed) {
+      handoverAcks.push({ quoteId, role: p.role, accountId: userId, at: now });
+      eventLog.append(userId, { type: 'contract.accepted_in_app', subject: { kind: 'lead', id: first.leadId }, capturedAt: now, payload: { quoteId, kind: 'handover', role: p.role, method: 'in_app_acceptance' } });
+    }
+    if (pjHandoverState(orders, pjAcksOf(quoteId)).complete) eventLog.append(userId, { type: 'installation.completed', subject: { kind: 'lead', id: first.leadId }, capturedAt: now, payload: { quoteId, record: 'handover_and_completion', statutoryNoc: false } });
+    return pjView(quoteId, userId)!;
   }),
   getProviderStatus: (userId) => simulateRead((): ProviderStatus[] => {
     if (!byId(users, userId)) throw new RepositoryError('not_found');

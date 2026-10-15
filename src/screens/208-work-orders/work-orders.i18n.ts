@@ -46,6 +46,7 @@ const translations: ScreenTranslations = {
   "qcAssignedOk": "Inspector named. They can now see this order and verify this milestone.",
   "reference": "Payment reference",
   "recordPayment": "Record payment",
+  "openProjects": "See project progress and handover",
   "readiness": {
     "title": "Getting the site ready", "disclaimer": "General guidance only. It is not an engineering, safety or legal check; your installer or inspector confirms what your site needs.",
     "material": { "1": "The shaft and pit are measured and match the approved drawing.", "2": "A vehicle can reach the site, and there is clear space to unload.", "3": "A dry, lockable place is ready to keep the parts until installation." },
@@ -120,6 +121,7 @@ const translations: ScreenTranslations = {
     "not_submitted": "Evidence has not been sent yet.",
     "qc_required": "This milestone needs an independent quality check first.",
     "self_verify": "You cannot verify your own work.",
+    "handover_unsigned": "The final milestone waits until the handover record is complete.",
     "template_empty": "Each kind of work needs at least one milestone.",
     "template_sum": "The shares of each kind must add up to exactly 100%.",
     "template_pct": "Each share must be a whole number above zero.",
@@ -195,6 +197,7 @@ const translations: ScreenTranslations = {
   "qcAssignedOk": "निरीक्षक नामित हुआ। वे अब यह ऑर्डर देख सकते हैं और इस चरण को सत्यापित कर सकते हैं।",
   "reference": "भुगतान संदर्भ",
   "recordPayment": "भुगतान दर्ज करें",
+  "openProjects": "प्रोजेक्ट की प्रगति और हैंडओवर देखें",
   "readiness": {
     "title": "साइट को तैयार करना", "disclaimer": "यह केवल सामान्य मार्गदर्शन है। यह इंजीनियरिंग, सुरक्षा या कानूनी जाँच नहीं है; आपके साइट को क्या चाहिए, यह आपका इंस्टॉलर या निरीक्षक तय करेगा।",
     "material": { "1": "शाफ्ट और पिट की नाप ली गई है और स्वीकृत ड्राइंग से मेल खाती है।", "2": "वाहन साइट तक पहुँच सकता है और सामान उतारने की खुली जगह है।", "3": "इंस्टॉलेशन तक पुर्ज़े रखने के लिए सूखी, ताला लगने वाली जगह तैयार है।" },
@@ -269,6 +272,7 @@ const translations: ScreenTranslations = {
     "not_submitted": "सबूत अभी भेजा नहीं गया है।",
     "qc_required": "इस माइलस्टोन के लिए पहले स्वतंत्र गुणवत्ता जाँच ज़रूरी है।",
     "self_verify": "आप अपना काम खुद सत्यापित नहीं कर सकते।",
+    "handover_unsigned": "अंतिम चरण तब तक रुका है जब तक हैंडओवर रिकॉर्ड पूरा न हो।",
     "template_empty": "हर तरह के काम में कम से कम एक चरण चाहिए।",
     "template_sum": "हर तरह के हिस्से ठीक 100% होने चाहिए।",
     "template_pct": "हर हिस्सा शून्य से बड़ी पूर्ण संख्या होना चाहिए।",
@@ -344,6 +348,7 @@ const translations: ScreenTranslations = {
   "qcAssignedOk": "निरीक्षक नेमला. ते आता ही ऑर्डर पाहू शकतात आणि हा टप्पा पडताळू शकतात.",
   "reference": "पेमेंट संदर्भ",
   "recordPayment": "पेमेंट नोंदवा",
+  "openProjects": "प्रकल्पाची प्रगती आणि हँडओव्हर पहा",
   "readiness": {
     "title": "साइट तयार करणे", "disclaimer": "हे फक्त सामान्य मार्गदर्शन आहे. ही अभियांत्रिकी, सुरक्षा किंवा कायदेशीर तपासणी नाही; तुमच्या साइटला काय हवे ते तुमचा इन्स्टॉलर किंवा निरीक्षक ठरवेल.",
     "material": { "1": "शाफ्ट आणि पिटचे मोजमाप झाले असून ते मंजूर आराखड्याशी जुळते.", "2": "वाहन साइटपर्यंत पोहोचू शकते आणि माल उतरवायला मोकळी जागा आहे.", "3": "इन्स्टॉलेशनपर्यंत सुटे भाग ठेवण्यासाठी कोरडी, कुलूप लावता येणारी जागा तयार आहे." },
@@ -418,6 +423,7 @@ const translations: ScreenTranslations = {
     "not_submitted": "पुरावा अजून पाठवलेला नाही.",
     "qc_required": "या माइलस्टोनसाठी आधी स्वतंत्र गुणवत्ता तपासणी हवी.",
     "self_verify": "तुम्ही स्वतःचे काम स्वतः पडताळू शकत नाही.",
+    "handover_unsigned": "हँडओव्हर नोंद पूर्ण होईपर्यंत अंतिम टप्पा थांबलेला आहे.",
     "template_empty": "प्रत्येक प्रकारच्या कामाला किमान एक टप्पा हवा.",
     "template_sum": "प्रत्येक प्रकाराचे हिस्से अचूक 100% असावेत.",
     "template_pct": "प्रत्येक हिस्सा शून्यापेक्षा मोठी पूर्ण संख्या असावी.",
