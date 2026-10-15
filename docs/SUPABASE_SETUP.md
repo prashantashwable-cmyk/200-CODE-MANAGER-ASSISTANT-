@@ -41,7 +41,10 @@ wording must match a template registered on the DLT portal. This is needed in th
    - `SUPABASE_PROJECT_REF` = the project reference
    - `SUPABASE_DB_PASSWORD` = the database password
    - `SUPABASE_ACCESS_TOKEN` = the access token
-5. **Send the database to the project.** GitHub → Actions → "Deploy database" → "Run workflow". When it is
+5. **Send the database to the project.** GitHub → Actions → "Deploy database" → "Run workflow". In the
+   "Use workflow from" list choose the branch **`claude/new-session-g6fda4`** (until it is merged): `main` only has
+   the first six migrations, and the app on this branch needs all of them (owner role, event stream, quotes, leads,
+   Decision Desk, work orders, complaints). Pick `main` only if you want the old foundation alone. When it is
    green, the tables, rules and the every-minute heartbeat exist in your project. You can see them in the
    Supabase dashboard under Table Editor (`profiles`, `audit_events`, `heartbeat_runs`).
 6. **Tell Claude it is done.** Then two more values are needed for the app itself (Project Settings → API:
@@ -75,12 +78,12 @@ After step 5 (the database is deployed, including `sms_outbox` and `send_sms_hoo
 8. **Send the codes to the database.** Authentication → Hooks → **Send SMS hook** → Postgres function →
    schema `public`, function `send_sms_hook` → Enable. From now on every sign-in code lands in the private
    table `sms_outbox` (nobody using the app can read it, not even Admin).
-9. **Make yourself the first Admin.** Dashboard → SQL Editor, with your own 10-digit mobile number:
+9. **Make yourself the Owner.** Dashboard → SQL Editor, with your own 10-digit mobile number:
    ```sql
    insert into public.profiles (phone, name, role, status)
-   values ('+91XXXXXXXXXX', 'Prashant Vasant Wable', 'admin', 'active');
+   values ('+91XXXXXXXXXX', 'Prashant Vasant Wable', 'owner', 'active');
    ```
-   When you sign in with that number, the database links the sign-in to this row. Any other number that
+   When you sign in with that number, the database links the sign-in to this row. (Deployed from `main`, which has no owner role yet, use `'admin'` instead.) Any other number that
    signs in waits with no role until you approve it (screen "Choose your role", `/onboarding/role`, as Admin).
 10. **Give the app the two public values.** Where the app is built (Vercel → Project → Settings → Environment
     Variables, or a `.env.local` file on a computer), set:
