@@ -12009,6 +12009,12 @@ function ofAdmin(userId: string): User {
   if (!u || !isAdminRole(u.role)) throw new RepositoryError('not_admin');
   return u;
 }
+/** A business decision (master prompt P1): the Owner decides; Admin may only send it to the Owner's Decision Desk. */
+function ownerDecides(userId: string): User {
+  const u = ofAdmin(userId);
+  if (u.role !== 'owner') throw new RepositoryError('admin_cannot_decide');
+  return u;
+}
 function ofApp(applicationId: string): PartnerApplication {
   const app = byId(partnerApplications, applicationId);
   if (!app) throw new RepositoryError('not_found');
@@ -25385,7 +25391,7 @@ export const memoryRepository: Repository = {
 
   approvePayout: (entryId, input, adminId) =>
     simulateWrite((): PayoutQueueRow => {
-      const admin = ofAdmin(adminId);
+      const admin = ownerDecides(adminId);
       const e = byId(commissions, entryId);
       if (!e || e.status !== 'approved') throw new RepositoryError('not_found');
       const now = Date.now();
@@ -25402,7 +25408,7 @@ export const memoryRepository: Repository = {
 
   approvePayoutsBatch: (entryIds, adminId) =>
     simulateWrite((): PayoutBatchResult => {
-      const admin = ofAdmin(adminId);
+      const admin = ownerDecides(adminId);
       const now = Date.now();
       const at = new Date(now).toISOString();
       const ctx = paContext();
@@ -25443,7 +25449,7 @@ export const memoryRepository: Repository = {
 
   releasePayoutHold: (entryId, adminId) =>
     simulateWrite((): PayoutQueueRow => {
-      const admin = ofAdmin(adminId);
+      const admin = ownerDecides(adminId);
       const e = byId(commissions, entryId);
       if (!e || e.status !== 'approved') throw new RepositoryError('not_found');
       const now = Date.now();
@@ -26086,7 +26092,7 @@ export const memoryRepository: Repository = {
 
   publishCommissionRule: (ruleId, input, adminId) =>
     simulateWrite((): CommissionRulesView => {
-      const admin = ofAdmin(adminId);
+      const admin = ownerDecides(adminId);
       if (!crIsRuleId(ruleId)) throw new RepositoryError('unknown_rule');
       const now = Date.now();
       tcEnsure(now);
@@ -26824,7 +26830,7 @@ export const memoryRepository: Repository = {
 
   assignPartnerTier: (partnerId, input, userId) =>
     simulateWrite((): PartnerTierDetailView => {
-      const admin = ofAdmin(userId);
+      const admin = ownerDecides(userId);
       const now = Date.now();
       tcEnsure(now);
       const review = tierReviews.find((r) => r.userId === partnerId && !r.resolved);
@@ -28582,10 +28588,10 @@ export const memoryRepository: Repository = {
   getPermissionOverview: (userId) => simulateRead(() => { intAdmin(userId); const now = Date.now(); syncPermissions(now); return pmOverview(now); }),
   getPermissionMatrix: (userId, filter) => simulateRead(() => { intAdmin(userId); return pmMatrix(filter); }),
   previewRoleChange: (userId, input) => simulateRead(() => { intAdmin(userId); return pmPlan(input).preview; }),
-  changeRolePermission: (userId, input) => simulateWrite(() => { const admin = intAdmin(userId); return pmChangeRole(admin, input, Date.now()); }),
+  changeRolePermission: (userId, input) => simulateWrite(() => { const admin = intAdmin(userId); ownerDecides(userId); return pmChangeRole(admin, input, Date.now()); }),
   createCustomRole: (userId, input) =>
     simulateWrite(() => {
-      const admin = intAdmin(userId);
+      const admin = intAdmin(userId); ownerDecides(userId);
       pmEnsure();
       const now = Date.now();
       if (pmLetters(input.name) < PM_NAME_MIN) throw new RepositoryError('name_short');
@@ -28619,7 +28625,7 @@ export const memoryRepository: Repository = {
   getUserAccess: (userId, targetUserId) => simulateRead(() => { intAdmin(userId); pmEnsure(); const t = byId(users, targetUserId); if (!t) throw new RepositoryError('not_found'); return pmUserAccess(t, Date.now()); }),
   assignUserRole: (userId, targetUserId, roleId, assign, reason) =>
     simulateWrite(() => {
-      const admin = intAdmin(userId);
+      const admin = intAdmin(userId); ownerDecides(userId);
       pmEnsure();
       const t = byId(users, targetUserId);
       const c = customRoles.find((x) => x.id === roleId && !x.retired);
@@ -28632,7 +28638,7 @@ export const memoryRepository: Repository = {
       pmWrite(admin, assign ? 'role_assigned' : 'role_unassigned', Date.now(), { roleId, roleLabel: c.name, userId: t.id, userName: t.name, reason: reason.trim() });
       return pmUserAccess(t, Date.now());
     }),
-  setUserOverride: (userId, input) => simulateWrite(() => { const admin = intAdmin(userId); const now = Date.now(); pmEnsure(); pmSetOverride(admin, input, now); return pmUserAccess(byId(users, input.targetUserId)!, now); }),
+  setUserOverride: (userId, input) => simulateWrite(() => { const admin = intAdmin(userId); ownerDecides(userId); const now = Date.now(); pmEnsure(); pmSetOverride(admin, input, now); return pmUserAccess(byId(users, input.targetUserId)!, now); }),
   removeUserOverride: (userId, overrideId, reason) =>
     simulateWrite(() => {
       const admin = intAdmin(userId);

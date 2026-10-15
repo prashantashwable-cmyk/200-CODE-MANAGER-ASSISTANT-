@@ -11,6 +11,7 @@ import { DEFER_MAX_DAYS, EFFECTIVE_MAX_DAYS, FIELD_ROLES, FILTERS, OUTCOMES, REA
 import type { Filter, Metric, RoleFilter, Tab, TierRole } from './partner-tiers.types';
 import { usePartnerTiers } from './usePartnerTiers';
 import type { PartnerTiersState } from './usePartnerTiers';
+import { SendToOwner } from '@/features/decisions/SendToOwner';
 
 type T = ReturnType<typeof useTranslation>['t'];
 type Tiers = TierCriteriaVersion['tiers'];
@@ -63,6 +64,7 @@ export function PartnerTiersScreen() {
     return (
       <>
         <ScreenHeader title={t(K.title)} subtitle={t(K.subtitle)} />
+        <SendToOwner kind="tier_change" />
         <Tabs label={t(K.tabs.label)} value={s.tab} onChange={(id) => s.setTab(id as Tab)} items={TABS.map((id) => ({ id, label: t(K.tabs[id]) }))} />
         <div className="mt-3">{s.tab === 'criteria' ? (s.criteria ? <CriteriaTab s={s} t={t} /> : <LoadingState label={t(K.loading)} variant="list" rows={4} />) : s.board ? <Board s={s} t={t} /> : <LoadingState label={t(K.loading)} variant="list" rows={6} />}</div>
       </>

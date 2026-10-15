@@ -9,6 +9,7 @@ import { mkdirSync } from 'node:fs';
 const OTP = '123456';
 const SECOND_STEP = '246810';
 const SHOTS = 'docs/evidence/adaptive';
+const ADMIN_PHONE = '9822011001';
 
 async function fillCode(page: Page, code: string, scope = page.locator('body')): Promise<void> {
   const boxes = scope.locator('input');
@@ -181,5 +182,22 @@ test('Owner: a customer\'s complaint is acknowledged and resolved in order, and 
     return (await repo.listComplaints('u-cust-3'))[0].resolutionNote as string;
   });
   expect(outcome).toContain('Monday');
+  expect(errors).toEqual([]);
+});
+
+test('Admin: the payout, tier, rate and access screens send a request to the Owner instead of deciding', async ({ page }) => {
+  const errors = watchErrors(page);
+  await signIn(page, ADMIN_PHONE, true);
+  await page.waitForURL((u) => !/\/login/.test(u.pathname), { timeout: 30_000 });
+  for (const path of ['/payout-approval', '/partner-tiers', '/commission-rules', '/access-control']) {
+    await go(page, path);
+    await expect(page.getByTestId('send-to-owner')).toBeVisible();
+  }
+  await go(page, '/payout-approval');
+  const card = page.getByTestId('send-to-owner');
+  await card.getByLabel(/What should the Owner decide/).fill('Release the held QC payout');
+  await card.getByLabel(/Why, and what you have checked/).fill('The partner sent the missing photos; I checked them.');
+  await card.getByRole('button', { name: 'Send to the Owner' }).click();
+  await expect(page.getByTestId('send-to-owner-sent')).toContainText('AIEC-');
   expect(errors).toEqual([]);
 });

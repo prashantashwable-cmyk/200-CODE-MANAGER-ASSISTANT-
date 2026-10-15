@@ -11,6 +11,7 @@ import { BURDEN_WARN_PCT, COMMISSION_KEYS as K, MAX_CREW, MAX_INSPECTORS, NOTICE
 import { ruleSummary } from '@/features/commission/ruleSummary';
 import { useCommissionRules } from './useCommissionRules';
 import type { CommissionRulesState } from './useCommissionRules';
+import { SendToOwner } from '@/features/decisions/SendToOwner';
 
 type T = ReturnType<typeof useTranslation>['t'];
 const problemKey = (code?: string | null) => (code && code in K.problem ? K.problem[code as keyof typeof K.problem] : K.problem.generic);
@@ -54,6 +55,7 @@ export function CommissionRulesScreen() {
       {(pull > 0 || s.refreshing) && <p className="t-xs t-muted" role="status" style={{ textAlign: 'center' }} data-pull>{s.refreshing ? t(K.refresh.busy) : pull >= PULL_DISTANCE ? t(K.refresh.release) : t(K.refresh.pull)}</p>}
       <Screen width="default">
         <ScreenHeader title={t(K.title)} subtitle={t(K.subtitle)} action={<Button size="sm" variant="ghost" icon={<ArrowsClockwise size={16} />} data-refresh disabled={s.refreshing} onClick={() => void s.refresh()}>{t(K.refresh.button)}</Button>} />
+        <SendToOwner kind="rate_card_change" />
         <Tabs label={t(K.title)} value={s.view} onChange={(v) => s.setView(v as (typeof VIEWS)[number])} items={VIEWS.map((v) => ({ id: v, label: t(K.tab[v]) }))} />
         <div className="stack gap-4 mt-3">
           {s.view === 'rules' && <RulesView data={data} s={s} t={t} />}
