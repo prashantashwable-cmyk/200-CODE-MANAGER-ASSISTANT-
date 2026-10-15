@@ -14,8 +14,8 @@ import type { CardRow, RecordRow, StatusRow } from './decisionMapping';
 import { captureErrorCode, captureResultOf } from './leadMapping';
 import type { CaptureRpc } from './leadMapping';
 import { customerViewOf, errorCode, feeFromRow, quoteFromRow } from './quoteMapping';
-import { workOrderErrorCode, workOrderFromRows } from './workOrderMapping';
-import type { MilestoneRow, QcAssignmentRow, WorkOrderRow } from './workOrderMapping';
+import { templateVersionFromRow, workOrderErrorCode, workOrderFromRows } from './workOrderMapping';
+import type { MilestoneRow, QcAssignmentRow, TemplateRow, WorkOrderRow } from './workOrderMapping';
 import type { PartnerAccount } from '@/features/workorders/types';
 import type { AcceptanceRow, FeeRow, QuoteRow } from './quoteMapping';
 
@@ -236,6 +236,23 @@ export function withServer(base: Repository): Repository {
     verifyMilestone: (userId, id, milestoneId) => actOnOrder(userId, 'verify_milestone', { p_wo: id, p_ms: milestoneId }, id),
     confirmMilestonePayment: (userId, id, milestoneId) => actOnOrder(userId, 'confirm_milestone_payment', { p_wo: id, p_ms: milestoneId }, id),
     recordMilestonePayment: (userId, id, milestoneId, reference) => actOnOrder(userId, 'record_milestone_payment', { p_wo: id, p_ms: milestoneId, p_reference: reference }, id),
+
+    getMilestoneTemplates: async (userId) => {
+      const role = await roleOf(userId);
+      if (role !== 'owner' && role !== 'admin') throw new RepositoryError('forbidden');
+      const { data, error } = await supabase().from('milestone_template_versions').select('version, templates, set_by_name, reason, created_at').order('version', { ascending: false }).returns<TemplateRow[]>();
+      if (error || !data || data.length === 0) throw new RepositoryError(error ? workOrderErrorCode(error.message) : 'not_found');
+      const history = data.map(templateVersionFromRow);
+      return { current: history[0], history };
+    },
+    saveMilestoneTemplates: async (userId, templates, reason) => {
+      const role = await roleOf(userId);
+      if (role !== 'owner') throw new RepositoryError('forbidden');
+      // The database numbers the version and names the person; what is sent here is only the content and the reason.
+      const { data, error } = await supabase().from('milestone_template_versions').insert({ version: 0, templates, set_by_name: '', reason: reason.trim() }).select('version, templates, set_by_name, reason, created_at').single<TemplateRow>();
+      if (error || !data) throw new RepositoryError(workOrderErrorCode(error?.message ?? ''));
+      return templateVersionFromRow(data);
+    },
 
     // Row-level security returns these only to a signed-in, active Admin (of the same world, real or demo).
     listSignInRequests: async () => {

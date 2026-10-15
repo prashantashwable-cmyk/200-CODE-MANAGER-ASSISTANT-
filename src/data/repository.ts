@@ -1,4 +1,5 @@
-import type { PartnerAccount, ProviderStatus, WorkOrderView } from '@/features/workorders/types';
+import type { PartnerAccount, ProviderStatus, TemplateHistory, TemplateVersion, WorkOrderView } from '@/features/workorders/types';
+import type { TemplateSet } from '@/features/workorders/workOrder';
 import type { FeeSettings, CostRates, QuoteLine } from '@/features/quotes/facilitatorQuote';
 import type { FeeSettingsVersion, QuotePreview, SaveQuoteInput, SaveQuoteResult, FacilitatorQuote, CustomerQuoteView } from '@/features/quotes/types';
 import type { VaultKind } from '@/features/documents/vault';
@@ -10194,6 +10195,10 @@ export interface Repository {
   recordMilestonePayment(userId: string, workOrderId: string, milestoneId: string, reference: string): Promise<WorkOrderView>;
   /** The partner says the money the customer recorded has reached them; that closes the milestone. */
   confirmMilestonePayment(userId: string, workOrderId: string, milestoneId: string): Promise<WorkOrderView>;
+  /** Owner and Admin read the payment-milestone templates in force and their history. */
+  getMilestoneTemplates(userId: string): Promise<TemplateHistory>;
+  /** Owner only: add a new version. Orders already issued keep the version they were issued under. */
+  saveMilestoneTemplates(userId: string, templates: TemplateSet, reason: string): Promise<TemplateVersion>;
   getProviderStatus(userId: string): Promise<ProviderStatus[]>;
   /* 207 — the customer's own quote: accept component by component */
   getMyQuote(userId: string): Promise<CustomerQuoteView | null>;

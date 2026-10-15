@@ -1017,8 +1017,10 @@ import type { Candidate as BookingCandidate } from '@/features/service/booking';
 import { DRIVE_SKILL } from '@/features/training/skills';
 import { isEmail, isIndianMobile, isPincode } from '@/features/validation/india';
 import { randomCode, randomToken } from '@/features/ids/clientId';
+import { templateSetProblem as woTemplateSetProblem } from '@/features/workorders/workOrder';
+import type { TemplateSet as WoTemplateSet } from '@/features/workorders/workOrder';
 import { DEFAULT_TEMPLATES as WO_TEMPLATES, acceptanceLabel as woAcceptanceLabel, evidenceNamesProblem as woEvidenceProblem, milestonesOf as woMilestonesOf, skipsWorkOrder as woSkips, paymentProblem as woPaymentProblem, permissionsOf as woPermissionsOf, confirmProblem as woConfirmProblem, mayVerify as woMayVerify, qcAssignProblem as woQcAssignProblem, sideOf as woSideOf, referenceProblem as woReferenceProblem, startProblem as woStartProblem, statusOfMilestones as woStatus, submitEvidenceProblem as woSubmitProblem, verifyProblem as woVerifyProblem } from '@/features/workorders/workOrder';
-import type { PartnerAccount, ProviderStatus, WorkOrder, WorkOrderView } from '@/features/workorders/types';
+import type { PartnerAccount, ProviderStatus, TemplateHistory, TemplateVersion, WorkOrder, WorkOrderView } from '@/features/workorders/types';
 import { DEFAULT_COST_RATES, DEFAULT_FEE_SETTINGS, alternatives as fqAlternatives, computeQuote as fqCompute, mayOffer as fqMayOffer, maxBundleDiscountInr as fqMaxDiscount, quoteProblems as fqProblems, settingsProblem as fqSettingsProblem, waterfall as fqWaterfall } from '@/features/quotes/facilitatorQuote';
 import type { CostRates as FqCostRates, FeeActor as FqActor, FeeSettings as FqSettings, QuoteLine as FqLine } from '@/features/quotes/facilitatorQuote';
 import type { CustomerQuoteView, FacilitatorQuote, FeeSettingsVersion, QuotePreview, SaveQuoteInput, SaveQuoteResult } from '@/features/quotes/types';
@@ -18940,6 +18942,9 @@ function fqCustomerView(q: FacilitatorQuote): CustomerQuoteView {
 /* ---- 208 work orders: one customer, one partner, milestones that are payable only after verification ---- */
 const workOrders: WorkOrder[] = [];
 let woCounter = 4000;
+/** Append-only versions of the payment-milestone templates; version 1 is the starting default for the Owner to replace. */
+const woTemplateVersions: TemplateVersion[] = [{ version: 1, templates: structuredClone(WO_TEMPLATES), setByName: 'Initial default [ASSUMPTION]', reason: 'Starting values for the Owner to replace; material 90/10 is from the original brief', at: new Date(0).toISOString() }];
+const woTemplateNow = () => woTemplateVersions[woTemplateVersions.length - 1];
 /** No signing provider is connected in this build: acceptance is recorded in-app and labelled as such. */
 const WO_SIGNING = 'not_connected' as const;
 /** An account can act for a partner only if it is an active technician or supplier. */
@@ -28703,7 +28708,7 @@ export const memoryRepository: Repository = {
     for (const c of todo) {
       woCounter += 1;
       const now = new Date().toISOString();
-      const w: WorkOrder = { id: `wo-${woCounter}`, code: `AIEC-WO-${woCounter}`, quoteId: q.id, lineId: c.id, leadId: q.leadId, siteName: q.siteName, customerId: q.customerId, partnerId: c.partnerId, partnerName: c.partnerName, partnerAccountId: partners[c.id], kind: c.kind, description: c.description, priceInr: c.partnerPriceInr, status: 'issued', milestones: woMilestonesOf(c.partnerPriceInr, WO_TEMPLATES[c.kind]), createdAt: now };
+      const w: WorkOrder = { id: `wo-${woCounter}`, code: `AIEC-WO-${woCounter}`, quoteId: q.id, lineId: c.id, leadId: q.leadId, siteName: q.siteName, customerId: q.customerId, partnerId: c.partnerId, partnerName: c.partnerName, partnerAccountId: partners[c.id], kind: c.kind, description: c.description, priceInr: c.partnerPriceInr, status: 'issued', milestones: woMilestonesOf(c.partnerPriceInr, woTemplateNow().templates[c.kind]), templateVersion: woTemplateNow().version, createdAt: now };
       workOrders.push(w);
       made.push(w);
       eventLog.append(userId, { type: 'contract.work_order_created', subject: { kind: 'lead', id: q.leadId }, capturedAt: now, payload: { workOrderId: w.id, quoteId: q.id, partnerId: w.partnerId, partnerAccountId: w.partnerAccountId, priceInr: w.priceInr, kind: w.kind } });
@@ -28790,6 +28795,22 @@ export const memoryRepository: Repository = {
     m.status = 'closed';
     eventLog.append(userId, { type: 'milestone.payment_confirmed', subject: { kind: 'lead', id: w.leadId }, capturedAt: new Date().toISOString(), payload: { workOrderId: w.id, milestoneId, amountInr: m.amountInr, movedByPlatform: false } });
     return woView(w, userId);
+  }),
+  getMilestoneTemplates: (userId) => simulateRead((): TemplateHistory => {
+    const u = byId(users, userId);
+    if (!u || !isAdminRole(u.role)) throw new RepositoryError('forbidden');
+    const copy = (v: TemplateVersion): TemplateVersion => ({ ...v, templates: structuredClone(v.templates) });
+    return { current: copy(woTemplateNow()), history: [...woTemplateVersions].reverse().map(copy) };
+  }),
+  saveMilestoneTemplates: (userId, templates, reason) => simulateWrite((): TemplateVersion => {
+    const u = byId(users, userId);
+    if (!u || u.role !== 'owner') throw new RepositoryError('forbidden'); // only the Owner sets how money is released
+    const bad = woTemplateSetProblem(templates as WoTemplateSet, woTemplateNow().templates, reason);
+    if (bad) throw new RepositoryError(bad);
+    const v: TemplateVersion = { version: woTemplateNow().version + 1, templates: structuredClone(templates), setByName: u.name, reason: reason.trim(), at: new Date().toISOString() };
+    woTemplateVersions.push(v);
+    eventLog.append(userId, { type: 'system.rule_changed', subject: { kind: 'system', id: 'milestone_templates' }, capturedAt: v.at, payload: { rule: 'milestone_templates', version: v.version, reason: v.reason } });
+    return structuredClone(v);
   }),
   getProviderStatus: (userId) => simulateRead((): ProviderStatus[] => {
     if (!byId(users, userId)) throw new RepositoryError('not_found');

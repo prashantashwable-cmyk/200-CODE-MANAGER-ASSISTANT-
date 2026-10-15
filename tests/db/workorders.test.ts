@@ -382,3 +382,26 @@ describe('the partner confirms the payment', () => {
     expect(ev.payload).toMatchObject({ milestoneId: a, reference: 'UTR12345', movedByPlatform: false });
   });
 });
+
+describe('template versions and orders', () => {
+  it('an order keeps the version it was issued under; the next one uses the new version', async () => {
+    const owner = await person('owner');
+    const add = (templates: unknown) => as(owner.authId, (c) => c.query('insert into public.milestone_template_versions (version, templates, set_by_name, reason) values (0, $1, $2, $3)', [JSON.stringify(templates), 'x', 'Pilot with a later release']));
+    const cur = (await pool.query<{ version: number; templates: Record<string, MilestoneTemplate[]> }>('select version, templates from public.milestone_template_versions order by version desc limit 1')).rows[0];
+    const first = await world();
+    await issue(first);
+    const a = (await ordersOf(first, first.owner))[0];
+    expect(a.template_version).toBe(cur.version);
+    const nextT = { ...cur.templates, installation: [{ id: 'progress', label: 'p', pct: 30, gate: 'on_progress' }, { id: 'handover', label: 'h', pct: 70, gate: 'on_handover' }] };
+    await add(nextT);
+    const second = await world();
+    await issue(second);
+    const b = (await ordersOf(second, second.owner)).find((o) => o.kind === 'installation')!;
+    expect(b.template_version).toBe(cur.version + 1);
+    expect((await milestones(second.owner.authId, b.id)).map((m) => Number(m.amount_inr))).toEqual([120000, 280000]); // 30 / 70 of 400000
+    const old = (await ordersOf(first, first.owner)).find((o) => o.kind === 'installation')!;
+    expect((await milestones(first.owner.authId, old.id)).map((m) => Number(m.amount_inr))).toEqual([200000, 200000]); // still 50 / 50
+    // put the defaults back so later tests see the usual split
+    await as(owner.authId, (c) => c.query('insert into public.milestone_template_versions (version, templates, set_by_name, reason) values (0, $1, $2, $3)', [JSON.stringify(cur.templates), 'x', 'Restore the defaults after the test']));
+  });
+});

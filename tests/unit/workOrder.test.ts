@@ -169,3 +169,23 @@ describe('payment confirmation rule', () => {
     for (const status of ['waiting', 'evidence_submitted', 'verified'] as const) expect(confirmProblem({ status })).toBe('not_recorded');
   });
 });
+
+import { templateSetProblem, LINE_KINDS } from '@/features/workorders/workOrder';
+import type { TemplateSet } from '@/features/workorders/workOrder';
+describe('template set rule', () => {
+  const cur = structuredClone(DEFAULT_TEMPLATES) as TemplateSet;
+  const next = (f: (t: TemplateSet) => void) => { const c = structuredClone(cur) as TemplateSet; f(c); return c; };
+  const why = 'Pilot with a lower advance';
+  it('needs a reason, valid kinds and a real change', () => {
+    expect(LINE_KINDS).toHaveLength(5);
+    expect(templateSetProblem(next((t) => { t.material[0].pct = 80; t.material[1].pct = 20; }), cur, why)).toBeNull();
+    expect(templateSetProblem(next((t) => { t.material[0].pct = 80; t.material[1].pct = 20; }), cur, 'short')).toBe('reason_short');
+    expect(templateSetProblem(cur, cur, why)).toBe('template_unchanged');
+    expect(templateSetProblem(next((t) => { t.material[0].pct = 80; }), cur, why)).toBe('template_sum');
+    expect(templateSetProblem(next((t) => { t.logistics = []; }), cur, why)).toBe('template_empty');
+    expect(templateSetProblem(next((t) => { t.material[0].gate = 'whenever' as never; }), cur, why)).toBe('template_gate');
+    expect(templateSetProblem(next((t) => { t.material[0].label = ' '; }), cur, why)).toBe('template_label');
+    expect(templateSetProblem(next((t) => { t.amc = Array.from({ length: 7 }, (_, i) => ({ id: `a${i}`, label: 'x', pct: i === 0 ? 94 : 1, gate: 'on_handover' as const })); }), cur, why)).toBe('template_rows');
+    expect(templateSetProblem(next((t) => { t.material[1].id = 'delivery'; }), cur, why)).toBe('template_duplicate');
+  });
+});

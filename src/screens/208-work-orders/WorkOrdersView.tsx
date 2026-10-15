@@ -4,6 +4,7 @@ import { Badge, Button, Card, EmptyState, ErrorState, Field, Input, ListRow, Loa
 import { useData } from '@/data/DataProvider';
 import { useSession } from '@/session/SessionProvider';
 import type { FacilitatorQuote } from '@/features/quotes/types';
+import { TemplateEditor } from './TemplateEditor';
 import { mayVerify, skipsWorkOrder } from '@/features/workorders/workOrder';
 import type { PartnerAccount, ProviderStatus, WorkOrderView } from '@/features/workorders/types';
 
@@ -136,6 +137,7 @@ export function WorkOrdersScreen() {
               </div>
             </Card>
           ))}
+          {(isOwner || user?.role === 'admin') && <TemplateEditor />}
         </div>
       )}
     </Screen>

@@ -1,5 +1,5 @@
 import type { LineKind } from '@/features/quotes/facilitatorQuote';
-import type { Milestone, Permissions, Side, WorkOrderStatus } from './workOrder';
+import type { Milestone, Permissions, Side, TemplateSet, WorkOrderStatus } from './workOrder';
 
 export interface WorkOrder {
   id: string;
@@ -23,6 +23,8 @@ export interface WorkOrder {
   partnerAcceptedAt?: string;
   startedAt?: string;
   createdAt: string;
+  /** The milestone template version this order was issued under. */
+  templateVersion?: number;
 }
 
 /** What each person may do with this order right now, decided by the server from who they are. */
@@ -38,3 +40,7 @@ export interface PartnerAccount { id: string; name: string; role: 'technician' |
 
 export type ProviderId = 'esign' | 'payments' | 'whatsapp' | 'sms' | 'maps' | 'nbfc' | 'storage';
 export interface ProviderStatus { id: ProviderId; connected: boolean; note: string; }
+
+/** One append-only version of the payment-milestone templates. The Owner adds versions; an order keeps the one it was issued under. */
+export interface TemplateVersion { version: number; templates: TemplateSet; setByName: string; reason: string; at: string; }
+export interface TemplateHistory { current: TemplateVersion; history: TemplateVersion[]; }

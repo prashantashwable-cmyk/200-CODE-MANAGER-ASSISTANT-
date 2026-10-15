@@ -31,6 +31,26 @@ export const DEFAULT_TEMPLATES: Record<LineKind, MilestoneTemplate[]> = {
   statutory: [{ id: 'start', label: 'On acceptance (pass-through)', pct: 100, gate: 'on_acceptance' }],
 };
 
+export const GATES: MilestoneGate[] = ['on_acceptance', 'on_delivery', 'on_progress', 'on_handover'];
+export const LINE_KINDS = ['material', 'installation', 'logistics', 'amc', 'statutory'] as const;
+export type TemplateSet = Record<LineKind, MilestoneTemplate[]>;
+export const TEMPLATE_REASON_MIN = 10;
+export const TEMPLATE_MAX_ROWS = 6;
+export type TemplateSetProblem = WorkOrderProblem | 'template_gate' | 'template_label' | 'template_rows' | 'reason_short' | 'template_unchanged';
+/** A new version of the milestone templates: every kind valid, a reason, and something actually different from the version in force. */
+export function templateSetProblem(next: TemplateSet, current: TemplateSet, reason: string): TemplateSetProblem | null {
+  if (reason.trim().length < TEMPLATE_REASON_MIN) return 'reason_short';
+  for (const k of LINE_KINDS) {
+    const t = next[k] ?? [];
+    if (t.length > TEMPLATE_MAX_ROWS) return 'template_rows';
+    if (t.some((m) => !GATES.includes(m.gate))) return 'template_gate';
+    if (t.some((m) => !m.id.trim() || !m.label.trim())) return 'template_label';
+    const bad = templateProblem(t);
+    if (bad) return bad;
+  }
+  return JSON.stringify(LINE_KINDS.map((k) => next[k])) === JSON.stringify(LINE_KINDS.map((k) => current[k])) ? 'template_unchanged' : null;
+}
+
 export type WorkOrderProblem = 'template_empty' | 'template_sum' | 'template_pct' | 'template_duplicate' | 'price_invalid';
 
 export function templateProblem(t: MilestoneTemplate[]): WorkOrderProblem | null {

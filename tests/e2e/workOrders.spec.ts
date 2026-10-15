@@ -56,6 +56,12 @@ test('Owner: work orders say plainly that signing and payment providers are not 
   await expect(page.getByTestId('wo-disclosure')).toBeVisible();
   await expect(page.getByTestId('wo-provider-esign')).toBeVisible();
   await expect(page.getByTestId('wo-provider-payments')).toBeVisible();
+  // The Owner can see how payment is released and change it; a change needs a reason and shows what is wrong live.
+  await expect(page.getByTestId('wo-templates')).toBeVisible();
+  await expect(page.getByTestId('wo-tpl-material')).toBeVisible();
+  await page.getByTestId('wo-tpl-material').getByLabel('%').first().fill('80');
+  await page.getByLabel(/Why this change/).fill('Pilot with a lower advance');
+  await expect(page.getByTestId('wo-tpl-problem')).toBeVisible(); // 80 + 10 is not 100
   expect(errors).toEqual([]);
 });
 

@@ -147,6 +147,27 @@ describe('work orders from an accepted quote', () => {
     expect(log.some((e) => e.type === 'milestone.payment_confirmed')).toBe(true);
   });
 
+  it('the Owner adds a version of the milestone templates; orders already issued keep theirs; nobody else can', async () => {
+    const before = await repo.getMilestoneTemplates(OWNER);
+    expect(before.current.version).toBe(1);
+    expect((await repo.getMilestoneTemplates(ADMIN)).current.version).toBe(1);
+    for (const who of [CUST, TECH]) expect(await refusal(repo.getMilestoneTemplates(who))).toBe('forbidden');
+    const t = structuredClone(before.current.templates);
+    t.installation = [{ id: 'progress', label: 'On verified progress', pct: 40, gate: 'on_progress' }, { id: 'handover', label: 'On handover', pct: 60, gate: 'on_handover' }];
+    for (const who of [ADMIN, CUST, TECH]) expect(await refusal(repo.saveMilestoneTemplates(who, t, 'Pilot with a later release'))).toBe('forbidden');
+    expect(await refusal(repo.saveMilestoneTemplates(OWNER, t, 'short'))).toBe('reason_short');
+    expect(await refusal(repo.saveMilestoneTemplates(OWNER, before.current.templates, 'Nothing is different here'))).toBe('template_unchanged');
+    const saved = await repo.saveMilestoneTemplates(OWNER, t, 'Pilot with a later release');
+    expect(saved.version).toBe(2);
+    const after = await repo.getMilestoneTemplates(OWNER);
+    expect(after.history.map((h) => h.version)).toEqual([2, 1]);
+    const w = (await repo.listWorkOrders(TECH))[0];
+    expect(w.templateVersion).toBe(1); // issued under version 1
+    expect(w.milestones.map((m) => m.pct)).toEqual([50, 50]); // unchanged by the new version
+    const log = await repo.listEvents(OWNER, {});
+    expect(log.some((e) => e.type === 'system.rule_changed')).toBe(true);
+  });
+
   it('emits the events and says which providers are not connected', async () => {
     const log = await repo.listEvents(OWNER, {});
     const types = new Set(log.map((e) => e.type));
