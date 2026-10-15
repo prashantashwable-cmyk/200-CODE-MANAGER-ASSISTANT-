@@ -83,8 +83,22 @@ const translations: ScreenTranslations = {
     "invalid_state": "This order is not in a state that allows that.",
     "not_submitted": "Evidence has not been sent yet.",
     "qc_required": "This milestone needs an independent quality check first.",
-    "self_verify": "You cannot verify your own work."
-  }
+    "self_verify": "You cannot verify your own work.",
+    "evidence_too_many": "Too many files. Send at most 20 at a time.",
+    "evidence_name_long": "A file name is too long.",
+    "partner_account_required": "Choose a partner account for every part.",
+    "partner_not_eligible": "That account cannot act as a partner. It must be an active installer or supplier.",
+    "no_customer": "This quote has no customer yet."
+  },
+  "chooseAccount": "Choose the partner account",
+  "accountRole": {
+    "technician": "Installer / technician",
+    "supplier": "Supplier"
+  },
+  "passThrough_one": "{{count}} statutory fee is paid to the authority and is not a work order.",
+  "passThrough_other": "{{count}} statutory fees are paid to the authority and are not work orders.",
+  "noAccounts": "No active partner account exists yet. Add the partner before issuing.",
+  "evidenceSent": "Evidence: {{names}}"
 } },
   hi: { workOrders: {
   "title": "वर्क ऑर्डर",
@@ -167,8 +181,22 @@ const translations: ScreenTranslations = {
     "invalid_state": "यह ऑर्डर इस कार्य की अनुमति वाली स्थिति में नहीं है।",
     "not_submitted": "सबूत अभी भेजा नहीं गया है।",
     "qc_required": "इस माइलस्टोन के लिए पहले स्वतंत्र गुणवत्ता जाँच ज़रूरी है।",
-    "self_verify": "आप अपना काम खुद सत्यापित नहीं कर सकते।"
-  }
+    "self_verify": "आप अपना काम खुद सत्यापित नहीं कर सकते।",
+    "evidence_too_many": "बहुत ज़्यादा फ़ाइलें। एक बार में अधिकतम 20 भेजें।",
+    "evidence_name_long": "किसी फ़ाइल का नाम बहुत लंबा है।",
+    "partner_account_required": "हर हिस्से के लिए पार्टनर खाता चुनें।",
+    "partner_not_eligible": "यह खाता पार्टनर के रूप में काम नहीं कर सकता। यह सक्रिय इंस्टॉलर या सप्लायर होना चाहिए।",
+    "no_customer": "इस कोटेशन में अभी कोई ग्राहक नहीं है।"
+  },
+  "chooseAccount": "पार्टनर खाता चुनें",
+  "accountRole": {
+    "technician": "इंस्टॉलर / तकनीशियन",
+    "supplier": "सप्लायर"
+  },
+  "passThrough_one": "{{count}} सरकारी शुल्क प्राधिकरण को दिया जाता है और वर्क ऑर्डर नहीं है।",
+  "passThrough_other": "{{count}} सरकारी शुल्क प्राधिकरण को दिए जाते हैं और वर्क ऑर्डर नहीं हैं।",
+  "noAccounts": "अभी कोई सक्रिय पार्टनर खाता नहीं है। जारी करने से पहले पार्टनर जोड़ें।",
+  "evidenceSent": "सबूत: {{names}}"
 } },
   mr: { workOrders: {
   "title": "वर्क ऑर्डर",
@@ -251,8 +279,22 @@ const translations: ScreenTranslations = {
     "invalid_state": "हा ऑर्डर या कृतीला परवानगी देणाऱ्या स्थितीत नाही.",
     "not_submitted": "पुरावा अजून पाठवलेला नाही.",
     "qc_required": "या माइलस्टोनसाठी आधी स्वतंत्र गुणवत्ता तपासणी हवी.",
-    "self_verify": "तुम्ही स्वतःचे काम स्वतः पडताळू शकत नाही."
-  }
+    "self_verify": "तुम्ही स्वतःचे काम स्वतः पडताळू शकत नाही.",
+    "evidence_too_many": "खूप फाइल्स. एका वेळी जास्तीत जास्त 20 पाठवा.",
+    "evidence_name_long": "एका फाइलचे नाव खूप लांब आहे.",
+    "partner_account_required": "प्रत्येक भागासाठी पार्टनर खाते निवडा.",
+    "partner_not_eligible": "हे खाते पार्टनर म्हणून काम करू शकत नाही. ते सक्रिय इन्स्टॉलर किंवा सप्लायर असावे.",
+    "no_customer": "या कोटेशनला अजून ग्राहक नाही."
+  },
+  "chooseAccount": "पार्टनर खाते निवडा",
+  "accountRole": {
+    "technician": "इन्स्टॉलर / तंत्रज्ञ",
+    "supplier": "सप्लायर"
+  },
+  "passThrough_one": "{{count}} सरकारी शुल्क प्राधिकरणाला दिले जाते आणि ते वर्क ऑर्डर नाही.",
+  "passThrough_other": "{{count}} सरकारी शुल्के प्राधिकरणाला दिली जातात आणि ती वर्क ऑर्डर नाहीत.",
+  "noAccounts": "अजून कोणतेही सक्रिय पार्टनर खाते नाही. जारी करण्यापूर्वी पार्टनर जोडा.",
+  "evidenceSent": "पुरावा: {{names}}"
 } },
 };
 

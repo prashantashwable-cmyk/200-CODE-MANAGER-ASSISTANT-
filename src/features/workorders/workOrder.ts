@@ -39,22 +39,42 @@ export function templateProblem(t: MilestoneTemplate[]): WorkOrderProblem | null
   return t.reduce((s, m) => s + m.pct, 0) === 100 ? null : 'template_sum';
 }
 
-/** Split a price across the template in whole rupees; the parts always add up to the price (largest remainder). */
+/**
+ * Split a price across the template in whole rupees; the parts always add up to the price (largest remainder).
+ * Integer arithmetic only: the remainder of milestone i is (price * pct) % 100, so ties are exact and always go to the
+ * earlier milestone. The database function app.wo_split does the same sum; a parity test keeps the two identical.
+ */
 export function amountsFor(priceInr: number, t: MilestoneTemplate[]): number[] {
   if (!Number.isInteger(priceInr) || priceInr < 0 || templateProblem(t)) throw new Error('price_invalid');
-  const exact = t.map((m) => (priceInr * m.pct) / 100);
-  const floors = exact.map(Math.floor);
+  if (!t.every((m) => Number.isInteger(m.pct))) throw new Error('price_invalid');
+  const floors = t.map((m) => Math.floor((priceInr * m.pct) / 100));
+  const rem = t.map((m) => (priceInr * m.pct) % 100);
   let left = priceInr - floors.reduce((a, b) => a + b, 0);
-  const order = exact.map((e, i) => ({ i, r: e - Math.floor(e) })).sort((a, b) => b.r - a.r || a.i - b.i);
+  const order = rem.map((r, i) => ({ i, r })).sort((a, b) => b.r - a.r || a.i - b.i);
   for (const o of order) { if (left <= 0) break; floors[o.i] += 1; left -= 1; }
   return floors;
 }
 
-export interface Milestone { id: string; label: string; gate: MilestoneGate; pct: number; amountInr: number; status: MilestoneStatus; evidenceCount: number; }
+/** Statutory fees are passed through to the authority: there is no partner contract, so no work order. */
+export const skipsWorkOrder = (kind: LineKind): boolean => kind === 'statutory';
+
+export const MIN_EVIDENCE = 1;
+export const MAX_EVIDENCE = 20;
+export const MAX_EVIDENCE_NAME = 200;
+export type EvidenceProblem = 'evidence_missing' | 'evidence_too_many' | 'evidence_name_long';
+/** Evidence is recorded by file name until a storage provider is connected; the names must be present and bounded. */
+export function evidenceNamesProblem(names: string[]): EvidenceProblem | null {
+  const clean = names.map((n) => n.trim()).filter(Boolean);
+  if (clean.length < MIN_EVIDENCE) return 'evidence_missing';
+  if (clean.length > MAX_EVIDENCE) return 'evidence_too_many';
+  return clean.some((n) => n.length > MAX_EVIDENCE_NAME) ? 'evidence_name_long' : null;
+}
+
+export interface Milestone { id: string; label: string; gate: MilestoneGate; pct: number; amountInr: number; status: MilestoneStatus; evidence: string[]; }
 
 export function milestonesOf(priceInr: number, t: MilestoneTemplate[]): Milestone[] {
   const amounts = amountsFor(priceInr, t);
-  return t.map((m, i) => ({ id: m.id, label: m.label, gate: m.gate, pct: m.pct, amountInr: amounts[i], status: 'waiting' as const, evidenceCount: 0 }));
+  return t.map((m, i) => ({ id: m.id, label: m.label, gate: m.gate, pct: m.pct, amountInr: amounts[i], status: 'waiting' as const, evidence: [] }));
 }
 
 export interface PartyStanding { licenceValid: boolean; insuranceValid: boolean; suspended: boolean; }
@@ -74,7 +94,6 @@ export function startProblem(w: { status: WorkOrderStatus; customerAcceptedAt?: 
 
 export type MilestoneProblem = 'locked' | 'not_waiting' | 'evidence_missing' | 'not_submitted' | 'not_verified' | 'qc_required' | 'self_verify' | 'not_payable';
 
-export const MIN_EVIDENCE = 1;
 /** Handover and progress milestones need an independent QC pass; delivery and acceptance need evidence only. */
 export const needsQc = (g: MilestoneGate): boolean => g === 'on_handover' || g === 'on_progress';
 

@@ -9,6 +9,7 @@ const ADMIN = 'u-admin-1';
 const CUST = 'u-cust-3';
 const OTHER = 'u-cust-1';
 const TECH = 'u-tech-1';
+const OTHER_TECH = 'u-tech-2';
 const refusal = async (p: Promise<unknown>) => { try { await p; return 'ok'; } catch (e) { return e instanceof Error ? e.message : String(e); } };
 
 beforeAll(async () => {
@@ -16,25 +17,52 @@ beforeAll(async () => {
   repo = (await import('@/data/memoryRepository')).memoryRepository;
 });
 
+describe('partner accounts', () => {
+  it('the Owner and Admin can list active installers and suppliers; nobody else can', async () => {
+    const owner = await repo.listPartnerAccounts(OWNER);
+    expect(owner.map((a) => a.id)).toContain(TECH);
+    expect(owner.every((a) => a.role === 'technician' || a.role === 'supplier')).toBe(true);
+    expect((await repo.listPartnerAccounts(ADMIN)).length).toBe(owner.length);
+    expect(await refusal(repo.listPartnerAccounts(CUST))).toBe('forbidden');
+    expect(await refusal(repo.listPartnerAccounts(TECH))).toBe('forbidden');
+  });
+});
+
 describe('work orders from an accepted quote', () => {
-  it('creates one per accepted component, once, and only the Owner issues them', async () => {
+  it('only the Owner issues them, every part needs a real partner account, and a refusal leaves nothing behind', async () => {
     const quote = (await repo.listFacilitatorQuotes(ADMIN))[0];
-    expect(await refusal(repo.createWorkOrdersFromQuote(CUST, quote.id))).toBe('forbidden');
-    expect(await refusal(repo.createWorkOrdersFromQuote(ADMIN, quote.id))).toBe('forbidden');
-    expect(await repo.createWorkOrdersFromQuote(OWNER, quote.id)).toHaveLength(0); // nothing accepted yet
+    expect(await refusal(repo.createWorkOrdersFromQuote(CUST, quote.id, {}))).toBe('forbidden');
+    expect(await refusal(repo.createWorkOrdersFromQuote(ADMIN, quote.id, {}))).toBe('forbidden');
+    expect(await repo.createWorkOrdersFromQuote(OWNER, quote.id, {})).toHaveLength(0); // nothing accepted yet
+
     await repo.sendFacilitatorQuote(ADMIN, quote.id).catch(() => undefined);
     const mine = await repo.getMyQuote(CUST);
-    const ids = mine!.quote.components.filter((c) => c.partnerId === TECH).map((c) => c.id);
-    await repo.acceptQuoteComponents(CUST, quote.id, ids);
-    const made = await repo.createWorkOrdersFromQuote(OWNER, quote.id);
-    expect(made).toHaveLength(ids.length);
-    expect(made.every((w) => w.milestones.reduce((a, m) => a + m.amountInr, 0) === w.priceInr)).toBe(true);
-    expect(await repo.createWorkOrdersFromQuote(OWNER, quote.id)).toHaveLength(0); // idempotent
+    const install = mine!.quote.components.find((c) => c.kind === 'installation')!;
+    const statutory = mine!.quote.components.find((c) => c.kind === 'statutory')!;
+    await repo.acceptQuoteComponents(CUST, quote.id, [install.id, statutory.id]);
+
+    expect(await refusal(repo.createWorkOrdersFromQuote(OWNER, quote.id, {}))).toBe('partner_account_required');
+    expect(await refusal(repo.createWorkOrdersFromQuote(OWNER, quote.id, { [install.id]: CUST }))).toBe('partner_not_eligible'); // a customer cannot act as a partner
+    expect(await refusal(repo.createWorkOrdersFromQuote(OWNER, quote.id, { [install.id]: 'nobody' }))).toBe('partner_not_eligible');
+    expect(await repo.listWorkOrders(OWNER)).toHaveLength(0);
+
+    const made = await repo.createWorkOrdersFromQuote(OWNER, quote.id, { [install.id]: TECH });
+    expect(made).toHaveLength(1); // the statutory fee is paid to the authority: no work order
+    expect(made[0].kind).toBe('installation');
+    expect(made[0].partnerAccountId).toBe(TECH);
+    expect(made[0].milestones.reduce((a, m) => a + m.amountInr, 0)).toBe(made[0].priceInr);
+    expect(await repo.createWorkOrdersFromQuote(OWNER, quote.id, {})).toHaveLength(0); // idempotent, and needs no mapping for what exists
   });
 
-  it('another customer sees none of them', async () => {
+  it('is visible to its customer, its partner account and Admin; to nobody else', async () => {
+    expect((await repo.listWorkOrders(CUST)).length).toBe(1);
+    expect((await repo.listWorkOrders(TECH)).length).toBe(1);
+    expect((await repo.listWorkOrders(ADMIN)).length).toBe(1);
     expect(await repo.listWorkOrders(OTHER)).toHaveLength(0);
-    expect((await repo.listWorkOrders(CUST)).length).toBeGreaterThan(0);
+    expect(await repo.listWorkOrders(OTHER_TECH)).toHaveLength(0); // another installer sees no one else's order
+    const id = (await repo.listWorkOrders(TECH))[0].id;
+    expect(await refusal(repo.acceptWorkOrder(OTHER_TECH, id))).toBe('not_found');
+    expect(await refusal(repo.acceptWorkOrder(OTHER, id))).toBe('not_found');
   });
 
   it('work starts only after both sides accept, and the partner cannot skip the gates', async () => {
@@ -52,14 +80,19 @@ describe('work orders from an accepted quote', () => {
     expect(started.status).toBe('in_progress');
   });
 
-  it('a milestone is payable only after evidence and an independent verification', async () => {
+  it('a milestone is payable only after evidence and the Owner has verified it', async () => {
     const w = (await repo.listWorkOrders(TECH))[0];
     const m = w.milestones[0];
     expect(await refusal(repo.recordMilestonePayment(CUST, w.id, m.id, 'UTR12345'))).toBe('not_payable');
     expect(await refusal(repo.submitMilestoneEvidence(TECH, w.id, m.id, []))).toBe('evidence_missing');
+    expect(await refusal(repo.submitMilestoneEvidence(TECH, w.id, m.id, Array.from({ length: 21 }, (_, i) => `f${i}.jpg`)))).toBe('evidence_too_many');
+    expect(await refusal(repo.submitMilestoneEvidence(TECH, w.id, m.id, ['x'.repeat(201)]))).toBe('evidence_name_long');
     expect(await refusal(repo.submitMilestoneEvidence(CUST, w.id, m.id, ['x.jpg']))).toBe('forbidden');
-    await repo.submitMilestoneEvidence(TECH, w.id, m.id, ['rails.jpg', 'level.mp4']);
+    const sent = await repo.submitMilestoneEvidence(TECH, w.id, m.id, ['rails.jpg', 'level.mp4']);
+    expect(sent.milestones[0].evidence).toEqual(['rails.jpg', 'level.mp4']);
     expect(await refusal(repo.verifyMilestone(TECH, w.id, m.id))).toBe('forbidden'); // the partner never verifies their own work
+    expect(await refusal(repo.verifyMilestone(OTHER_TECH, w.id, m.id))).toBe('not_found'); // nor does another installer
+    expect(await refusal(repo.verifyMilestone(CUST, w.id, m.id))).toBe('forbidden');
     expect(await refusal(repo.verifyMilestone(ADMIN, w.id, m.id))).toBe('forbidden'); // Admin never approves
     expect(await refusal(repo.recordMilestonePayment(CUST, w.id, m.id, 'UTR12345'))).toBe('not_payable');
     await repo.verifyMilestone(OWNER, w.id, m.id);

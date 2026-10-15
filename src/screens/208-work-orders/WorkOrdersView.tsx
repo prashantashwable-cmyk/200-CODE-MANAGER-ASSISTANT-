@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Badge, Button, Card, EmptyState, ErrorState, Field, Input, ListRow, LoadingState, Screen, ScreenHeader, formatDate, formatINR, useToast } from '@/design-system';
+import { Badge, Button, Card, EmptyState, ErrorState, Field, Input, ListRow, LoadingState, Screen, ScreenHeader, Select, formatDate, formatINR, useToast } from '@/design-system';
 import { useData } from '@/data/DataProvider';
 import { useSession } from '@/session/SessionProvider';
 import type { FacilitatorQuote } from '@/features/quotes/types';
-import type { ProviderStatus, WorkOrderView } from '@/features/workorders/types';
+import { skipsWorkOrder } from '@/features/workorders/workOrder';
+import type { PartnerAccount, ProviderStatus, WorkOrderView } from '@/features/workorders/types';
 
 const MILESTONE_TONE = { waiting: 'neutral', evidence_submitted: 'warning', verified: 'accent', payment_recorded: 'success', closed: 'success' } as const;
 
@@ -17,6 +18,8 @@ export function WorkOrdersScreen() {
   const [orders, setOrders] = useState<WorkOrderView[]>([]);
   const [quotes, setQuotes] = useState<FacilitatorQuote[]>([]);
   const [providers, setProviders] = useState<ProviderStatus[]>([]);
+  const [accounts, setAccounts] = useState<PartnerAccount[]>([]);
+  const [picks, setPicks] = useState<Record<string, string>>({});
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [text, setText] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -25,8 +28,8 @@ export function WorkOrdersScreen() {
   const load = useCallback(async () => {
     setState('loading');
     try {
-      const [o, p, q] = await Promise.all([repository.listWorkOrders(uid), repository.getProviderStatus(uid), isOwner ? repository.listFacilitatorQuotes(uid) : Promise.resolve([] as FacilitatorQuote[])]);
-      setOrders(o); setProviders(p); setQuotes(q.filter((x) => x.components.some((c) => c.acceptedAt))); setState('ready');
+      const [o, p, q, a] = await Promise.all([repository.listWorkOrders(uid), repository.getProviderStatus(uid), isOwner ? repository.listFacilitatorQuotes(uid) : Promise.resolve([] as FacilitatorQuote[]), isOwner ? repository.listPartnerAccounts(uid) : Promise.resolve([] as PartnerAccount[])]);
+      setOrders(o); setProviders(p); setAccounts(a); setQuotes(q.filter((x) => x.components.some((c) => c.acceptedAt))); setState('ready');
     } catch { setState('error'); }
   }, [repository, uid, isOwner]);
   useEffect(() => { void load(); }, [load]);
@@ -39,6 +42,8 @@ export function WorkOrdersScreen() {
   };
   const key = (id: string, m: string) => `${id}:${m}`;
   const off = providers.filter((p) => !p.connected);
+  /** Accepted components that still need a work order: one account to bind to each, chosen by the Owner. */
+  const todoOf = (q: FacilitatorQuote) => q.components.filter((c) => c.acceptedAt && !skipsWorkOrder(c.kind) && !orders.some((w) => w.quoteId === q.id && w.lineId === c.id));
 
   return (
     <Screen width="default">
@@ -53,11 +58,31 @@ export function WorkOrdersScreen() {
               {off.filter((p) => p.id === 'esign' || p.id === 'payments').map((p) => <p key={p.id} className="text-sm" data-testid={`wo-provider-${p.id}`}>{t(`workOrders.provider.${p.id}`)}</p>)}
             </Card>
           )}
-          {isOwner && quotes.length > 0 && (
-            <Card title={t('workOrders.fromQuotes')}>
-              {quotes.map((q) => <ListRow key={q.id} title={`${q.code} · ${q.siteName}`} trailing={<Button size="sm" disabled={busy} onClick={() => void run(() => repository.createWorkOrdersFromQuote(uid, q.id), 'workOrders.created')}>{t('workOrders.create')}</Button>} />)}
-            </Card>
-          )}
+          {isOwner && quotes.map((q) => {
+            const todo = todoOf(q);
+            const passThrough = q.components.filter((c) => c.acceptedAt && skipsWorkOrder(c.kind));
+            if (todo.length === 0 && passThrough.length === 0) return null;
+            const ready = todo.length > 0 && todo.every((c) => picks[`${q.id}:${c.id}`]);
+            return (
+              <Card key={q.id} title={`${t('workOrders.fromQuotes')} · ${q.code} · ${q.siteName}`}>
+                <div className="stack gap-2" data-testid={`wo-issue-${q.id}`}>
+                  {todo.map((c) => (
+                    <Field key={c.id} label={`${c.partnerName} · ${t(`workOrders.kinds.${c.kind}`)} · ${formatINR(c.partnerPriceInr)}`}>
+                      {({ id }) => (
+                        <Select id={id} value={picks[`${q.id}:${c.id}`] ?? ''} onChange={(e) => setPicks({ ...picks, [`${q.id}:${c.id}`]: e.target.value })}>
+                          <option value="">{t('workOrders.chooseAccount')}</option>
+                          {accounts.map((a) => <option key={a.id} value={a.id}>{`${a.name} · ${t(`workOrders.accountRole.${a.role}`)}`}</option>)}
+                        </Select>
+                      )}
+                    </Field>
+                  ))}
+                  {passThrough.length > 0 && <p className="text-sm text-muted" data-testid="wo-pass-through">{t('workOrders.passThrough', { count: passThrough.length })}</p>}
+                  {todo.length > 0 && accounts.length === 0 && <p className="text-sm text-muted">{t('workOrders.noAccounts')}</p>}
+                  {todo.length > 0 && <Button disabled={busy || !ready} onClick={() => void run(() => repository.createWorkOrdersFromQuote(uid, q.id, Object.fromEntries(todo.map((c) => [c.id, picks[`${q.id}:${c.id}`]]))), 'workOrders.created')}>{t('workOrders.create')}</Button>}
+                </div>
+              </Card>
+            );
+          })}
           {orders.length === 0 && <EmptyState title={t('workOrders.empty.title')} body={t('workOrders.empty.body')} />}
           {orders.map((w) => (
             <Card key={w.id} title={`${w.code} · ${w.partnerName}`}>
@@ -77,6 +102,7 @@ export function WorkOrdersScreen() {
                   return (
                     <div key={m.id} className="stack gap-1" data-testid={`wo-ms-${m.id}`}>
                       <ListRow title={`${t(`workOrders.gate.${m.gate}`)} · ${m.pct}%`} subtitle={m.label} trailing={<span className="row gap-2">{formatINR(m.amountInr)}<Badge tone={MILESTONE_TONE[m.status]}>{t(`workOrders.milestone.${m.status}`)}</Badge></span>} />
+                      {m.evidence.length > 0 && <p className="text-sm text-muted" data-testid={`wo-evidence-${m.id}`}>{t('workOrders.evidenceSent', { names: m.evidence.join(', ') })}</p>}
                       {m.status === 'waiting' && w.can.submitEvidence && (
                         <div className="row gap-2">
                           <Field label={t('workOrders.evidence')}>{({ id }) => <Input id={id} value={text[k] ?? ''} placeholder={t('workOrders.evidenceHint')} onChange={(e) => setText({ ...text, [k]: e.target.value })} />}</Field>

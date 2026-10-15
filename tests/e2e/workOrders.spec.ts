@@ -68,3 +68,32 @@ test('Customer: sees the contract disclosure and an honest empty state before an
   await expect(page.getByTestId('wo-provider-esign')).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test('Owner: picks a partner account for each accepted part, issues the work orders, and the statutory fee is left out', async ({ page }) => {
+  const errors = watchErrors(page);
+  await signIn(page, '9822011009', true);
+  // The customer's acceptance happens in another session in real life; here the repository does it, then the Owner's screen reads it.
+  const ids = await page.evaluate(async () => {
+    type R = { listFacilitatorQuotes(u: string): Promise<{ id: string }[]>; sendFacilitatorQuote(u: string, id: string): Promise<unknown>; getMyQuote(u: string): Promise<{ quote: { components: { id: string; kind: string }[] } } | null>; acceptQuoteComponents(u: string, q: string, l: string[]): Promise<unknown> };
+    const repo = (window as unknown as { __aiecRepo: R }).__aiecRepo;
+    const quote = (await repo.listFacilitatorQuotes('u-owner-1'))[0];
+    await repo.sendFacilitatorQuote('u-owner-1', quote.id).catch(() => undefined);
+    const mine = await repo.getMyQuote('u-cust-3');
+    const pick = mine!.quote.components.filter((c) => c.kind === 'installation' || c.kind === 'statutory').map((c) => c.id);
+    await repo.acceptQuoteComponents('u-cust-3', quote.id, pick);
+    return quote.id;
+  });
+  await go(page, '/work-orders');
+  const card = page.getByTestId(`wo-issue-${ids}`);
+  await expect(card).toBeVisible();
+  await expect(page.getByTestId('wo-pass-through')).toBeVisible();
+  const create = card.getByRole('button').last();
+  await expect(create).toBeDisabled(); // no partner account chosen yet
+  await card.locator('select').first().selectOption('u-tech-1');
+  await expect(create).toBeEnabled();
+  await create.click();
+  await expect(page.locator('[data-testid^="wo-wo-"]')).toHaveCount(1);
+  await expect(card.getByRole('button')).toHaveCount(0); // nothing left to issue; the pass-through note stays
+  await expect(card.locator('select')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

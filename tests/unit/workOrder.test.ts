@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_TEMPLATES, acceptanceLabel, amountsFor, milestonesOf, paymentProblem, startProblem, statusOfMilestones, submitEvidenceProblem, templateProblem, verifyProblem } from '@/features/workorders/workOrder';
+import { DEFAULT_TEMPLATES, MAX_EVIDENCE, MAX_EVIDENCE_NAME, acceptanceLabel, amountsFor, evidenceNamesProblem, milestonesOf, paymentProblem, skipsWorkOrder, startProblem, statusOfMilestones, submitEvidenceProblem, templateProblem, verifyProblem } from '@/features/workorders/workOrder';
+import type { MilestoneTemplate } from '@/features/workorders/workOrder';
 import type { Milestone } from '@/features/workorders/workOrder';
 
 const good = { licenceValid: true, insuranceValid: true, suspended: false };
@@ -16,6 +17,38 @@ describe('milestone templates', () => {
     expect(amountsFor(1_000_000, DEFAULT_TEMPLATES.material)).toEqual([900_000, 100_000]);
     for (const p of [1, 7, 99_999, 1_234_567]) expect(amountsFor(p, DEFAULT_TEMPLATES.installation).reduce((a, b) => a + b, 0)).toBe(p);
     expect(() => amountsFor(10.5, DEFAULT_TEMPLATES.material)).toThrow();
+  });
+});
+
+describe('the split is exact, whatever the price', () => {
+  const t = (pcts: number[]): MilestoneTemplate[] => pcts.map((pct, i) => ({ id: `m${i}`, label: `m${i}`, pct, gate: 'on_delivery' as const }));
+  it('gives the extra rupees to the largest remainders, ties to the earlier milestone', () => {
+    // 3 rupees over 33 / 33 / 34: exact shares 0.99 / 0.99 / 1.02 -> floors 0 / 0 / 1, two left, equal remainders go to the earlier one first
+    expect(amountsFor(3, t([33, 33, 34]))).toEqual([1, 1, 1]);
+    expect(amountsFor(1, t([50, 50]))).toEqual([1, 0]);
+    expect(amountsFor(0, t([50, 50]))).toEqual([0, 0]);
+  });
+  it('stays exact on very large prices where floating point would drift', () => {
+    const price = 9_007_199_254_740; // price * pct stays below 2^53
+    for (const pcts of [[33, 33, 34], [90, 10], [25, 25, 25, 25], [1, 99], [7, 13, 80]]) {
+      const parts = amountsFor(price, t(pcts));
+      expect(parts.reduce((a, b) => a + b, 0)).toBe(price);
+      parts.forEach((p, i) => expect(Math.abs(p - (price * pcts[i]) / 100)).toBeLessThan(1));
+    }
+  });
+});
+
+describe('what becomes a work order, and what evidence is acceptable', () => {
+  it('statutory pass-through fees are not work orders; everything else is', () => {
+    expect(skipsWorkOrder('statutory')).toBe(true);
+    for (const k of ['material', 'installation', 'logistics', 'amc'] as const) expect(skipsWorkOrder(k)).toBe(false);
+  });
+  it('evidence names are counted, bounded and non-empty', () => {
+    expect(evidenceNamesProblem([])).toBe('evidence_missing');
+    expect(evidenceNamesProblem(['  ', ''])).toBe('evidence_missing');
+    expect(evidenceNamesProblem(Array.from({ length: MAX_EVIDENCE + 1 }, (_, i) => `f${i}.jpg`))).toBe('evidence_too_many');
+    expect(evidenceNamesProblem(['x'.repeat(MAX_EVIDENCE_NAME + 1)])).toBe('evidence_name_long');
+    expect(evidenceNamesProblem(['rails.jpg', 'level.mp4'])).toBeNull();
   });
 });
 

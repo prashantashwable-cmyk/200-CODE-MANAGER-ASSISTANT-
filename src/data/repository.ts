@@ -1,4 +1,4 @@
-import type { ProviderStatus, WorkOrderView } from '@/features/workorders/types';
+import type { PartnerAccount, ProviderStatus, WorkOrderView } from '@/features/workorders/types';
 import type { FeeSettings, CostRates, QuoteLine } from '@/features/quotes/facilitatorQuote';
 import type { FeeSettingsVersion, QuotePreview, SaveQuoteInput, SaveQuoteResult, FacilitatorQuote, CustomerQuoteView } from '@/features/quotes/types';
 import type { VaultKind } from '@/features/documents/vault';
@@ -10182,7 +10182,9 @@ export interface Repository {
   sendFacilitatorQuote(userId: string, quoteId: string): Promise<FacilitatorQuote>;
   /* 208 — customer–partner work orders and milestone gates */
   listWorkOrders(userId: string): Promise<WorkOrderView[]>;
-  createWorkOrdersFromQuote(userId: string, quoteId: string): Promise<WorkOrderView[]>;
+  /** Owner only. `partners` binds each accepted component (by line id) to the partner account that will act; statutory fees are never work orders. */
+  createWorkOrdersFromQuote(userId: string, quoteId: string, partners: Record<string, string>): Promise<WorkOrderView[]>;
+  listPartnerAccounts(userId: string): Promise<PartnerAccount[]>;
   acceptWorkOrder(userId: string, workOrderId: string): Promise<WorkOrderView>;
   startWorkOrder(userId: string, workOrderId: string): Promise<WorkOrderView>;
   submitMilestoneEvidence(userId: string, workOrderId: string, milestoneId: string, evidenceNames: string[]): Promise<WorkOrderView>;

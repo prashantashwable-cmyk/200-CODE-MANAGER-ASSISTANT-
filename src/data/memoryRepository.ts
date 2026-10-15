@@ -1017,8 +1017,8 @@ import type { Candidate as BookingCandidate } from '@/features/service/booking';
 import { DRIVE_SKILL } from '@/features/training/skills';
 import { isEmail, isIndianMobile, isPincode } from '@/features/validation/india';
 import { randomCode, randomToken } from '@/features/ids/clientId';
-import { DEFAULT_TEMPLATES as WO_TEMPLATES, acceptanceLabel as woAcceptanceLabel, milestonesOf as woMilestonesOf, paymentProblem as woPaymentProblem, startProblem as woStartProblem, statusOfMilestones as woStatus, submitEvidenceProblem as woSubmitProblem, verifyProblem as woVerifyProblem } from '@/features/workorders/workOrder';
-import type { ProviderStatus, WorkOrder, WorkOrderView } from '@/features/workorders/types';
+import { DEFAULT_TEMPLATES as WO_TEMPLATES, acceptanceLabel as woAcceptanceLabel, evidenceNamesProblem as woEvidenceProblem, milestonesOf as woMilestonesOf, skipsWorkOrder as woSkips, paymentProblem as woPaymentProblem, startProblem as woStartProblem, statusOfMilestones as woStatus, submitEvidenceProblem as woSubmitProblem, verifyProblem as woVerifyProblem } from '@/features/workorders/workOrder';
+import type { PartnerAccount, ProviderStatus, WorkOrder, WorkOrderView } from '@/features/workorders/types';
 import { DEFAULT_COST_RATES, DEFAULT_FEE_SETTINGS, alternatives as fqAlternatives, computeQuote as fqCompute, mayOffer as fqMayOffer, maxBundleDiscountInr as fqMaxDiscount, quoteProblems as fqProblems, settingsProblem as fqSettingsProblem, waterfall as fqWaterfall } from '@/features/quotes/facilitatorQuote';
 import type { CostRates as FqCostRates, FeeActor as FqActor, FeeSettings as FqSettings, QuoteLine as FqLine } from '@/features/quotes/facilitatorQuote';
 import type { CustomerQuoteView, FacilitatorQuote, FeeSettingsVersion, QuotePreview, SaveQuoteInput, SaveQuoteResult } from '@/features/quotes/types';
@@ -18942,41 +18942,35 @@ const workOrders: WorkOrder[] = [];
 let woCounter = 4000;
 /** No signing provider is connected in this build: acceptance is recorded in-app and labelled as such. */
 const WO_SIGNING = 'not_connected' as const;
-function woPartnerKeys(userId: string): string[] {
-  const u = byId(users, userId);
-  if (!u) return [];
-  return [u.id, ...suppliers.filter((x) => x.contactPhone && x.contactPhone === u.phone).map((x) => x.id)];
-}
+/** An account can act for a partner only if it is an active technician or supplier. */
+const woEligibleAccount = (id: string | undefined) => { const a = id ? byId(users, id) : undefined; return a && a.status === 'active' && (a.role === 'technician' || a.role === 'supplier') ? a : undefined; };
 function woStanding(w: WorkOrder) {
-  const sup = suppliers.find((x) => x.id === w.partnerId);
-  const tech = byId(users, w.partnerId);
-  const suspended = sup ? sup.status === 'suspended' : tech ? tech.status !== 'active' : false;
+  const acct = byId(users, w.partnerAccountId);
+  const sup = acct ? suppliers.find((x) => x.contactPhone && x.contactPhone === acct.phone) : undefined;
   // [GAP] no licence/insurance expiry registry exists yet: a supplier is gated on KYC, anyone on suspension.
-  return { licenceValid: sup ? sup.kycStatus === 'approved' : true, insuranceValid: true, suspended };
+  return { licenceValid: sup ? sup.kycStatus === 'approved' : true, insuranceValid: true, suspended: !acct || acct.status !== 'active' || sup?.status === 'suspended' };
 }
 function woView(w: WorkOrder, userId: string): WorkOrderView {
   const u = byId(users, userId);
-  const staff = isAdminRole(u?.role);
-  const side: WorkOrderView['side'] = u?.id === w.customerId ? 'customer' : woPartnerKeys(userId).includes(w.partnerId) ? 'partner' : 'staff';
+  const side: WorkOrderView['side'] = u?.id === w.customerId ? 'customer' : u?.id === w.partnerAccountId ? 'partner' : 'staff';
   const startBlock = woStartProblem(w, woStanding(w));
   const open = w.status === 'in_progress';
-  const verifier = u?.role === 'owner' || u?.role === 'technician';
   return {
-    ...w, milestones: w.milestones.map((m) => ({ ...m })), side, startBlock, acceptance: woAcceptanceLabel(WO_SIGNING),
+    ...w, milestones: w.milestones.map((m) => ({ ...m, evidence: [...m.evidence] })), side, startBlock, acceptance: woAcceptanceLabel(WO_SIGNING),
     can: {
       accept: w.status === 'issued' && ((side === 'customer' && !w.customerAcceptedAt) || (side === 'partner' && !w.partnerAcceptedAt)),
       start: side === 'partner' && startBlock === null,
       submitEvidence: side === 'partner' && open,
-      verify: open && (u?.role === 'owner' || (verifier && side !== 'partner' && !staff)),
+      verify: open && u?.role === 'owner', // verification outcomes are the Owner's (master prompt P1); a QC inspector arrives with QC tasks
       recordPayment: side === 'customer' && open,
     },
   };
 }
+/** Who may see an order at all: Admin and Owner, its customer, and the one account that acts for its partner. Nobody else. */
+const woVisibleTo = (w: WorkOrder, userId: string) => { const u = byId(users, userId); return !!u && (isAdminRole(u.role) || u.id === w.customerId || u.id === w.partnerAccountId); };
 function woFind(userId: string, id: string): WorkOrder {
-  const u = byId(users, userId);
   const w = workOrders.find((x) => x.id === id);
-  if (!u || !w) throw new RepositoryError('not_found');
-  if (!isAdminRole(u.role) && u.id !== w.customerId && !woPartnerKeys(userId).includes(w.partnerId) && u.role !== 'technician') throw new RepositoryError('not_found');
+  if (!w || !woVisibleTo(w, userId)) throw new RepositoryError('not_found');
   return w;
 }
 function woMilestone(w: WorkOrder, id: string) {
@@ -28694,28 +28688,35 @@ export const memoryRepository: Repository = {
   }),
   /* 208 — work orders */
   listWorkOrders: (userId) => simulateRead(() => {
-    const u = byId(users, userId);
-    if (!u) throw new RepositoryError('not_found');
-    const keys = woPartnerKeys(userId);
-    return workOrders.filter((w) => isAdminRole(u.role) || u.role === 'technician' || w.customerId === userId || keys.includes(w.partnerId)).map((w) => woView(w, userId));
+    if (!byId(users, userId)) throw new RepositoryError('not_found');
+    return workOrders.filter((w) => woVisibleTo(w, userId)).map((w) => woView(w, userId));
   }),
-  createWorkOrdersFromQuote: (userId, quoteId) => simulateWrite(() => {
+  listPartnerAccounts: (userId) => simulateRead((): PartnerAccount[] => {
+    const u = byId(users, userId);
+    if (!u || !isAdminRole(u.role)) throw new RepositoryError('forbidden');
+    return users.filter((x) => woEligibleAccount(x.id)).map((x) => ({ id: x.id, name: x.name, role: x.role as PartnerAccount['role'] }));
+  }),
+  createWorkOrdersFromQuote: (userId, quoteId, partners) => simulateWrite(() => {
     const u = byId(users, userId);
     if (!u || u.role !== 'owner') throw new RepositoryError('forbidden'); // the Owner issues work orders; Admin only watches
     fqSeed();
     const q = byId(facilitatorQuotes, quoteId);
     if (!q) throw new RepositoryError('not_found');
     if (!q.customerId) throw new RepositoryError('no_customer');
+    const todo = q.components.filter((c) => c.acceptedAt && !woSkips(c.kind) && !workOrders.some((w) => w.quoteId === q.id && w.lineId === c.id));
+    // Check every component before creating any, so a refusal never leaves half an order set behind.
+    for (const c of todo) {
+      if (!partners[c.id]) throw new RepositoryError('partner_account_required');
+      if (!woEligibleAccount(partners[c.id])) throw new RepositoryError('partner_not_eligible');
+    }
     const made: WorkOrder[] = [];
-    for (const c of q.components) {
-      if (!c.acceptedAt) continue;
-      if (workOrders.some((w) => w.quoteId === q.id && w.lineId === c.id)) continue;
+    for (const c of todo) {
       woCounter += 1;
       const now = new Date().toISOString();
-      const w: WorkOrder = { id: `wo-${woCounter}`, code: `AIEC-WO-${woCounter}`, quoteId: q.id, lineId: c.id, leadId: q.leadId, siteName: q.siteName, customerId: q.customerId, partnerId: c.partnerId, partnerName: c.partnerName, kind: c.kind, description: c.description, priceInr: c.partnerPriceInr, status: 'issued', milestones: woMilestonesOf(c.partnerPriceInr, WO_TEMPLATES[c.kind]), createdAt: now };
+      const w: WorkOrder = { id: `wo-${woCounter}`, code: `AIEC-WO-${woCounter}`, quoteId: q.id, lineId: c.id, leadId: q.leadId, siteName: q.siteName, customerId: q.customerId, partnerId: c.partnerId, partnerName: c.partnerName, partnerAccountId: partners[c.id], kind: c.kind, description: c.description, priceInr: c.partnerPriceInr, status: 'issued', milestones: woMilestonesOf(c.partnerPriceInr, WO_TEMPLATES[c.kind]), createdAt: now };
       workOrders.push(w);
       made.push(w);
-      eventLog.append(userId, { type: 'contract.work_order_created', subject: { kind: 'lead', id: q.leadId }, capturedAt: now, payload: { workOrderId: w.id, quoteId: q.id, partnerId: w.partnerId, priceInr: w.priceInr, kind: w.kind } });
+      eventLog.append(userId, { type: 'contract.work_order_created', subject: { kind: 'lead', id: q.leadId }, capturedAt: now, payload: { workOrderId: w.id, quoteId: q.id, partnerId: w.partnerId, partnerAccountId: w.partnerAccountId, priceInr: w.priceInr, kind: w.kind } });
     }
     return made.map((w) => woView(w, userId));
   }),
@@ -28743,9 +28744,9 @@ export const memoryRepository: Repository = {
     if (w.status !== 'in_progress') throw new RepositoryError('invalid_state');
     const m = woMilestone(w, milestoneId);
     const names = evidenceNames.map((n) => n.trim()).filter(Boolean);
-    const bad = woSubmitProblem(m, names.length);
+    const bad = woEvidenceProblem(names) ?? woSubmitProblem(m, names.length);
     if (bad) throw new RepositoryError(bad);
-    m.status = 'evidence_submitted'; m.evidenceCount = names.length;
+    m.status = 'evidence_submitted'; m.evidence = names;
     eventLog.append(userId, { type: 'milestone.evidence_submitted', subject: { kind: 'lead', id: w.leadId }, capturedAt: new Date().toISOString(), payload: { workOrderId: w.id, milestoneId, evidence: names, submitterId: userId } });
     return woView(w, userId);
   }),
@@ -28754,8 +28755,8 @@ export const memoryRepository: Repository = {
     const v = woView(w, userId);
     if (!v.can.verify) throw new RepositoryError('forbidden');
     const m = woMilestone(w, milestoneId);
-    // The partner who submitted evidence is the order's partner, so the verifier is always a different person; the rule still checks it.
-    const bad = woVerifyProblem(m, { verifierId: userId, submitterId: w.partnerId, qcPassed: true });
+    // Only the Owner verifies, and the Owner is never the partner's account; the rule still checks it.
+    const bad = woVerifyProblem(m, { verifierId: userId, submitterId: w.partnerAccountId, qcPassed: true });
     if (bad) throw new RepositoryError(bad);
     m.status = 'verified';
     eventLog.append(userId, { type: 'milestone.verified', subject: { kind: 'lead', id: w.leadId }, capturedAt: new Date().toISOString(), payload: { workOrderId: w.id, milestoneId, amountInr: m.amountInr, verifierId: userId } });
