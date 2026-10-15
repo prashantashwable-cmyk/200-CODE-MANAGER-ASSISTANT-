@@ -9,6 +9,10 @@ import type { Role, SignInRequest } from '@/data/types';
 import { supabase } from './client';
 import { DEFAULT_COST_RATES, alternatives, computeQuote, mayOffer, maxBundleDiscountInr, quoteProblems, settingsProblem, waterfall } from '@/features/quotes/facilitatorQuote';
 import type { QuotePreview } from '@/features/quotes/types';
+import { cardFromRow, chainFrom, decisionErrorCode, recordFromRow, statusRowFromRow } from './decisionMapping';
+import type { CardRow, RecordRow, StatusRow } from './decisionMapping';
+import { captureErrorCode, captureResultOf } from './leadMapping';
+import type { CaptureRpc } from './leadMapping';
 import { customerViewOf, errorCode, feeFromRow, quoteFromRow } from './quoteMapping';
 import type { AcceptanceRow, FeeRow, QuoteRow } from './quoteMapping';
 
@@ -54,6 +58,77 @@ export function withServer(base: Repository): Repository {
   };
   const repo: Repository = {
     ...base,
+
+    // ---- 201 Decision Desk: the database decides who may decide and chains every record ----
+    listDecisionCards: async (userId, filter) => {
+      const who = await supabase().from('profiles').select('role').eq('id', userId).maybeSingle<{ role: string }>();
+      const isOwner = who.data?.role === 'owner';
+      const isAdmin = who.data?.role === 'admin';
+      const open = (q: any) => (filter?.status === 'open' ? q.in('status', ['pending', 'info_requested']) : filter?.status ? q.eq('status', filter.status) : q);
+      const kind = (q: any) => (filter?.kind ? q.eq('kind', filter.kind) : q);
+      if (isAdmin) {
+        const { data, error } = await kind(open(supabase().from('decision_cards_status').select('*'))).order('created_at', { ascending: false }).returns();
+        if (error) throw new RepositoryError(decisionErrorCode(error.message));
+        return { level: 'status' as const, cards: [], statusRows: ((data ?? []) as StatusRow[]).map(statusRowFromRow) };
+      }
+      const { data, error } = await kind(open(supabase().from('decision_cards').select('*'))).order('created_at', { ascending: false }).returns();
+      if (error) throw new RepositoryError(decisionErrorCode(error.message));
+      void isOwner; // row-level security already limits a delegate to the cards handed to them
+      return { level: 'detail' as const, cards: ((data ?? []) as CardRow[]).map(cardFromRow), statusRows: [] };
+    },
+    getDecisionCard: async (userId, cardId) => {
+      const who = await supabase().from('profiles').select('role').eq('id', userId).maybeSingle<{ role: string }>();
+      if (who.data?.role === 'admin') {
+        const { data, error } = await supabase().from('decision_cards_status').select('*').eq('id', cardId).maybeSingle<StatusRow>();
+        if (error || !data) throw new RepositoryError(error ? decisionErrorCode(error.message) : 'not_found');
+        return { level: 'status' as const, card: statusRowFromRow(data) };
+      }
+      const [card, recs] = await Promise.all([
+        supabase().from('decision_cards').select('*').eq('id', cardId).maybeSingle<CardRow>(),
+        supabase().from('decision_records').select('*').eq('card_id', cardId).order('seq').returns<RecordRow[]>(),
+      ]);
+      if (card.error || !card.data) throw new RepositoryError(card.error ? decisionErrorCode(card.error.message) : 'not_found');
+      return { level: 'detail' as const, card: cardFromRow(card.data), records: (recs.data ?? []).map(recordFromRow) };
+    },
+    prepareDecisionPacket: async (_userId, input) => {
+      const { data, error } = await supabase().rpc('prepare_decision', {
+        p_kind: input.kind, p_title: input.title, p_summary: input.summary, p_amount_inr: input.amountInr ?? null, p_place: input.place ?? null,
+        p_evidence: input.evidence ?? [], p_impact: input.impact ?? [], p_recommendation: input.recommendation ?? null,
+      });
+      if (error || !data) throw new RepositoryError(decisionErrorCode(error?.message ?? ''));
+      const card = await supabase().from('decision_cards').select('*').eq('id', (data as { id: string }).id).maybeSingle<CardRow>();
+      if (card.data) return cardFromRow(card.data);
+      // Admin cannot read the full card back: the packet it prepared is returned from what it just sent.
+      return { id: (data as { id: string }).id, code: (data as { code: string }).code, kind: input.kind, title: input.title, summary: input.summary, status: 'pending', proposedBy: { role: 'admin', name: '' }, createdAt: new Date().toISOString(), evidence: input.evidence ?? [], impact: input.impact ?? [], isDemo: false, ...(input.amountInr != null ? { amountInr: input.amountInr } : {}) };
+    },
+    decideDecisionCard: async (_userId, input) => {
+      const { data, error } = await supabase().rpc('decide_decision', { p_card: input.cardId, p_action: input.action, p_reason: input.reason, p_edits: input.edits ?? null, p_delegate_to: input.delegateTo ?? null });
+      if (error || !data) throw new RepositoryError(decisionErrorCode(error?.message ?? ''));
+      const [card, rec] = await Promise.all([
+        supabase().from('decision_cards').select('*').eq('id', input.cardId).maybeSingle<CardRow>(),
+        supabase().from('decision_records').select('*').eq('card_id', input.cardId).order('seq', { ascending: false }).limit(1).returns<RecordRow[]>(),
+      ]);
+      if (!card.data || !rec.data?.[0]) throw new RepositoryError('network');
+      return { card: cardFromRow(card.data), record: recordFromRow(rec.data[0]) };
+    },
+    verifyDecisionChain: async () => {
+      const { data, error } = await supabase().rpc('verify_decision_chain');
+      if (error) throw new RepositoryError(decisionErrorCode(error.message));
+      const head = await supabase().from('decision_records').select('hash').order('seq', { ascending: false }).limit(1).returns<{ hash: string }[]>();
+      return chainFrom((data ?? []) as { ok: boolean; checked: number; broken_at: number | null }[], head.data?.[0]?.hash ?? '');
+    },
+
+    // ---- 205 lead capture: the database decides who owns the site ----
+    submitLeadCapture: async (_userId, input) => {
+      const d = input.draft;
+      const { data, error } = await supabase().rpc('submit_lead_capture', {
+        p_client_event_id: input.clientEventId, p_site_name: d.siteName, p_contact_name: d.contactName, p_contact_phone: d.contactPhone, p_builder_name: d.builderName,
+        p_address: d.address, p_city: d.city, p_pincode: d.pincode, p_lat: d.location.lat, p_lng: d.location.lng, p_accuracy_m: input.accuracyM ?? null,
+        p_captured_at: input.capturedAt ?? null, p_device_sent_at: input.deviceSentAt ?? null,
+      });
+      if (error || !data) throw new RepositoryError(captureErrorCode(error?.message ?? ''));
+      return captureResultOf(data as CaptureRpc, input, new Date().toISOString());
+    },
 
     // ---- 206/207 facilitator quote: the database prices, owns the fee history and records acceptance ----
     getFeeSettings: async () => {
