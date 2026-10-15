@@ -35,10 +35,12 @@ const translations: ScreenTranslations = {
         body: 'Pick a role and step straight into a fully populated account. Nothing to fill in.',
         entering: 'Opening…',
         role: {
+          owner: 'Your decisions, the business at a glance, and the record of everything decided.',
           admin: 'The live map, the numbers, and every exception in one place.',
           surveyor: 'Capture a site, track your leads, watch your commission add up.',
           technician: 'Your jobs, step by step, with proof at every safety stage.',
           customer: 'Follow your own project from order to handover.',
+          supplier: 'Your orders, deliveries, invoices and payments from AIEC.',
         },
         safety:
           'Demo accounts use sample data only. No real payment or payout can be made from them.',
@@ -88,10 +90,12 @@ const translations: ScreenTranslations = {
         body: 'कोई भी भूमिका चुनिए और सीधे भरे-पूरे खाते में पहुँच जाइए। कुछ भरना नहीं है।',
         entering: 'खुल रहा है…',
         role: {
+          owner: 'आपके फ़ैसले, कारोबार की पूरी झलक, और हर तय बात का रिकॉर्ड।',
           admin: 'लाइव नक्शा, आँकड़े और हर अपवाद — सब एक जगह।',
           surveyor: 'साइट दर्ज कीजिए, अपने लीड देखिए, कमीशन बढ़ता हुआ देखिए।',
           technician: 'आपके काम, चरण-दर-चरण, हर सुरक्षा-चरण पर सबूत के साथ।',
           customer: 'ऑर्डर से हैंडओवर तक अपना प्रोजेक्ट खुद देखिए।',
+          supplier: 'AIEC से आपके ऑर्डर, डिलीवरी, बिल और भुगतान।',
         },
         safety: 'डेमो खातों में सिर्फ़ नमूना डेटा है। इनसे कोई असली भुगतान नहीं हो सकता।',
       },
@@ -140,10 +144,12 @@ const translations: ScreenTranslations = {
         body: 'कोणतीही भूमिका निवडा आणि थेट भरलेल्या खात्यात जा. काहीही भरायचे नाही.',
         entering: 'उघडत आहे…',
         role: {
+          owner: 'तुमचे निर्णय, व्यवसायाचे संपूर्ण चित्र, आणि प्रत्येक ठरलेल्या गोष्टीची नोंद.',
           admin: 'थेट नकाशा, आकडे आणि प्रत्येक अपवाद — सर्व एकाच ठिकाणी.',
           surveyor: 'साइट नोंदवा, तुमचे लीड पहा, कमिशन वाढताना पहा.',
           technician: 'तुमची कामे, टप्प्याटप्प्याने, प्रत्येक सुरक्षा-टप्प्यावर पुराव्यासह.',
           customer: 'ऑर्डरपासून ताबा मिळेपर्यंत तुमचा प्रकल्प स्वतः पहा.',
+          supplier: 'AIEC कडून तुमच्या ऑर्डर, डिलिव्हरी, बिले आणि पेमेंट.',
         },
         safety: 'डेमो खात्यांत फक्त नमुना माहिती असते. त्यातून खरे पैसे कधीच जात नाहीत.',
       },
