@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { DataProvider } from '@/data/DataProvider';
 import { SessionProvider } from '@/session/SessionProvider';
+import { DemoDataScope } from '@/session/DemoDataScope';
 import { ToastProvider } from '@/design-system';
 import { CaptureDraftProvider } from '@/features/leadCapture/CaptureDraftProvider';
 import { BrandProvider } from '@/features/brand/BrandProvider';
@@ -34,6 +35,7 @@ void i18nReady.then(() => ReactDOM.createRoot(document.getElementById('root')!).
       <DataProvider>
         <BrandProvider>
         <SessionProvider>
+          <DemoDataScope>
           <AccessProvider>
           <ToastProvider>
             <CaptureDraftProvider>
@@ -41,6 +43,7 @@ void i18nReady.then(() => ReactDOM.createRoot(document.getElementById('root')!).
             </CaptureDraftProvider>
           </ToastProvider>
           </AccessProvider>
+          </DemoDataScope>
         </SessionProvider>
         </BrandProvider>
       </DataProvider>

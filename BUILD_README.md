@@ -12,7 +12,7 @@ npm install
 npm run dev
 ```
 
-Then open http://localhost:5173 and press **Try Demo** — four role tiles, no
+Then open http://localhost:5173 and press **Try Demo** — a tile for every role (Owner, Admin, Surveyor, Technician, Customer, Supplier), no
 form to fill, populated data behind every one.
 
 ---

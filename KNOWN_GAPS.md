@@ -38,6 +38,7 @@ memory), backups. Each screen that depends on one says so; see
 - Free plan: the project pauses after a week with no activity and has no daily backups; move to the paid plan before live use.
 - Supabase's own multi-factor sign-in is a paid-plan feature; 195's second step stays the app's own until then.
 - Demo sign-ins are not wired: demo profiles exist as a separate world (`is_demo`), but Demo Mode in the app still runs in memory.
+- Demo Mode is kept off the server on purpose (2026-10-15). Try Demo now offers every role, Owner and Supplier included. A demo session always reads and writes the in-memory sample data, even in a Supabase-configured build (`DemoDataScope`, `repositoryForSession`). Entering demo also signs out any real Supabase sign-in left in the browser, so a demo Owner can never decide a real Decision Desk card. Unit-tested (`tests/unit/demoScope.test.ts`). **Not yet run end to end in server mode:** CI does not run `test:e2e:server`, and this container has no Docker for `supabase start`.
 - No CI job runs the full Supabase stack yet: the end-to-end sign-in test (`npm run test:e2e:server`) and `test:db` on Supabase's own Postgres were run on a local `supabase start`; CI runs `test:db` on a plain Postgres 17 with a stand-in for Supabase's roles.
 - The send-SMS hook is set in `supabase/config.toml` for local stacks; on the live project it is switched on in the dashboard (setup step 8), since `db push` does not carry auth settings.
 - A phone number changed on a Supabase sign-in after the first sign-in is not re-linked to a profile.
