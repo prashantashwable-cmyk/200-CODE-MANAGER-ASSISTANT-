@@ -540,7 +540,7 @@ describe('complaints and partner trust', () => {
     expect(await refusal(raise(w.customer, w.quoteId, null, 'lunch', TEXT))).toBe('category_invalid');
     expect(await refusal(raise(w.customer, w.quoteId, null, 'defect', 'too short'))).toBe('text_short');
     expect(await refusal(raise(w.customer, w.quoteId, null, 'defect', 'x'.repeat(1001)))).toBe('text_long');
-    expect(await refusal(raise(w.customer, w.quoteId, inst.id.replace(/.$/, '0'), 'defect', TEXT))).toBe('not_found'); // an order that is not this project's
+    expect(await refusal(raise(w.customer, w.quoteId, '22222222-2222-4222-8222-222222222222', 'defect', TEXT))).toBe('not_found'); // an order that is not this project's
     expect(await refusal(as(null, (c) => c.query('select public.raise_complaint($1, null, $2, $3, null)', [w.quoteId, 'defect', TEXT])))).toMatch(/permission denied/);
     const client = '11111111-1111-4111-8111-111111111111';
     const a = await idOf(raise(w.customer, w.quoteId, inst.id, 'defect', TEXT, client));

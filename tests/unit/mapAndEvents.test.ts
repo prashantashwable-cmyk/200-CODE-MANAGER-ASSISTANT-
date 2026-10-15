@@ -60,7 +60,8 @@ describe('map: what each role may see of a site', () => {
       expect(p.distanceM! % 100).toBe(0);
     }
     const json = JSON.stringify(view);
-    for (const pt of real.values()) expect(json).not.toContain(String(pt.lat));
+    // exact numbers only: a fuzzed 18.5515587 is not the real 18.5515, though it starts with the same digits
+    for (const pt of real.values()) expect(new RegExp(`:${String(pt.lat).replace('.', '\\.')}(?![0-9])`).test(json)).toBe(false);
     expect(json).not.toContain('Kulkarni');
   });
   it('the same technician sees the site exactly once they are on the work', async () => {
