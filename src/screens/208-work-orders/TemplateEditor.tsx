@@ -21,21 +21,26 @@ export function TemplateEditor() {
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [busy, setBusy] = useState(false);
 
-  const load = useCallback(async () => {
-    setState('loading');
-    try { const h = await repository.getMilestoneTemplates(uid); setData(h); setDraft(structuredClone(h.current.templates)); setReason(''); setState('ready'); }
-    catch { setState('error'); }
+  /** A reload never throws away what the Owner has typed: the draft is replaced only the first time, or after a save. */
+  const load = useCallback(async (fresh = false) => {
+    try {
+      const h = await repository.getMilestoneTemplates(uid);
+      setData(h);
+      setDraft((d) => (d === null || fresh ? structuredClone(h.current.templates) : d));
+      if (fresh) setReason('');
+      setState('ready');
+    } catch { setState((s) => (s === 'ready' ? s : 'error')); }
   }, [repository, uid]);
   useEffect(() => { void load(); }, [load]);
 
   if (state === 'loading') return <LoadingState label={t('workOrders.loading')} rows={2} />;
-  if (state === 'error' || !data || !draft) return <ErrorState title={t('workOrders.error.title')} body={t('workOrders.error.body')} retryLabel={t('workOrders.retry')} onRetry={() => void load()} />;
+  if (state === 'error' || !data || !draft) return <ErrorState title={t('workOrders.error.title')} body={t('workOrders.error.body')} retryLabel={t('workOrders.retry')} onRetry={() => { setState('loading'); void load(true); }} />;
 
   const problem = templateSetProblem(draft, data.current.templates, reason);
   const edit = (k: (typeof LINE_KINDS)[number], i: number, patch: Partial<MilestoneTemplate>) => setDraft({ ...draft, [k]: draft[k].map((m, j) => (j === i ? { ...m, ...patch } : m)) });
   const save = async () => {
     setBusy(true);
-    try { await repository.saveMilestoneTemplates(uid, draft, reason); toast.push(t('workOrders.tplSaved')); await load(); }
+    try { await repository.saveMilestoneTemplates(uid, draft, reason); toast.push(t('workOrders.tplSaved')); await load(true); }
     catch (e) { toast.push(t(`workOrders.problem.${e instanceof Error ? e.message : ''}`, { defaultValue: t('workOrders.error.action') })); }
     finally { setBusy(false); }
   };
